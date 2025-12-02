@@ -64,7 +64,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
-        >
+    >
           <ChevronLeft className="h-4 w-4" />
           Previous
         </Button>
@@ -80,7 +80,7 @@ export function Pagination({
             }
 
             const pageNum = page as number
-            return (
+  return (
               <Button
                 key={pageNum}
                 variant={currentPage === pageNum ? "default" : "outline"}
@@ -90,7 +90,7 @@ export function Pagination({
               >
                 {pageNum}
               </Button>
-            )
+  )
           })}
         </div>
 
@@ -99,7 +99,7 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
-        >
+    >
           Next
           <ChevronRight className="h-4 w-4" />
         </Button>

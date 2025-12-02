@@ -59,12 +59,37 @@ export const usersApi = {
       }
       
       if (!response.ok) {
+        // Log detailed error information for debugging
         console.error("API Error - Status:", response.status);
+        console.error("API Error - URL:", url);
         console.error("API Error - Response:", data);
-        const errorMessage = data?.message || 
-                           (data?.errors && Array.isArray(data.errors) ? data.errors.join(", ") : null) ||
-                           data?.title ||
-                           `HTTP error! status: ${response.status}`;
+        
+        // Extract error message from response
+        let errorMessage = `Server error (${response.status})`;
+        
+        if (data) {
+          if (data.message) {
+            errorMessage = data.message;
+          } else if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+            errorMessage = data.errors.join(", ");
+          } else if (data.title) {
+            errorMessage = data.title;
+          } else if (typeof data === 'string') {
+            errorMessage = data;
+          }
+        }
+        
+        // Provide user-friendly messages for common status codes
+        if (response.status === 401) {
+          errorMessage = "Authentication failed. Please login again.";
+        } else if (response.status === 403) {
+          errorMessage = "You don't have permission to access this resource.";
+        } else if (response.status === 404) {
+          errorMessage = "The requested resource was not found.";
+        } else if (response.status === 500) {
+          errorMessage = data?.message || "An internal server error occurred. Please try again later or contact support.";
+        }
+        
         throw new Error(errorMessage);
       }
       
