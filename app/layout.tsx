@@ -12,21 +12,8 @@ export const metadata: Metadata = {
   description: "FPT Facility Booking System - Reserve rooms and facilities at your campus",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/logoweb.png",
+    apple: "/logoweb.png",
   },
 }
 

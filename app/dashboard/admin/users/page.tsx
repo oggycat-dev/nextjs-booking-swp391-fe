@@ -1,0 +1,633 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination } from "@/components/ui/pagination"
+import { useUsers, useUserMutations } from "@/hooks/use-users"
+import { usePendingRegistrations } from "@/hooks/use-auth"
+import type { User, UserRole, PendingRegistration } from "@/types"
+
+export default function AdminUsersPage() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterRole, setFilterRole] = useState<UserRole | "">("")
+  const [filterStatus, setFilterStatus] = useState<boolean | "">("")
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [activeTab, setActiveTab] = useState<"users" | "pending">("users")
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [selectedPending, setSelectedPending] = useState<PendingRegistration | null>(null)
+  const pageSize = 10
+
+  const { users, fetchUsers, isLoading, error } = useUsers()
+  const { updateUser, deleteUser, isLoading: isMutating } = useUserMutations()
+  const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
+
+  useEffect(() => {
+    if (activeTab === "users") {
+      fetchUsers({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm || undefined,
+        role: filterRole || undefined,
+        isActive: filterStatus === "" ? undefined : filterStatus === true,
+      })
+    } else {
+      fetchPendingRegistrations()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, searchTerm, filterRole, filterStatus, activeTab])
+
+  const handleSearch = () => {
+    setPageNumber(1) // Reset to first page when searching
+    fetchUsers({
+      pageNumber: 1,
+      pageSize,
+      searchTerm: searchTerm || undefined,
+      role: filterRole || undefined,
+      isActive: filterStatus === "" ? undefined : filterStatus === true,
+    })
+  }
+
+  const handleToggleActive = async (user: User) => {
+    const updated = await updateUser(user.id, {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      isActive: !user.isActive,
+    })
+
+    if (updated) {
+      // Refresh the list
+      fetchUsers({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm || undefined,
+        role: filterRole || undefined,
+        isActive: filterStatus === "" ? undefined : filterStatus === true,
+      })
+      if (selectedUser?.id === user.id) {
+        setSelectedUser(updated)
+      }
+    }
+  }
+
+  const filteredUsers = users?.items || []
+
+  const stats = {
+    totalUsers: users?.totalCount || 0,
+    students: filteredUsers.filter((u) => u.role === "Student").length,
+    lecturers: filteredUsers.filter((u) => u.role === "Lecturer").length,
+    blocked: filteredUsers.filter((u) => !u.isActive).length,
+  }
+
+  const getStatusColor = (isActive: boolean) => {
+    return isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+  }
+
+  const getStatusText = (isActive: boolean) => {
+    return isActive ? "Active" : "Inactive"
+  }
+
+  const handleApproveRegistration = async (registration: PendingRegistration, approved: boolean) => {
+    const result = await approveRegistration({
+      userId: registration.id,
+      isApproved: approved,
+      rejectionReason: approved ? undefined : rejectionReason || undefined,
+    })
+    
+    if (result) {
+      setSelectedPending(null)
+      setRejectionReason("")
+      if (activeTab === "pending") {
+        await fetchPendingRegistrations()
+      }
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">User Management</h1>
+        <p className="text-muted-foreground">View and manage system users and permissions</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-border">
+        <button
+          onClick={() => setActiveTab("users")}
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+            activeTab === "users"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All Users
+        </button>
+        <button
+          onClick={() => setActiveTab("pending")}
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
+            activeTab === "pending"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Pending Registrations
+          {registrations.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+              {registrations.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-muted-foreground">Total Users</p>
+            <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-primary">{stats.totalUsers}</p>
+        </Card>
+        <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-muted-foreground">Students</p>
+            <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-blue-600">{stats.students}</p>
+        </Card>
+        <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-muted-foreground">Lecturers</p>
+            <div className="w-10 h-10 bg-purple-200 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-purple-600">{stats.lecturers}</p>
+        </Card>
+        <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100/50 border-red-200 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-muted-foreground">Inactive Users</p>
+            <div className="w-10 h-10 bg-red-200 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-red-600">{stats.blocked}</p>
+        </Card>
+      </div>
+
+      <Card className="p-6 space-y-4 shadow-lg border-2">
+        <h3 className="text-lg font-semibold mb-4">Filters & Search</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Search</label>
+            <Input
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch()
+                }
+              }}
+              className="h-11 border-2 focus:border-primary"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Role</label>
+            <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : (value as UserRole))}>
+              <SelectTrigger className="h-11 border-2 focus:border-primary">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="Student">Student</SelectItem>
+                <SelectItem value="Lecturer">Lecturer</SelectItem>
+                <SelectItem value="Admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold">Status</label>
+            <Select
+              value={filterStatus === "" ? "all" : filterStatus === true ? "active" : "inactive"}
+              onValueChange={(value) => {
+                if (value === "all") setFilterStatus("")
+                else setFilterStatus(value === "active")
+              }}
+            >
+              <SelectTrigger className="h-11 border-2 focus:border-primary">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end gap-2">
+            <Button onClick={handleSearch} className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg">
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 h-11 border-2"
+              onClick={() => {
+                setSearchTerm("")
+                setFilterRole("")
+                setFilterStatus("")
+                setPageNumber(1)
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {activeTab === "users" && isLoading && (
+        <Card className="p-12 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-muted-foreground">Loading users...</p>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === "users" && error && !isLoading && (
+        <Card className="p-6 border-destructive/50 bg-destructive/5">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="font-semibold text-destructive mb-1">Error loading users</h3>
+              <p className="text-sm text-destructive/80">{error}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => {
+                  fetchUsers({
+                    pageNumber,
+                    pageSize,
+                    searchTerm: searchTerm || undefined,
+                    role: filterRole || undefined,
+                    isActive: filterStatus === "" ? undefined : filterStatus === true,
+                  })
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === "pending" && (
+        <>
+          {isPendingLoading && (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">Loading pending registrations...</p>
+            </Card>
+          )}
+          {!isPendingLoading && registrations.length === 0 && (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">No pending registrations</p>
+            </Card>
+          )}
+          {!isPendingLoading && registrations.length > 0 && (
+            <div className="space-y-3">
+              {registrations.map((registration) => (
+                <Card
+                  key={registration.id}
+                  className="p-5 hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl flex items-center justify-center">
+                          <span className="text-lg font-bold text-yellow-600">
+                            {registration.fullName[0]}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg">{registration.fullName}</h3>
+                          <p className="text-sm text-muted-foreground">{registration.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
+                            {registration.role}
+                          </span>
+                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                            {registration.campusName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          {registration.phoneNumber}
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {new Date(registration.createdAt).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          {registration.userCode}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedPending(registration)}
+                        className="text-green-600 border-green-200 hover:bg-green-50"
+                      >
+                        Review
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "users" && !isLoading && !error && (
+        <>
+          <div className="space-y-3">
+            {filteredUsers.length === 0 ? (
+              <Card className="p-12 text-center">
+                <p className="text-muted-foreground">No users found</p>
+              </Card>
+            ) : (
+              filteredUsers.map((user) => (
+                <Card
+                  key={user.id}
+                  className="p-5 hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 group"
+                  onClick={() => setSelectedUser(user)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
+                          <span className="text-lg font-bold text-primary">
+                            {user.firstName[0]}{user.lastName[0]}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
+                            {user.firstName} {user.lastName}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20">
+                            {user.role}
+                          </span>
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.isActive)} border`}>
+                            {getStatusText(user.isActive)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {user.username}
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </div>
+                        {user.lastLoginDate && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {new Date(user.lastLoginDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleActive(user)
+                        }}
+                        disabled={isMutating}
+                        className={`border-2 ${
+                          !user.isActive
+                            ? "text-green-600 border-green-200 hover:bg-green-50"
+                            : "text-destructive border-red-200 hover:bg-red-50"
+                        }`}
+                      >
+                        {!user.isActive ? "Activate" : "Deactivate"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {users && users.totalPages > 1 && (
+            <Card className="p-4">
+              <Pagination
+                currentPage={users.pageNumber}
+                totalPages={users.totalPages}
+                onPageChange={setPageNumber}
+                hasPreviousPage={users.hasPreviousPage}
+                hasNextPage={users.hasNextPage}
+              />
+            </Card>
+          )}
+        </>
+      )}
+
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">
+                {selectedUser.firstName} {selectedUser.lastName}
+              </h2>
+              <button onClick={() => setSelectedUser(null)} className="text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Email</p>
+                  <p className="font-bold">{selectedUser.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Username</p>
+                  <p className="font-bold">{selectedUser.username}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Role</p>
+                  <p className="font-bold">{selectedUser.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedUser.isActive)}`}
+                  >
+                    {getStatusText(selectedUser.isActive)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Created At</p>
+                  <p className="font-bold">{new Date(selectedUser.createdAt).toLocaleString()}</p>
+                </div>
+                {selectedUser.lastLoginDate && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Last Login</p>
+                    <p className="font-bold">{new Date(selectedUser.lastLoginDate).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 bg-transparent"
+                onClick={() => handleToggleActive(selectedUser)}
+                disabled={isMutating}
+              >
+                {selectedUser.isActive ? "Deactivate User" : "Activate User"}
+              </Button>
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedUser(null)}>
+                Close
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Pending Registration Modal */}
+      {selectedPending && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Review Registration</h2>
+              <button onClick={() => {
+                setSelectedPending(null)
+                setRejectionReason("")
+              }} className="text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Full Name</p>
+                  <p className="font-bold">{selectedPending.fullName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Email</p>
+                  <p className="font-bold">{selectedPending.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
+                  <p className="font-bold">{selectedPending.phoneNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Campus</p>
+                  <p className="font-bold">{selectedPending.campusName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Role</p>
+                  <p className="font-bold">{selectedPending.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">User Code</p>
+                  <p className="font-bold">{selectedPending.userCode}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Created At</p>
+                  <p className="font-bold">{new Date(selectedPending.createdAt).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-semibold mb-2">Rejection Reason (if rejecting)</label>
+                <Input
+                  placeholder="Enter reason for rejection..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="h-11 border-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                onClick={() => handleApproveRegistration(selectedPending, true)}
+                disabled={isPendingLoading}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                onClick={() => handleApproveRegistration(selectedPending, false)}
+                disabled={isPendingLoading}
+              >
+                Reject
+              </Button>
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => {
+                setSelectedPending(null)
+                setRejectionReason("")
+              }}>
+                Close
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
