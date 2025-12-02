@@ -16,11 +16,12 @@ const API_URL = apiConfig.baseURL;
 export const campusApi = {
   /**
    * Get all active campuses
+   * Note: Use auth headers because campus endpoints may require authentication.
    */
   getAll: async (): Promise<ApiResponse<Campus[]>> => {
     const response = await fetch(`${API_URL}/Campus`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
     });
     return response.json();
   },
