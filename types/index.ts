@@ -96,29 +96,32 @@ export type UserRole = "Student" | "Lecturer" | "Admin";
 
 export interface User {
   id: string;
-  username: string;
+  userCode: string;
+  fullName: string;
   email: string;
-  firstName: string;
-  lastName: string;
   role: UserRole;
+  campusId: string | null;
+  campusName: string | null;
   isActive: boolean;
-  lastLoginDate: string | null;
+  noShowCount: number;
+  isBlocked: boolean;
+  blockedUntil: string | null;
+  blockedReason: string | null;
+  lastLoginAt: string | null;
   createdAt: string;
-  updatedAt: string | null;
+  modifiedAt: string | null;
 }
 
 export interface CreateUserRequest {
-  username: string;
+  fullName: string;
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  campusId: string;
   role: UserRole;
 }
 
 export interface UpdateUserRequest {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   role: UserRole;
   isActive: boolean;
