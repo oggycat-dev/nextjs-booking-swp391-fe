@@ -1,106 +1,88 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { useFacilities, useFacilityMutations } from "@/hooks/use-facility"
+import { useFacilityTypes } from "@/hooks/use-facility-type"
+import { useCampuses } from "@/hooks/use-campus"
+import type { Facility, FacilityStatus } from "@/types"
 
-const MOCK_FACILITIES = [
-  {
-    id: 1,
-    code: "LAB-201",
-    name: "Computer Lab 201",
-    type: "Lab",
-    building: "B",
-    floor: 2,
-    capacity: 30,
-    status: "Active",
-    equipment: ["PCs", "Projector", "Microphone"],
-    utilization: 85,
-    lastUpdated: "2025-12-04",
-  },
-  {
-    id: 2,
-    code: "MR-301",
-    name: "Meeting Room 301",
-    type: "Meeting Room",
-    building: "A",
-    floor: 3,
-    capacity: 8,
-    status: "Active",
-    equipment: ["Projector", "Whiteboard"],
-    utilization: 72,
-    lastUpdated: "2025-12-01",
-  },
-  {
-    id: 3,
-    code: "SR-105",
-    name: "Study Room 105",
-    type: "Study Room",
-    building: "C",
-    floor: 1,
-    capacity: 6,
-    status: "Maintenance",
-    equipment: ["Whiteboard"],
-    utilization: 0,
-    lastUpdated: "2025-11-28",
-  },
-  {
-    id: 4,
-    code: "AUD-001",
-    name: "Auditorium",
-    type: "Auditorium",
-    building: "D",
-    floor: 0,
-    capacity: 200,
-    status: "Active",
-    equipment: ["Projector", "Sound System", "Microphone"],
-    utilization: 54,
-    lastUpdated: "2025-12-03",
-  },
-]
+type AdminFacility = Facility
 
-const FACILITY_TYPES = ["Lab", "Meeting Room", "Study Room", "Auditorium", "Sports"]
-const BUILDING_OPTIONS = ["A", "B", "C", "D", "E"]
+const STATUS_COLORS: Record<string, string> = {
+  Available: "bg-green-100 text-green-700",
+  UnderMaintenance: "bg-yellow-100 text-yellow-700",
+  Unavailable: "bg-red-100 text-red-700",
+}
 
 export default function AdminFacilitiesPage() {
-  const [facilities, setFacilities] = useState(MOCK_FACILITIES)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [selectedFacility, setSelectedFacility] = useState<(typeof MOCK_FACILITIES)[0] | null>(null)
+  const { toast } = useToast()
+  const { facilities, fetchFacilities, isLoading } = useFacilities()
+  const { facilityTypes } = useFacilityTypes(true)
+  const { campuses } = useCampuses()
+  const { deleteFacility, updateFacility } = useFacilityMutations()
+
+  const [showModal, setShowModal] = useState(false)
+  const [editingFacility, setEditingFacility] = useState<AdminFacility | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState<string>("")
+  const [filterTypeId, setFilterTypeId] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<string>("")
 
-  const filteredFacilities = facilities.filter((f) => {
-    const matchesSearch =
-      f.name.toLowerCase().includes(searchTerm.toLowerCase()) || f.code.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = !filterType || f.type === filterType
-    const matchesStatus = !filterStatus || f.status === filterStatus
-    return matchesSearch && matchesType && matchesStatus
-  })
+  const filteredFacilities = useMemo(() => {
+    return facilities.filter((f) => {
+      const matchesSearch =
+        f.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        f.facilityCode.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesType = !filterTypeId || f.typeId === filterTypeId
+      const matchesStatus = !filterStatus || f.status === filterStatus
+      return matchesSearch && matchesType && matchesStatus
+    })
+  }, [facilities, searchTerm, filterTypeId, filterStatus])
 
-  const handleEdit = (facility: (typeof MOCK_FACILITIES)[0]) => {
-    setSelectedFacility(facility)
-    setShowEditModal(true)
+  const handleCreate = () => {
+    setEditingFacility(null)
+    setShowModal(true)
   }
 
-  const handleStatusChange = (id: number, newStatus: string) => {
-    setFacilities(facilities.map((f) => (f.id === id ? { ...f, status: newStatus } : f)))
+  const handleEdit = (facility: AdminFacility) => {
+    setEditingFacility(facility)
+    setShowModal(true)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-700"
-      case "Maintenance":
-        return "bg-yellow-100 text-yellow-700"
-      case "Unavailable":
-        return "bg-red-100 text-red-700"
-      default:
-        return "bg-gray-100 text-gray-700"
+  const handleDelete = async (facility: AdminFacility) => {
+    const confirmed = window.confirm(`Delete facility "${facility.facilityName}"?`)
+    if (!confirmed) return
+    const ok = await deleteFacility(facility.id)
+    if (ok) {
+      toast({ title: "Facility deleted" })
+      fetchFacilities()
     }
   }
+
+  const handleStatusChange = async (facility: AdminFacility, newStatus: FacilityStatus) => {
+    const updated = await updateFacility(facility.id, {
+      facilityName: facility.facilityName,
+      typeId: facility.typeId,
+      building: facility.building ?? undefined,
+      floor: facility.floor ?? undefined,
+      roomNumber: facility.roomNumber ?? undefined,
+      capacity: facility.capacity,
+      description: facility.description ?? undefined,
+      equipment: facility.equipment ?? undefined,
+      imageUrl: facility.imageUrl ?? undefined,
+      status: newStatus,
+      isActive: facility.isActive,
+    })
+    if (updated) {
+      toast({ title: "Status updated" })
+      fetchFacilities()
+    }
+  }
+
+  const getStatusColor = (status: string) => STATUS_COLORS[status] ?? "bg-gray-100 text-gray-700"
 
   return (
     <div className="space-y-6">
@@ -109,10 +91,7 @@ export default function AdminFacilitiesPage() {
           <h1 className="text-3xl font-bold mb-2">Facility Management</h1>
           <p className="text-muted-foreground">Create, edit, and manage campus facilities</p>
         </div>
-        <Button
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleCreate}>
           Create Facility
         </Button>
       </div>
@@ -130,14 +109,14 @@ export default function AdminFacilitiesPage() {
           <div>
             <label className="block text-sm font-medium mb-2">Type</label>
             <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              value={filterTypeId}
+              onChange={(e) => setFilterTypeId(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-lg bg-background"
             >
               <option value="">All Types</option>
-              {FACILITY_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
+              {facilityTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.typeName}
                 </option>
               ))}
             </select>
@@ -150,8 +129,8 @@ export default function AdminFacilitiesPage() {
               className="w-full px-3 py-2 border border-input rounded-lg bg-background"
             >
               <option value="">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Maintenance">Maintenance</option>
+              <option value="Available">Available</option>
+              <option value="UnderMaintenance">Under maintenance</option>
               <option value="Unavailable">Unavailable</option>
             </select>
           </div>
@@ -161,7 +140,7 @@ export default function AdminFacilitiesPage() {
               className="w-full bg-transparent"
               onClick={() => {
                 setSearchTerm("")
-                setFilterType("")
+                setFilterTypeId("")
                 setFilterStatus("")
               }}
             >
@@ -172,12 +151,16 @@ export default function AdminFacilitiesPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredFacilities.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground">Loading facilities...</p>
+          </Card>
+        ) : filteredFacilities.length === 0 ? (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground mb-4">No facilities found</p>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleCreate}
             >
               Create New Facility
             </Button>
@@ -188,29 +171,29 @@ export default function AdminFacilitiesPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">{facility.name}</h3>
+                    <h3 className="text-lg font-bold">{facility.facilityName}</h3>
                     <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(facility.status)}`}>
                       {facility.status}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Code: {facility.code} • Type: {facility.type} • Building {facility.building}, Floor {facility.floor}{" "}
-                    • Capacity: {facility.capacity}
+                    Code: {facility.facilityCode} • Type: {facility.typeName} • Campus: {facility.campusName} •
+                    Building {facility.building ?? "-"}, Floor {facility.floor ?? "-"} • Capacity: {facility.capacity}
                   </p>
                   <div className="flex items-center gap-4 mb-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Equipment</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {facility.equipment.map((eq) => (
-                          <span key={eq} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                            {eq}
-                          </span>
-                        ))}
+                        {(facility.equipment ?? "")
+                          .split(",")
+                          .map((e) => e.trim())
+                          .filter(Boolean)
+                          .map((eq) => (
+                            <span key={eq} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
+                              {eq}
+                            </span>
+                          ))}
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Utilization</p>
-                      <p className="text-lg font-bold text-primary">{facility.utilization}%</p>
                     </div>
                   </div>
                 </div>
@@ -224,13 +207,21 @@ export default function AdminFacilitiesPage() {
                   </Button>
                   <select
                     value={facility.status}
-                    onChange={(e) => handleStatusChange(facility.id, e.target.value)}
+                    onChange={(e) => handleStatusChange(facility, e.target.value as FacilityStatus)}
                     className="px-2 py-1 text-xs border border-input rounded-lg bg-background"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Maintenance">Maintenance</option>
+                    <option value="Available">Available</option>
+                    <option value="UnderMaintenance">Under maintenance</option>
                     <option value="Unavailable">Unavailable</option>
                   </select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(facility)}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -238,23 +229,17 @@ export default function AdminFacilitiesPage() {
         )}
       </div>
 
-      {showCreateModal && (
+      {showModal && (
         <FacilityFormModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          title="Create New Facility"
-        />
-      )}
-
-      {showEditModal && selectedFacility && (
-        <FacilityFormModal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false)
-            setSelectedFacility(null)
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          facility={editingFacility}
+          facilityTypes={facilityTypes}
+          campuses={campuses}
+          onSaved={async () => {
+            setShowModal(false)
+            await fetchFacilities()
           }}
-          title={`Edit ${selectedFacility.name}`}
-          facility={selectedFacility}
         />
       )}
     </div>
@@ -264,94 +249,212 @@ export default function AdminFacilitiesPage() {
 interface FacilityFormModalProps {
   isOpen: boolean
   onClose: () => void
-  title: string
-  facility?: (typeof MOCK_FACILITIES)[0]
+  facility?: AdminFacility | null
+  facilityTypes: ReturnType<typeof useFacilityTypes>["facilityTypes"]
+  campuses: ReturnType<typeof useCampuses>["campuses"]
+  onSaved: () => Promise<void> | void
 }
 
-function FacilityFormModal({ isOpen, onClose, title, facility }: FacilityFormModalProps) {
+function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses, onSaved }: FacilityFormModalProps) {
+  const isEdit = !!facility
+  const { toast } = useToast()
+  const { createFacility, updateFacility, isLoading } = useFacilityMutations()
+
+  const [facilityCode, setFacilityCode] = useState(facility?.facilityCode ?? "")
+  const [facilityName, setFacilityName] = useState(facility?.facilityName ?? "")
+  const [campusId, setCampusId] = useState(facility?.campusId ?? "")
+  const [typeId, setTypeId] = useState(facility?.typeId ?? "")
+  const [building, setBuilding] = useState(facility?.building ?? "")
+  const [floor, setFloor] = useState(facility?.floor ?? "")
+  const [roomNumber, setRoomNumber] = useState(facility?.roomNumber ?? "")
+  const [capacity, setCapacity] = useState(facility?.capacity?.toString() ?? "")
+  const [description, setDescription] = useState(facility?.description ?? "")
+  const [equipment, setEquipment] = useState(facility?.equipment ?? "")
+  const [imageUrl, setImageUrl] = useState(facility?.imageUrl ?? "")
+  const [status, setStatus] = useState<FacilityStatus>((facility?.status as FacilityStatus) ?? "Available")
+  const [isActive, setIsActive] = useState(facility?.isActive ?? true)
+
   if (!isOpen) return null
 
-  const FACILITY_TYPES = ["Lab", "Meeting Room", "Study Room", "Auditorium", "Sports"]
-  const BUILDING_OPTIONS = ["A", "B", "C", "D", "E"]
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!facilityName || !facilityCode || !campusId || !typeId || !capacity) {
+      toast({ title: "Please fill in all required fields", variant: "destructive" })
+      return
+    }
+
+    if (isEdit && facility) {
+      const updated = await updateFacility(facility.id, {
+        facilityName,
+        typeId,
+        building: building || undefined,
+        floor: floor || undefined,
+        roomNumber: roomNumber || undefined,
+        capacity: Number(capacity),
+        description: description || undefined,
+        equipment: equipment || undefined,
+        imageUrl: imageUrl || undefined,
+        status,
+        isActive,
+      })
+      if (updated) {
+        toast({ title: "Facility updated" })
+        await onSaved()
+      }
+      return
+    }
+
+    const created = await createFacility({
+      facilityCode,
+      facilityName,
+      typeId,
+      campusId,
+      building: building || undefined,
+      floor: floor || undefined,
+      roomNumber: roomNumber || undefined,
+      capacity: Number(capacity),
+      description: description || undefined,
+      equipment: equipment || undefined,
+      imageUrl: imageUrl || undefined,
+    })
+    if (created) {
+      toast({ title: "Facility created" })
+      await onSaved()
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">{title}</h2>
+          <h2 className="text-2xl font-bold">{isEdit ? "Edit Facility" : "Create Facility"}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             ✕
           </button>
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Facility Code</label>
-              <Input defaultValue={facility?.code} placeholder="e.g., LAB-201" />
+              <Input
+                value={facilityCode}
+                onChange={(e) => setFacilityCode(e.target.value)}
+                placeholder="e.g., LAB-201"
+                disabled={isEdit}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Facility Name</label>
-              <Input defaultValue={facility?.name} placeholder="e.g., Computer Lab 201" />
+              <Input
+                value={facilityName}
+                onChange={(e) => setFacilityName(e.target.value)}
+                placeholder="e.g., Computer Lab 201"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
-              <select className="w-full px-3 py-2 border border-input rounded-lg bg-background" defaultValue={facility?.type}>
-                {FACILITY_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+              <label className="block text-sm font-medium mb-2">Campus</label>
+              <select
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                value={campusId}
+                onChange={(e) => setCampusId(e.target.value)}
+              >
+                <option value="">Select campus</option>
+                {campuses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.campusName}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Capacity</label>
-              <Input type="number" defaultValue={facility?.capacity} placeholder="e.g., 30" />
+              <label className="block text-sm font-medium mb-2">Type</label>
+              <select
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                value={typeId}
+                onChange={(e) => setTypeId(e.target.value)}
+              >
+                <option value="">Select type</option>
+                {facilityTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.typeName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Building</label>
-              <select className="w-full px-3 py-2 border border-input rounded-lg bg-background" defaultValue={facility?.building}>
-                {BUILDING_OPTIONS.map((building) => (
-                  <option key={building} value={building}>
-                    {building}
-                  </option>
-                ))}
-              </select>
+              <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="A" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Floor</label>
-              <Input type="number" defaultValue={facility?.floor} placeholder="0" />
+              <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Room Number</label>
+              <Input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="201" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Capacity</label>
+              <Input
+                type="number"
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="30"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select className="w-full px-3 py-2 border border-input rounded-lg bg-background" defaultValue={facility?.status}>
-                <option value="Active">Active</option>
-                <option value="Maintenance">Maintenance</option>
+              <select
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as FacilityStatus)}
+              >
+                <option value="Available">Available</option>
+                <option value="UnderMaintenance">Under maintenance</option>
                 <option value="Unavailable">Unavailable</option>
               </select>
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <input
+                id="facility-active"
+                type="checkbox"
+                className="w-4 h-4 accent-primary"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+              />
+              <label htmlFor="facility-active" className="text-sm">
+                Active
+              </label>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Equipment</label>
-            <div className="space-y-2">
-              {["Projector", "Whiteboard", "PCs", "Microphone", "Sound System", "Video Conference"].map((item) => (
-                <label key={item} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    defaultChecked={facility?.equipment.includes(item)}
-                    className="w-4 h-4 accent-primary rounded"
-                  />
-                  <span className="text-sm">{item}</span>
-                </label>
-              ))}
-            </div>
+            <label className="block text-sm font-medium mb-2">Equipment (comma separated)</label>
+            <Input
+              value={equipment}
+              onChange={(e) => setEquipment(e.target.value)}
+              placeholder="Projector, Whiteboard, PCs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Image URL</label>
+            <Input
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+            />
           </div>
 
           <div>
@@ -359,13 +462,18 @@ function FacilityFormModal({ isOpen, onClose, title, facility }: FacilityFormMod
             <textarea
               placeholder="Enter facility description..."
               className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-24"
-              defaultValue=""
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div className="flex gap-2 pt-4 border-t">
-            <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
-              {facility ? "Update Facility" : "Create Facility"}
+            <Button
+              type="submit"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={isLoading}
+            >
+              {isEdit ? "Update Facility" : "Create Facility"}
             </Button>
             <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={onClose}>
               Cancel
