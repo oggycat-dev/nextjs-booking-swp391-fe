@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
+import { SessionManager } from "@/components/auth/session-manager"
 
 export default function DashboardLayout({
   children,
@@ -194,7 +196,10 @@ export default function DashboardLayout({
         </aside>
 
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
-          {children}
+          <TokenRefreshProvider>
+            <SessionManager />
+            {children}
+          </TokenRefreshProvider>
         </main>
       </div>
     </div>
