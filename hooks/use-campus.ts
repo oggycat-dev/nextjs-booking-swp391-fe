@@ -4,6 +4,49 @@ import { useState, useCallback, useEffect } from "react";
 import { campusApi } from "@/lib/api/campus";
 import type { Campus, CreateCampusRequest, UpdateCampusRequest } from "@/types";
 
+// Helper function to ensure time format is HH:mm:ss (24-hour)
+const ensureTimeFormat = (time: string): string => {
+  if (!time) return time;
+  
+  // Remove any whitespace
+  let cleanTime = time.trim();
+  
+  // Check if it has AM/PM
+  const hasAMPM = /\s*(AM|PM|am|pm)$/i.test(cleanTime);
+  
+  if (hasAMPM) {
+    // Extract hours, minutes, and AM/PM
+    const match = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2];
+      const period = match[3].toUpperCase();
+      
+      // Convert to 24-hour format
+      if (period === "PM" && hours !== 12) {
+        hours += 12;
+      } else if (period === "AM" && hours === 12) {
+        hours = 0;
+      }
+      
+      // Format as HH:mm:ss
+      return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+    }
+  }
+  
+  // If already in HH:mm or HH:mm:ss format, just ensure :ss is present
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(cleanTime)) {
+    const parts = cleanTime.split(':');
+    const hours = parts[0].padStart(2, '0');
+    const minutes = parts[1];
+    const seconds = parts[2] || '00';
+    return `${hours}:${minutes}:${seconds}`;
+  }
+  
+  // Return as-is if format is unrecognized
+  return cleanTime;
+};
+
 export function useCampuses() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +128,14 @@ export function useCampusMutations() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await campusApi.create(request);
+      // Ensure time format is HH:mm:ss (24-hour)
+      const sanitizedRequest = {
+        ...request,
+        workingHoursStart: ensureTimeFormat(request.workingHoursStart),
+        workingHoursEnd: ensureTimeFormat(request.workingHoursEnd),
+      };
+      
+      const response = await campusApi.create(sanitizedRequest);
       if (response.success && response.data) {
         return response.data;
       } else {
@@ -105,7 +155,14 @@ export function useCampusMutations() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await campusApi.update(id, request);
+      // Ensure time format is HH:mm:ss (24-hour)
+      const sanitizedRequest = {
+        ...request,
+        workingHoursStart: ensureTimeFormat(request.workingHoursStart),
+        workingHoursEnd: ensureTimeFormat(request.workingHoursEnd),
+      };
+      
+      const response = await campusApi.update(id, sanitizedRequest);
       if (response.success && response.data) {
         return response.data;
       } else {

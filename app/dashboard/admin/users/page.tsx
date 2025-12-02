@@ -53,8 +53,7 @@ export default function AdminUsersPage() {
 
   const handleToggleActive = async (user: User) => {
     const updated = await updateUser(user.id, {
-      firstName: user.firstName,
-      lastName: user.lastName,
+      fullName: user.fullName,
       email: user.email,
       role: user.role,
       isActive: !user.isActive,
@@ -401,12 +400,12 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
                           <span className="text-lg font-bold text-primary">
-                            {user.firstName[0]}{user.lastName[0]}
+                            {user.fullName[0]}
                           </span>
                         </div>
                         <div className="flex-1">
                           <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                            {user.firstName} {user.lastName}
+                            {user.fullName}
                           </h3>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
@@ -424,7 +423,7 @@ export default function AdminUsersPage() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          {user.username}
+                          {user.userCode}
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,12 +431,12 @@ export default function AdminUsersPage() {
                           </svg>
                           {new Date(user.createdAt).toLocaleDateString()}
                         </div>
-                        {user.lastLoginDate && (
+                        {user.lastLoginAt && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            {new Date(user.lastLoginDate).toLocaleDateString()}
+                            {new Date(user.lastLoginAt).toLocaleDateString()}
                           </div>
                         )}
                       </div>
@@ -485,7 +484,7 @@ export default function AdminUsersPage() {
           <Card className="w-full max-w-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">
-                {selectedUser.firstName} {selectedUser.lastName}
+                {selectedUser.fullName}
               </h2>
               <button onClick={() => setSelectedUser(null)} className="text-muted-foreground hover:text-foreground">
                 ✕
@@ -499,8 +498,8 @@ export default function AdminUsersPage() {
                   <p className="font-bold">{selectedUser.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Username</p>
-                  <p className="font-bold">{selectedUser.username}</p>
+                  <p className="text-sm text-muted-foreground mb-1">User Code</p>
+                  <p className="font-bold">{selectedUser.userCode}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Role</p>
@@ -518,10 +517,10 @@ export default function AdminUsersPage() {
                   <p className="text-sm text-muted-foreground mb-1">Created At</p>
                   <p className="font-bold">{new Date(selectedUser.createdAt).toLocaleString()}</p>
                 </div>
-                {selectedUser.lastLoginDate && (
+                {selectedUser.lastLoginAt && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Last Login</p>
-                    <p className="font-bold">{new Date(selectedUser.lastLoginDate).toLocaleString()}</p>
+                    <p className="font-bold">{new Date(selectedUser.lastLoginAt).toLocaleString()}</p>
                   </div>
                 )}
               </div>
