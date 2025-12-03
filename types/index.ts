@@ -117,11 +117,12 @@ export interface User {
 }
 
 export interface CreateUserRequest {
-  fullName: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  role: string; // "Student" | "Lecturer" | "Admin"
   password: string;
-  campusId: string;
-  role: UserRole;
 }
 
 export interface UpdateUserRequest {

@@ -109,7 +109,7 @@ export const usersApi = {
     const response = await fetch(`${API_URL}/cms/Users/${id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ id, ...request }),
+      body: JSON.stringify({ Id: id, ...request }),
     });
     return response.json();
   },

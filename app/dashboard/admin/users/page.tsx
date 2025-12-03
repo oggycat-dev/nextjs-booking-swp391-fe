@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination } from "@/components/ui/pagination"
+import { useToast } from "@/hooks/use-toast"
 import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { usePendingRegistrations } from "@/hooks/use-auth"
 import { useCampusChangeRequests, useCampusChangeRequestMutations } from "@/hooks/use-campus-change-requests"
@@ -27,6 +28,16 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   
+  // Create user modal states
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createEmail, setCreateEmail] = useState("")
+  const [createFirstName, setCreateFirstName] = useState("")
+  const [createLastName, setCreateLastName] = useState("")
+  const [createPhoneNumber, setCreatePhoneNumber] = useState("")
+  const [createRole, setCreateRole] = useState("Student")
+  const [createPassword, setCreatePassword] = useState("")
+  const [createConfirmPassword, setCreateConfirmPassword] = useState("")
+  
   // Edit form states
   const [editFirstName, setEditFirstName] = useState("")
   const [editLastName, setEditLastName] = useState("")
@@ -35,9 +46,10 @@ export default function AdminUsersPage() {
   const [editIsActive, setEditIsActive] = useState(true)
   
   const pageSize = 10
+  const { toast } = useToast()
 
   const { users, fetchUsers, isLoading, error } = useUsers()
-  const { updateUser, deleteUser, resetPassword, isLoading: isMutating } = useUserMutations()
+  const { createUser, updateUser, deleteUser, resetPassword, isLoading: isMutating, error: updateError } = useUserMutations()
   const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
   const { requests: campusChangeRequests, fetchPending: fetchCampusChangeRequests, isLoading: isCampusChangeLoading } = useCampusChangeRequests()
   const { approveRequest: approveCampusChangeRequest, isLoading: isApprovingCampusChange } = useCampusChangeRequestMutations()
@@ -124,6 +136,10 @@ export default function AdminUsersPage() {
     })
 
     if (updated) {
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      })
       // Refresh the list
       fetchUsers({
         pageNumber,
@@ -134,6 +150,12 @@ export default function AdminUsersPage() {
       })
       setSelectedUser(updated)
       setIsEditMode(false)
+    } else {
+      toast({
+        title: "Error",
+        description: updateError || "Failed to update user",
+        variant: "destructive",
+      })
     }
   }
 
@@ -190,6 +212,52 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleCreateUser = async () => {
+    if (!createEmail || !createFirstName || !createLastName || !createPassword || !createConfirmPassword) {
+      alert("Please fill in all required fields!")
+      return
+    }
+
+    if (createPassword !== createConfirmPassword) {
+      alert("Passwords do not match!")
+      return
+    }
+
+    if (createPassword.length < 6) {
+      alert("Password must be at least 6 characters!")
+      return
+    }
+
+    const newUser = await createUser({
+      email: createEmail,
+      firstName: createFirstName,
+      lastName: createLastName,
+      phoneNumber: createPhoneNumber || undefined,
+      role: createRole,
+      password: createPassword,
+    })
+
+    if (newUser) {
+      setShowCreateModal(false)
+      setCreateEmail("")
+      setCreateFirstName("")
+      setCreateLastName("")
+      setCreatePhoneNumber("")
+      setCreateRole("Student")
+      setCreatePassword("")
+      setCreateConfirmPassword("")
+      alert("User created successfully!")
+      // Refresh user list
+      fetchUsers({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm || undefined,
+        role: filterRole || undefined,
+        isActive: filterStatus === "" ? undefined : filterStatus === true,
+      })
+    }
+  }
+
   const handleApproveRegistration = async (registration: PendingRegistration, approved: boolean) => {
     const result = await approveRegistration({
       userId: registration.id,
@@ -223,9 +291,20 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">User Management</h1>
-        <p className="text-muted-foreground">View and manage system users and permissions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">User Management</h1>
+          <p className="text-muted-foreground">View and manage system users and permissions</p>
+        </div>
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Create User
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -1093,6 +1172,147 @@ export default function AdminUsersPage() {
                 setCampusChangeComment("")
               }}>
                 Close
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card className="w-full max-w-2xl p-6 my-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Create New User</h2>
+              <button
+                onClick={() => {
+                  setShowCreateModal(false)
+                  setCreateEmail("")
+                  setCreateFirstName("")
+                  setCreateLastName("")
+                  setCreatePhoneNumber("")
+                  setCreateRole("Student")
+                  setCreatePassword("")
+                  setCreateConfirmPassword("")
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Email <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    value={createEmail}
+                    onChange={(e) => setCreateEmail(e.target.value)}
+                    placeholder="user@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number</label>
+                  <Input
+                    value={createPhoneNumber}
+                    onChange={(e) => setCreatePhoneNumber(e.target.value)}
+                    placeholder="+84 123 456 789"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    First Name <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={createFirstName}
+                    onChange={(e) => setCreateFirstName(e.target.value)}
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Last Name <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={createLastName}
+                    onChange={(e) => setCreateLastName(e.target.value)}
+                    placeholder="Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Role <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                    value={createRole}
+                    onChange={(e) => setCreateRole(e.target.value)}
+                  >
+                    <option value="Student">Student</option>
+                    <option value="Lecturer">Lecturer</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </div>
+                <div></div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Password <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="password"
+                    value={createPassword}
+                    onChange={(e) => setCreatePassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Confirm Password <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="password"
+                    value={createConfirmPassword}
+                    onChange={(e) => setCreateConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={handleCreateUser}
+                disabled={
+                  isMutating ||
+                  !createEmail ||
+                  !createFirstName ||
+                  !createLastName ||
+                  !createPassword ||
+                  !createConfirmPassword
+                }
+              >
+                {isMutating ? "Creating..." : "Create User"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 bg-transparent"
+                onClick={() => {
+                  setShowCreateModal(false)
+                  setCreateEmail("")
+                  setCreateFirstName("")
+                  setCreateLastName("")
+                  setCreatePhoneNumber("")
+                  setCreateRole("Student")
+                  setCreatePassword("")
+                  setCreateConfirmPassword("")
+                }}
+                disabled={isMutating}
+              >
+                Cancel
               </Button>
             </div>
           </Card>
