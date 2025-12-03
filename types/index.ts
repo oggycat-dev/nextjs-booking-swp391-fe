@@ -261,6 +261,53 @@ export interface UpdateFacilityTypeRequest {
 }
 
 // ============================================
+// Campus Change Request Types
+// ============================================
+
+export type CampusChangeRequestStatus = "Pending" | "Approved" | "Rejected";
+
+export interface CampusChangeRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  currentCampusId: string | null;
+  currentCampusName: string | null;
+  requestedCampusId: string;
+  requestedCampusName: string;
+  reason: string;
+  status: CampusChangeRequestStatus;
+  reviewedBy: string | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewComment: string | null;
+  createdAt: string;
+}
+
+export interface RequestCampusChangeRequest {
+  requestedCampusId: string;
+  reason: string;
+}
+
+export interface ApproveCampusChangeRequest {
+  approved: boolean;
+  comment?: string;
+}
+
+export interface MyCampusChangeRequest {
+  id: string;
+  currentCampusId: string | null;
+  currentCampusName: string | null;
+  requestedCampusId: string;
+  requestedCampusName: string;
+  reason: string;
+  status: CampusChangeRequestStatus;
+  reviewComment: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+// ============================================
 // Auth Context Types
 // ============================================
 
