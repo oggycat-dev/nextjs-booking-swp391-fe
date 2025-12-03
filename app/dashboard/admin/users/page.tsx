@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination } from "@/components/ui/pagination"
 import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { usePendingRegistrations } from "@/hooks/use-auth"
-import type { User, UserRole, PendingRegistration } from "@/types"
+import { useCampusChangeRequests, useCampusChangeRequestMutations } from "@/hooks/use-campus-change-requests"
+import type { User, UserRole, PendingRegistration, CampusChangeRequest } from "@/types"
 
 export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -16,9 +17,11 @@ export default function AdminUsersPage() {
   const [filterStatus, setFilterStatus] = useState<boolean | "">("")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
-  const [activeTab, setActiveTab] = useState<"users" | "pending">("users")
+  const [activeTab, setActiveTab] = useState<"users" | "pending" | "campus-change">("users")
   const [rejectionReason, setRejectionReason] = useState("")
   const [selectedPending, setSelectedPending] = useState<PendingRegistration | null>(null)
+  const [selectedCampusChange, setSelectedCampusChange] = useState<CampusChangeRequest | null>(null)
+  const [campusChangeComment, setCampusChangeComment] = useState("")
   const [isEditMode, setIsEditMode] = useState(false)
   
   // Edit form states
@@ -33,6 +36,8 @@ export default function AdminUsersPage() {
   const { users, fetchUsers, isLoading, error } = useUsers()
   const { updateUser, deleteUser, isLoading: isMutating } = useUserMutations()
   const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
+  const { requests: campusChangeRequests, fetchPending: fetchCampusChangeRequests, isLoading: isCampusChangeLoading } = useCampusChangeRequests()
+  const { approveRequest: approveCampusChangeRequest, isLoading: isApprovingCampusChange } = useCampusChangeRequestMutations()
 
   useEffect(() => {
     if (activeTab === "users") {
@@ -43,8 +48,10 @@ export default function AdminUsersPage() {
         role: filterRole || undefined,
         isActive: filterStatus === "" ? undefined : filterStatus === true,
       })
-    } else {
+    } else if (activeTab === "pending") {
       fetchPendingRegistrations()
+    } else if (activeTab === "campus-change") {
+      fetchCampusChangeRequests()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber, searchTerm, filterRole, filterStatus, activeTab])
@@ -174,6 +181,21 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleApproveCampusChange = async (request: CampusChangeRequest, approved: boolean) => {
+    const result = await approveCampusChangeRequest(request.id, {
+      approved,
+      comment: campusChangeComment || undefined,
+    })
+    
+    if (result) {
+      setSelectedCampusChange(null)
+      setCampusChangeComment("")
+      if (activeTab === "campus-change") {
+        await fetchCampusChangeRequests()
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -205,6 +227,21 @@ export default function AdminUsersPage() {
           {registrations.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
               {registrations.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("campus-change")}
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
+            activeTab === "campus-change"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Campus Change Requests
+          {campusChangeRequests.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs bg-orange-500 text-white rounded-full">
+              {campusChangeRequests.length}
             </span>
           )}
         </button>
@@ -436,6 +473,86 @@ export default function AdminUsersPage() {
                         variant="outline"
                         onClick={() => setSelectedPending(registration)}
                         className="text-green-600 border-green-200 hover:bg-green-50"
+                      >
+                        Review
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "campus-change" && (
+        <>
+          {isCampusChangeLoading && (
+            <Card className="p-12 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-muted-foreground">Loading campus change requests...</p>
+              </div>
+            </Card>
+          )}
+          {!isCampusChangeLoading && campusChangeRequests.length === 0 && (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">No pending campus change requests</p>
+            </Card>
+          )}
+          {!isCampusChangeLoading && campusChangeRequests.length > 0 && (
+            <div className="space-y-3">
+              {campusChangeRequests.map((request: CampusChangeRequest) => (
+                <Card
+                  key={request.id}
+                  className="p-5 hover:shadow-xl transition-all duration-300 border-2 hover:border-orange-500/50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl flex items-center justify-center">
+                          <span className="text-lg font-bold text-orange-600">
+                            {request.userName[0]}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg">{request.userName}</h3>
+                          <p className="text-sm text-muted-foreground">{request.userEmail}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                            Pending
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Current Campus</p>
+                          <p className="font-semibold">{request.currentCampusName || "N/A"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Requested Campus</p>
+                          <p className="font-semibold text-orange-600">{request.requestedCampusName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Request Date</p>
+                          <p className="font-semibold">{new Date(request.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 pl-16">
+                        <p className="text-xs text-muted-foreground mb-1">Reason</p>
+                        <p className="text-sm bg-muted p-2 rounded">{request.reason}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedCampusChange(request)}
+                        className="text-orange-600 border-orange-200 hover:bg-orange-50"
                       >
                         Review
                       </Button>
@@ -790,6 +907,94 @@ export default function AdminUsersPage() {
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => {
                 setSelectedPending(null)
                 setRejectionReason("")
+              }}>
+                Close
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Campus Change Request Modal */}
+      {selectedCampusChange && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Review Campus Change Request</h2>
+              <button onClick={() => {
+                setSelectedCampusChange(null)
+                setCampusChangeComment("")
+              }} className="text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">User Name</p>
+                  <p className="font-bold">{selectedCampusChange.userName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">User Email</p>
+                  <p className="font-bold">{selectedCampusChange.userEmail}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Current Campus</p>
+                  <p className="font-bold">{selectedCampusChange.currentCampusName || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Requested Campus</p>
+                  <p className="font-bold text-orange-600">{selectedCampusChange.requestedCampusName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Request Date</p>
+                  <p className="font-bold">{new Date(selectedCampusChange.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                    {selectedCampusChange.status}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Reason for Change</p>
+                <div className="bg-muted p-3 rounded-lg">
+                  <p className="text-sm">{selectedCampusChange.reason}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-semibold mb-2">Admin Comment (optional)</label>
+                <textarea
+                  placeholder="Enter your comment or rejection reason..."
+                  value={campusChangeComment}
+                  onChange={(e) => setCampusChangeComment(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-input rounded-lg bg-background min-h-20"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                onClick={() => handleApproveCampusChange(selectedCampusChange, true)}
+                disabled={isApprovingCampusChange}
+              >
+                {isApprovingCampusChange ? "Processing..." : "Approve"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                onClick={() => handleApproveCampusChange(selectedCampusChange, false)}
+                disabled={isApprovingCampusChange}
+              >
+                {isApprovingCampusChange ? "Processing..." : "Reject"}
+              </Button>
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => {
+                setSelectedCampusChange(null)
+                setCampusChangeComment("")
               }}>
                 Close
               </Button>
