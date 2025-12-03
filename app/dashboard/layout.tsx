@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
+import { SessionManager } from "@/components/auth/session-manager"
 
 export default function DashboardLayout({
   children,
@@ -94,8 +96,8 @@ export default function DashboardLayout({
     { href: "/dashboard/recurring-bookings", label: "Recurring Bookings", roles: ["lecturer"] },
     { href: "/dashboard/department-reports", label: "Department Reports", roles: ["lecturer"] },
     { href: "/dashboard/history", label: "Booking History", roles: ["student", "lecturer"] },
-    { href: "/dashboard/notifications", label: "Notifications", roles: ["student", "lecturer", "admin"] },
     { href: "/dashboard/profile", label: "Profile", roles: ["student", "lecturer", "admin"] },
+    { href: "/dashboard/admin/campuses", label: "Manage Campuses", roles: ["admin"] },
     { href: "/dashboard/admin/facilities", label: "Manage Facilities", roles: ["admin"] },
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
@@ -152,18 +154,7 @@ export default function DashboardLayout({
                 </>
               )}
             </div>
-            <Link href="/notifications" className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-primary-foreground border-primary-foreground/30 hover:bg-white/10 bg-white/5 backdrop-blur-sm"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                Notifications
-              </Button>
-            </Link>
+
             <Button
               variant="outline"
               size="sm"
@@ -205,7 +196,10 @@ export default function DashboardLayout({
         </aside>
 
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
-          {children}
+          <TokenRefreshProvider>
+            <SessionManager />
+            {children}
+          </TokenRefreshProvider>
         </main>
       </div>
     </div>
