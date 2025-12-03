@@ -95,10 +95,24 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Search Facilities</h1>
-        <p className="text-muted-foreground">Find and book the perfect facility for your needs</p>
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <div className="relative w-full h-[280px] rounded-2xl overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/modern-meeting-room.png')" }}
+        >
+          <div className="absolute inset-0 bg-black/30"></div>
+        </div>
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center text-white">
+          <div className="max-w-3xl mx-auto space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold">Search Facilities</h1>
+            <p className="text-lg text-white/90">
+              Find and book the perfect facility for your study sessions, meetings, and activities
+            </p>
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent"></div>
       </div>
 
       {error && (

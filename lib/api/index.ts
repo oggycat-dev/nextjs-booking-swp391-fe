@@ -7,6 +7,7 @@ export { authApi } from './auth';
 export { campusApi } from './campus';
 export { facilityApi } from './facility';
 export { facilityTypeApi } from './facility-type';
+export { profileApi } from './profile';
 export { usersApi } from './users';
 
 // Re-export API client utilities

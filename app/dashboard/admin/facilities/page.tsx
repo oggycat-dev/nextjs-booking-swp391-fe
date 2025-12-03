@@ -279,8 +279,20 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!facilityName || !facilityCode || !campusId || !typeId || !capacity) {
-      toast({ title: "Please fill in all required fields", variant: "destructive" })
+    // Validate required fields
+    const missingFields = []
+    if (!facilityCode) missingFields.push("Facility Code")
+    if (!facilityName) missingFields.push("Facility Name")
+    if (!campusId) missingFields.push("Campus")
+    if (!typeId) missingFields.push("Type")
+    if (!capacity || Number(capacity) <= 0) missingFields.push("Capacity (must be > 0)")
+
+    if (missingFields.length > 0) {
+      toast({ 
+        title: "Missing Required Fields", 
+        description: `Please fill in: ${missingFields.join(", ")}`,
+        variant: "destructive" 
+      })
       return
     }
 
@@ -337,31 +349,43 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Facility Code</label>
+              <label className="block text-sm font-medium mb-2">
+                Facility Code <span className="text-destructive">*</span>
+              </label>
               <Input
                 value={facilityCode}
-                onChange={(e) => setFacilityCode(e.target.value)}
+                onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
                 placeholder="e.g., LAB-201"
                 disabled={isEdit}
+                maxLength={20}
+                pattern="[A-Z0-9-]+"
+                title="Only uppercase letters, numbers, and hyphens allowed"
               />
+              <p className="text-xs text-muted-foreground mt-1">Only uppercase, numbers, and hyphens (max 20 chars)</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Facility Name</label>
+              <label className="block text-sm font-medium mb-2">
+                Facility Name <span className="text-destructive">*</span>
+              </label>
               <Input
                 value={facilityName}
                 onChange={(e) => setFacilityName(e.target.value)}
                 placeholder="e.g., Computer Lab 201"
+                maxLength={200}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Campus</label>
+              <label className="block text-sm font-medium mb-2">
+                Campus <span className="text-destructive">*</span>
+              </label>
               <select
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background"
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
+                disabled={isEdit}
               >
                 <option value="">Select campus</option>
                 {campuses.map((c) => (
@@ -372,7 +396,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
+              <label className="block text-sm font-medium mb-2">
+                Type <span className="text-destructive">*</span>
+              </label>
               <select
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background"
                 value={typeId}
@@ -405,13 +431,18 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Capacity</label>
+              <label className="block text-sm font-medium mb-2">
+                Capacity <span className="text-destructive">*</span>
+              </label>
               <Input
                 type="number"
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
                 placeholder="30"
+                min="1"
+                max="1000"
               />
+              <p className="text-xs text-muted-foreground mt-1">Must be between 1-1000</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
@@ -433,9 +464,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
               />
-              <label htmlFor="facility-active" className="text-sm">
-                Active
-              </label>
+              <label htmlFor="facility-active" className="text-sm">Active</label>
             </div>
           </div>
 
@@ -445,7 +474,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
               placeholder="Projector, Whiteboard, PCs"
+              maxLength={500}
             />
+            <p className="text-xs text-muted-foreground mt-1">Max 500 characters</p>
           </div>
 
           <div>
@@ -454,7 +485,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/image.jpg"
+              maxLength={500}
             />
+            <p className="text-xs text-muted-foreground mt-1">Max 500 characters</p>
           </div>
 
           <div>
@@ -464,7 +497,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-24"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={1000}
             />
+            <p className="text-xs text-muted-foreground mt-1">Max 1000 characters</p>
           </div>
 
           <div className="flex gap-2 pt-4 border-t">

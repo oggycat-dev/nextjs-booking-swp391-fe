@@ -42,7 +42,10 @@ export interface UserInfo {
   userCode: string;
   fullName: string;
   email: string;
+  phoneNumber?: string | null;
   role: UserRole;
+  department?: string | null;
+  major?: string | null;
   campusId: string | null;
   campusName: string | null;
 }
@@ -99,10 +102,14 @@ export interface User {
   userCode: string;
   fullName: string;
   email: string;
+  phoneNumber: string | null;
   role: UserRole;
+  department: string | null;
+  major: string | null;
   campusId: string | null;
   campusName: string | null;
   isActive: boolean;
+  isApproved: boolean;
   noShowCount: number;
   isBlocked: boolean;
   blockedUntil: string | null;
@@ -121,9 +128,11 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
-  fullName: string;
+  id?: string; // Optional here, will be added by API client
+  firstName: string;
+  lastName: string;
   email: string;
-  role: UserRole;
+  role: number; // 0 = Student, 1 = Lecturer, 2 = Admin
   isActive: boolean;
 }
 
@@ -133,6 +142,20 @@ export interface GetUsersQuery {
   searchTerm?: string;
   role?: UserRole;
   isActive?: boolean;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phoneNumber?: string | null;
+  department?: string | null;
+  major?: string | null;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phoneNumber?: string | null;
+  department?: string | null;
+  major?: string | null;
 }
 
 // ============================================
