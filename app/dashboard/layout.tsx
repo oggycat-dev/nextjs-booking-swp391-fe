@@ -96,13 +96,11 @@ export default function DashboardLayout({
     { href: "/dashboard/recurring-bookings", label: "Recurring Bookings", roles: ["lecturer"] },
     { href: "/dashboard/department-reports", label: "Department Reports", roles: ["lecturer"] },
     { href: "/dashboard/history", label: "Booking History", roles: ["student", "lecturer"] },
-    { href: "/dashboard/profile", label: "Profile", roles: ["student", "lecturer", "admin"] },
     { href: "/dashboard/admin/campuses", label: "Manage Campuses", roles: ["admin"] },
     { href: "/dashboard/admin/facilities", label: "Manage Facilities", roles: ["admin"] },
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
     { href: "/dashboard/admin/analytics", label: "Analytics", roles: ["admin"] },
-    { href: "/dashboard/admin/settings", label: "Settings", roles: ["admin"] },
   ]
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(userRole))
@@ -122,55 +120,57 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <nav className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-xl sticky top-0 z-50 border-b border-primary-foreground/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-              <img src="/logo.png" alt="FPT" className="w-8 h-8 object-contain" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Facility Booking System</h1>
-              <p className="text-xs text-primary-foreground/80">FPT University</p>
-            </div>
-          </div>
+          {/* Profile Container - Left Side */}
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg">
-              {userInfo?.campusName && (
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="text-sm font-medium">{userInfo.campusName}</span>
+            <Link href="/dashboard/profile">
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
+                  {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
                 </div>
-              )}
-              <span className="text-primary-foreground/60">|</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-sm font-medium capitalize">{userRole}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">{userInfo?.fullName || "User"}</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                      <span className="capitalize">{userRole}</span>
+                    </span>
+                    {userInfo?.campusName && (
+                      <>
+                        <span className="text-primary-foreground/40">•</span>
+                        <span>{userInfo.campusName}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-              {userInfo?.fullName && (
-                <>
-                  <span className="text-primary-foreground/60">|</span>
-                  <span className="text-sm">{userInfo.fullName}</span>
-                </>
-              )}
-            </div>
-
+            </Link>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="text-primary-foreground border-primary-foreground/30 hover:bg-white/10 bg-white/5 backdrop-blur-sm"
+              className="h-10 w-10 p-0 hover:bg-white/20 text-primary-foreground bg-white/10 rounded-xl"
               onClick={async () => {
                 await authLogout()
                 if (typeof window !== "undefined") {
                   window.location.href = "/"
                 }
               }}
+              title="Logout"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Logout
             </Button>
+          </div>
+
+          {/* System Title - Right Side */}
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-right">Facility Booking System</h1>
+              <p className="text-xs text-primary-foreground/80 text-right">FPT University</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
+              <img src="/logo.png" alt="FPT" className="w-8 h-8 object-contain" />
+            </div>
           </div>
         </div>
       </nav>
