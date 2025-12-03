@@ -291,20 +291,9 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">User Management</h1>
-          <p className="text-muted-foreground">View and manage system users and permissions</p>
-        </div>
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Create User
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold mb-2">User Management</h1>
+        <p className="text-muted-foreground">View and manage system users and permissions</p>
       </div>
 
       {/* Tabs */}
@@ -351,58 +340,70 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-muted-foreground">Total Users</p>
-            <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-6 bg-gradient-to-br from-rose-50 to-pink-50 border-rose-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-600">Total Users</p>
+            <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center shadow-sm">
+              <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-bold text-primary">{stats.totalUsers}</p>
+          <p className="text-4xl font-bold text-rose-600">{stats.totalUsers}</p>
         </Card>
-        <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-muted-foreground">Students</p>
-            <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-600">Students</p>
+            <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center shadow-sm">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-bold text-blue-600">{stats.students}</p>
+          <p className="text-4xl font-bold text-blue-600">{stats.students}</p>
         </Card>
-        <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-muted-foreground">Lecturers</p>
-            <div className="w-10 h-10 bg-purple-200 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Card className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-600">Lecturers</p>
+            <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center shadow-sm">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-bold text-purple-600">{stats.lecturers}</p>
+          <p className="text-4xl font-bold text-purple-600">{stats.lecturers}</p>
         </Card>
-        <Card className="p-6 bg-gradient-to-br from-red-50 to-red-100/50 border-red-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-muted-foreground">Inactive Users</p>
-            <div className="w-10 h-10 bg-red-200 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Card className="p-6 bg-gradient-to-br from-red-50 to-orange-50 border-red-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-600">Inactive Users</p>
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center shadow-sm">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
           </div>
-          <p className="text-3xl font-bold text-red-600">{stats.blocked}</p>
+          <p className="text-4xl font-bold text-red-600">{stats.blocked}</p>
         </Card>
       </div>
 
-      <Card className="p-6 space-y-4 shadow-lg border-2">
-        <h3 className="text-lg font-semibold mb-4">Filters & Search</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {activeTab === "users" && (
+        <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Filters & Search</h3>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary shadow-lg hover:shadow-xl transition-all rounded-xl font-semibold h-11"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create User
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold">Search</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Search</label>
             <Input
               placeholder="Search by name or email..."
               value={searchTerm}
@@ -412,11 +413,11 @@ export default function AdminUsersPage() {
                   handleSearch()
                 }
               }}
-              className="h-11 border-2 focus:border-primary"
+              className="h-11 border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all"
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-semibold">Role</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Role</label>
             <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : (value as UserRole))}>
               <SelectTrigger className="h-11 border-2 focus:border-primary">
                 <SelectValue placeholder="All Roles" />
@@ -430,7 +431,7 @@ export default function AdminUsersPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-semibold">Status</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Status</label>
             <Select
               value={filterStatus === "" ? "all" : filterStatus === true ? "active" : "inactive"}
               onValueChange={(value) => {
@@ -438,7 +439,7 @@ export default function AdminUsersPage() {
                 else setFilterStatus(value === "active")
               }}
             >
-              <SelectTrigger className="h-11 border-2 focus:border-primary">
+              <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -449,12 +450,15 @@ export default function AdminUsersPage() {
             </Select>
           </div>
           <div className="flex items-end gap-2">
-            <Button onClick={handleSearch} className="flex-1 h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg">
+            <Button onClick={handleSearch} className="flex-1 h-11 bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary shadow-lg hover:shadow-xl transition-all rounded-xl font-semibold">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               Search
             </Button>
             <Button
               variant="outline"
-              className="flex-1 h-11 border-2"
+              className="flex-1 h-11 border-2 border-gray-300 hover:bg-gray-100 rounded-xl font-semibold"
               onClick={() => {
                 setSearchTerm("")
                 setFilterRole("")
@@ -467,6 +471,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </Card>
+      )}
 
       {activeTab === "users" && isLoading && (
         <Card className="p-12 text-center">
