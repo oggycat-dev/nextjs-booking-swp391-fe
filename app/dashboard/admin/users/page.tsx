@@ -19,6 +19,15 @@ export default function AdminUsersPage() {
   const [activeTab, setActiveTab] = useState<"users" | "pending">("users")
   const [rejectionReason, setRejectionReason] = useState("")
   const [selectedPending, setSelectedPending] = useState<PendingRegistration | null>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  
+  // Edit form states
+  const [editFirstName, setEditFirstName] = useState("")
+  const [editLastName, setEditLastName] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editRole, setEditRole] = useState<number>(0)
+  const [editIsActive, setEditIsActive] = useState(true)
+  
   const pageSize = 10
 
   const { users, fetchUsers, isLoading, error } = useUsers()
@@ -52,10 +61,15 @@ export default function AdminUsersPage() {
   }
 
   const handleToggleActive = async (user: User) => {
+    const [firstName, ...lastNameParts] = user.fullName.split(' ')
+    const lastName = lastNameParts.join(' ') || firstName
+    const roleMap: Record<UserRole, number> = { Student: 0, Lecturer: 1, Admin: 2 }
+    
     const updated = await updateUser(user.id, {
-      fullName: user.fullName,
+      firstName: firstName,
+      lastName: lastName,
       email: user.email,
-      role: user.role,
+      role: roleMap[user.role],
       isActive: !user.isActive,
     })
 
@@ -71,6 +85,59 @@ export default function AdminUsersPage() {
       if (selectedUser?.id === user.id) {
         setSelectedUser(updated)
       }
+    }
+  }
+
+  const handleEditUser = () => {
+    if (!selectedUser) return
+    
+    // Load current data into form
+    const [firstName, ...lastNameParts] = selectedUser.fullName.split(' ')
+    setEditFirstName(firstName)
+    setEditLastName(lastNameParts.join(' ') || firstName)
+    setEditEmail(selectedUser.email)
+    const roleMap: Record<UserRole, number> = { Student: 0, Lecturer: 1, Admin: 2 }
+    setEditRole(roleMap[selectedUser.role])
+    setEditIsActive(selectedUser.isActive)
+    setIsEditMode(true)
+  }
+
+  const handleSaveUser = async () => {
+    if (!selectedUser) return
+
+    const updated = await updateUser(selectedUser.id, {
+      firstName: editFirstName,
+      lastName: editLastName,
+      email: editEmail,
+      role: editRole,
+      isActive: editIsActive,
+    })
+
+    if (updated) {
+      // Refresh the list
+      fetchUsers({
+        pageNumber,
+        pageSize,
+        searchTerm: searchTerm || undefined,
+        role: filterRole || undefined,
+        isActive: filterStatus === "" ? undefined : filterStatus === true,
+      })
+      setSelectedUser(updated)
+      setIsEditMode(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    // Reset form to current user data
+    if (selectedUser) {
+      const [firstName, ...lastNameParts] = selectedUser.fullName.split(' ')
+      setEditFirstName(firstName)
+      setEditLastName(lastNameParts.join(' ') || firstName)
+      setEditEmail(selectedUser.email)
+      const roleMap: Record<UserRole, number> = { Student: 0, Lecturer: 1, Admin: 2 }
+      setEditRole(roleMap[selectedUser.role])
+      setEditIsActive(selectedUser.isActive)
     }
   }
 
@@ -441,24 +508,6 @@ export default function AdminUsersPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleActive(user)
-                        }}
-                        disabled={isMutating}
-                        className={`border-2 ${
-                          !user.isActive
-                            ? "text-green-600 border-green-200 hover:bg-green-50"
-                            : "text-destructive border-red-200 hover:bg-red-50"
-                        }`}
-                      >
-                        {!user.isActive ? "Activate" : "Deactivate"}
-                      </Button>
-                    </div>
                   </div>
                 </Card>
               ))
@@ -480,65 +529,187 @@ export default function AdminUsersPage() {
       )}
 
       {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card className="w-full max-w-2xl p-6 my-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">
                 {selectedUser.fullName}
               </h2>
-              <button onClick={() => setSelectedUser(null)} className="text-muted-foreground hover:text-foreground">
+              <button 
+                onClick={() => {
+                  setSelectedUser(null)
+                  setIsEditMode(false)
+                }} 
+                className="text-muted-foreground hover:text-foreground"
+              >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Email</p>
-                  <p className="font-bold">{selectedUser.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">User Code</p>
-                  <p className="font-bold">{selectedUser.userCode}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Role</p>
-                  <p className="font-bold">{selectedUser.role}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedUser.isActive)}`}
-                  >
-                    {getStatusText(selectedUser.isActive)}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Created At</p>
-                  <p className="font-bold">{new Date(selectedUser.createdAt).toLocaleString()}</p>
-                </div>
-                {selectedUser.lastLoginAt && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Last Login</p>
-                    <p className="font-bold">{new Date(selectedUser.lastLoginAt).toLocaleString()}</p>
+            {!isEditMode ? (
+              // View Mode
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Email</p>
+                      <p className="font-bold">{selectedUser.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">User Code</p>
+                      <p className="font-bold">{selectedUser.userCode}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Full Name</p>
+                      <p className="font-bold">{selectedUser.fullName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
+                      <p className="font-bold">{selectedUser.phoneNumber || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Role</p>
+                      <p className="font-bold">{selectedUser.role}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Campus</p>
+                      <p className="font-bold">{selectedUser.campusName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Department</p>
+                      <p className="font-bold">{selectedUser.department || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Major</p>
+                      <p className="font-bold">{selectedUser.major || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedUser.isActive)}`}
+                      >
+                        {getStatusText(selectedUser.isActive)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Created At</p>
+                      <p className="font-bold">{new Date(selectedUser.createdAt).toLocaleString()}</p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 bg-transparent"
-                onClick={() => handleToggleActive(selectedUser)}
-                disabled={isMutating}
-              >
-                {selectedUser.isActive ? "Deactivate User" : "Activate User"}
-              </Button>
-              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedUser(null)}>
-                Close
-              </Button>
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                    onClick={handleEditUser}
+                  >
+                    Edit User
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 bg-transparent"
+                    onClick={() => handleToggleActive(selectedUser)}
+                    disabled={isMutating}
+                  >
+                    {selectedUser.isActive ? "Deactivate User" : "Activate User"}
+                  </Button>
+                  <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedUser(null)}>
+                    Close
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // Edit Mode
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">User Code (Read-only)</label>
+                      <Input value={selectedUser.userCode} disabled className="bg-muted" />
+                    </div>
+                    <div className="col-span-2"></div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        First Name <span className="text-destructive">*</span>
+                      </label>
+                      <Input 
+                        value={editFirstName} 
+                        onChange={(e) => setEditFirstName(e.target.value)}
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Last Name <span className="text-destructive">*</span>
+                      </label>
+                      <Input 
+                        value={editLastName} 
+                        onChange={(e) => setEditLastName(e.target.value)}
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Email <span className="text-destructive">*</span>
+                      </label>
+                      <Input 
+                        type="email"
+                        value={editEmail} 
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        placeholder="Enter email"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Role <span className="text-destructive">*</span>
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                        value={editRole}
+                        onChange={(e) => setEditRole(Number(e.target.value))}
+                      >
+                        <option value={0}>Student</option>
+                        <option value={1}>Lecturer</option>
+                        <option value={2}>Admin</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="edit-user-active"
+                          type="checkbox"
+                          className="w-4 h-4 accent-primary"
+                          checked={editIsActive}
+                          onChange={(e) => setEditIsActive(e.target.checked)}
+                        />
+                        <label htmlFor="edit-user-active" className="text-sm font-medium">
+                          Active
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={handleSaveUser}
+                    disabled={isMutating || !editFirstName.trim() || !editLastName.trim() || !editEmail.trim()}
+                  >
+                    {isMutating ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 bg-transparent" 
+                    onClick={handleCancelEdit}
+                    disabled={isMutating}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
           </Card>
         </div>
       )}
