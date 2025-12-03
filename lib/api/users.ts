@@ -61,21 +61,33 @@ export const usersApi = {
       if (!response.ok) {
         // Log detailed error information for debugging
         console.error("API Error - Status:", response.status);
+        console.error("API Error - Status Text:", response.statusText);
         console.error("API Error - URL:", url);
-        console.error("API Error - Response:", data);
+        console.error("API Error - Response Data:", JSON.stringify(data, null, 2));
+        console.error("API Error - Response Headers:", Object.fromEntries(response.headers.entries()));
         
         // Extract error message from response
         let errorMessage = `Server error (${response.status})`;
+        let errorDetails: string | undefined;
         
         if (data) {
+          // Try multiple ways to extract error message
           if (data.message) {
             errorMessage = data.message;
           } else if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
             errorMessage = data.errors.join(", ");
           } else if (data.title) {
             errorMessage = data.title;
+            if (data.detail) {
+              errorDetails = data.detail;
+            }
+          } else if (data.error) {
+            errorMessage = typeof data.error === 'string' ? data.error : data.error.message || JSON.stringify(data.error);
           } else if (typeof data === 'string') {
             errorMessage = data;
+          } else {
+            // If we have data but can't extract a message, log it for debugging
+            errorDetails = JSON.stringify(data);
           }
         }
         
@@ -87,10 +99,22 @@ export const usersApi = {
         } else if (response.status === 404) {
           errorMessage = "The requested resource was not found.";
         } else if (response.status === 500) {
-          errorMessage = data?.message || "An internal server error occurred. Please try again later or contact support.";
+          const serverMessage = data?.message || data?.title || data?.error;
+          errorMessage = serverMessage 
+            ? `Server error: ${serverMessage}` 
+            : "An internal server error occurred. Please check the backend logs or contact support.";
+          
+          // Log full error details for 500 errors to help with debugging
+          if (errorDetails) {
+            console.error("500 Error Details:", errorDetails);
+          }
         }
         
-        throw new Error(errorMessage);
+        const fullErrorMessage = errorDetails 
+          ? `${errorMessage}${errorDetails ? ` | Details: ${errorDetails.substring(0, 200)}` : ''}`
+          : errorMessage;
+        
+        throw new Error(fullErrorMessage);
       }
       
       console.log("Users fetched successfully:", data);

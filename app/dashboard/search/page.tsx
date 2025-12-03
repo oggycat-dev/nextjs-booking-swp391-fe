@@ -1,92 +1,70 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { FacilitySearchFilters } from "@/components/facilities/search-filters"
 import { FacilityGrid } from "@/components/facilities/facility-grid"
 import { BookingModal } from "@/components/facilities/booking-modal"
+import { useFacilities } from "@/hooks/use-facility"
+import { useFacilityTypes } from "@/hooks/use-facility-type"
+import type { Facility } from "@/types"
 
-const MOCK_FACILITIES = [
-  {
-    id: 1,
-    name: "Meeting Room 301",
-    type: "Meeting Room",
-    capacity: 8,
-    building: "A",
-    floor: 3,
-    equipment: ["Projector", "Whiteboard"],
-    image: "/modern-meeting-room.png",
-    rating: 4.5,
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Computer Lab 201",
-    type: "Lab",
-    capacity: 30,
-    building: "B",
-    floor: 2,
-    equipment: ["PCs", "Projector", "Microphone"],
-    image: "/computer-lab.png",
-    rating: 4.2,
-    available: true,
-  },
-  {
-    id: 3,
-    name: "Study Room 105",
-    type: "Study Room",
-    capacity: 6,
-    building: "C",
-    floor: 1,
-    equipment: ["Whiteboard"],
-    image: "/study-room.jpg",
-    rating: 4.8,
-    available: true,
-  },
-  {
-    id: 4,
-    name: "Auditorium",
-    type: "Auditorium",
-    capacity: 200,
-    building: "D",
-    floor: 0,
-    equipment: ["Projector", "Sound System", "Microphone"],
-    image: "/auditorium.jpg",
-    rating: 4.6,
-    available: false,
-  },
-  {
-    id: 5,
-    name: "Sports Gym",
-    type: "Sports",
-    capacity: 50,
-    building: "E",
-    floor: 1,
-    equipment: [],
-    image: "/sports-gym.jpg",
-    rating: 4.4,
-    available: true,
-  },
-  {
-    id: 6,
-    name: "Meeting Room 302",
-    type: "Meeting Room",
-    capacity: 12,
-    building: "A",
-    floor: 3,
-    equipment: ["Projector", "Whiteboard", "Video Conference"],
-    image: "/meeting-room-modern.jpg",
-    rating: 4.7,
-    available: true,
-  },
-]
+interface FilterOptions {
+  facilityTypeId?: string
+  capacity?: [number, number]
+  equipment?: string[]
+  availableOnly?: boolean
+}
 
 export default function SearchPage() {
-  const [filteredFacilities, setFilteredFacilities] = useState(MOCK_FACILITIES)
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    availableOnly: true,
+  })
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [selectedFacility, setSelectedFacility] = useState<(typeof MOCK_FACILITIES)[0] | null>(null)
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
   const [showBookingModal, setShowBookingModal] = useState(false)
+
+  // Fetch facility types for filter dropdown
+  const { facilityTypes } = useFacilityTypes(true) // Only active types
+
+  // Fetch facilities with filters
+  const query = useMemo(() => ({
+    facilityTypeId: filterOptions.facilityTypeId,
+    availableOnly: filterOptions.availableOnly,
+  }), [filterOptions.facilityTypeId, filterOptions.availableOnly])
+
+  const { facilities, fetchFacilities, isLoading, error } = useFacilities(query)
+
+  // Apply client-side filters (capacity, equipment) on fetched facilities
+  const filteredFacilities = useMemo(() => {
+    let filtered = facilities || []
+
+    // Filter by capacity
+    if (filterOptions.capacity) {
+      filtered = filtered.filter(
+        (f) => f.capacity >= filterOptions.capacity![0] && f.capacity <= filterOptions.capacity![1]
+      )
+    }
+
+    // Filter by equipment
+    if (filterOptions.equipment && filterOptions.equipment.length > 0) {
+      filtered = filtered.filter((f) => {
+        if (!f.equipment) return false
+        const facilityEquipment = f.equipment.split(",").map((e) => e.trim().toLowerCase())
+        return filterOptions.equipment!.some((eq) =>
+          facilityEquipment.some((fe) => fe.includes(eq.toLowerCase()))
+        )
+      })
+    }
+
+    // Filter by availability status
+    if (filterOptions.availableOnly) {
+      filtered = filtered.filter((f) => f.status === "Available" && f.isActive)
+    }
+
+    return filtered
+  }, [facilities, filterOptions])
 
   const handleFilter = (filters: {
     type?: string
@@ -94,28 +72,18 @@ export default function SearchPage() {
     equipment?: string[]
     availability?: boolean
   }) => {
-    let filtered = MOCK_FACILITIES
-
-    if (filters.type) {
-      filtered = filtered.filter((f) => f.type === filters.type)
-    }
-
-    if (filters.capacity) {
-      filtered = filtered.filter((f) => f.capacity >= filters.capacity[0] && f.capacity <= filters.capacity[1])
-    }
-
-    if (filters.equipment && filters.equipment.length > 0) {
-      filtered = filtered.filter((f) => filters.equipment!.every((e) => f.equipment.includes(e)))
-    }
-
-    if (filters.availability !== undefined) {
-      filtered = filtered.filter((f) => f.available === filters.availability)
-    }
-
-    setFilteredFacilities(filtered)
+    // Find facility type ID from type name
+    const facilityType = facilityTypes.find((ft) => ft.typeName === filters.type)
+    
+    setFilterOptions({
+      facilityTypeId: facilityType?.id || undefined,
+      capacity: filters.capacity,
+      equipment: filters.equipment,
+      availableOnly: filters.availability,
+    })
   }
 
-  const handleBooking = (facility: (typeof MOCK_FACILITIES)[0]) => {
+  const handleBooking = (facility: Facility) => {
     setSelectedFacility(facility)
     setShowBookingModal(true)
   }
@@ -123,6 +91,7 @@ export default function SearchPage() {
   const handleBookingSubmit = (data: any) => {
     console.log("Booking submitted:", data)
     setShowBookingModal(false)
+    // TODO: Implement actual booking API call
   }
 
   return (
@@ -132,14 +101,29 @@ export default function SearchPage() {
         <p className="text-muted-foreground">Find and book the perfect facility for your needs</p>
       </div>
 
+      {error && (
+        <Card className="p-4 bg-destructive/10 border-destructive">
+          <p className="text-destructive text-sm">{error}</p>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <FacilitySearchFilters onFilter={handleFilter} />
+          <FacilitySearchFilters 
+            onFilter={handleFilter} 
+            facilityTypes={facilityTypes}
+          />
         </div>
 
         <div className="lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">{filteredFacilities.length} facilities found</p>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading facilities...</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {filteredFacilities.length} {filteredFacilities.length === 1 ? "facility" : "facilities"} found
+              </p>
+            )}
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
@@ -158,15 +142,26 @@ export default function SearchPage() {
             </div>
           </div>
 
-          {filteredFacilities.length === 0 ? (
+          {isLoading ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">Loading facilities...</p>
+            </Card>
+          ) : filteredFacilities.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground mb-4">No facilities found matching your criteria</p>
-              <Button variant="outline" onClick={() => handleFilter({})}>
+              <Button 
+                variant="outline" 
+                onClick={() => setFilterOptions({ availableOnly: true })}
+              >
                 Clear Filters
               </Button>
             </Card>
           ) : (
-            <FacilityGrid facilities={filteredFacilities} viewMode={viewMode} onBooking={handleBooking} />
+            <FacilityGrid 
+              facilities={filteredFacilities} 
+              viewMode={viewMode} 
+              onBooking={handleBooking} 
+            />
           )}
         </div>
       </div>
@@ -182,4 +177,3 @@ export default function SearchPage() {
     </div>
   )
 }
-
