@@ -158,7 +158,7 @@ export const usersApi = {
     const response = await fetch(`${API_URL}/cms/Users/${id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ id, ...request }),
+      body: JSON.stringify({ Id: id, ...request }),
     });
     return response.json();
   },
@@ -173,5 +173,18 @@ export const usersApi = {
     });
     return response.json();
   },
+
+  /**
+   * Reset user password (Admin only)
+   */
+  resetPassword: async (id: string, newPassword: string): Promise<ApiResponse<null>> => {
+    const response = await fetch(`${API_URL}/cms/Users/${id}/reset-password`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId: id, newPassword }),
+    });
+    return response.json();
+  },
 };
+
 

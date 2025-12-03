@@ -98,6 +98,7 @@ export default function DashboardLayout({
     { href: "/dashboard/history", label: "Booking History", roles: ["student", "lecturer"] },
     { href: "/dashboard/admin/campuses", label: "Manage Campuses", roles: ["admin"] },
     { href: "/dashboard/admin/facilities", label: "Manage Facilities", roles: ["admin"] },
+    { href: "/dashboard/admin/facility-types", label: "Facility Types", roles: ["admin"] },
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
     { href: "/dashboard/admin/analytics", label: "Analytics", roles: ["admin"] },
