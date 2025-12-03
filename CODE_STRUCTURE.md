@@ -3,7 +3,7 @@
 Tài liệu này mô tả cấu trúc code và kiểm tra xem có tuân thủ chuẩn Clean Architecture không.
 
 ## 📐 Chuẩn Clean Architecture
-
+D
 ```
 ┌─────────────────────────────────────────┐
 │           UI/Pages (Presentation)       │  ← Gọi hooks, hiển thị UI

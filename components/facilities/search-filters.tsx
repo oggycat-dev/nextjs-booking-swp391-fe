@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import type { FacilityType } from "@/types"
 
-const FACILITY_TYPES = ["Meeting Room", "Lab", "Study Room", "Auditorium", "Sports"]
 const EQUIPMENT_OPTIONS = ["Projector", "Whiteboard", "PCs", "Microphone", "Sound System", "Video Conference"]
 
 interface FacilitySearchFiltersProps {
@@ -14,9 +14,10 @@ interface FacilitySearchFiltersProps {
     equipment?: string[]
     availability?: boolean
   }) => void
+  facilityTypes?: FacilityType[]
 }
 
-export function FacilitySearchFilters({ onFilter }: FacilitySearchFiltersProps) {
+export function FacilitySearchFilters({ onFilter, facilityTypes = [] }: FacilitySearchFiltersProps) {
   const [selectedType, setSelectedType] = useState<string>("")
   const [minCapacity, setMinCapacity] = useState<number>(1)
   const [maxCapacity, setMaxCapacity] = useState<number>(200)
@@ -54,19 +55,22 @@ export function FacilitySearchFilters({ onFilter }: FacilitySearchFiltersProps) 
             />
             <span className="text-sm">All Types</span>
           </label>
-          {FACILITY_TYPES.map((type) => (
-            <label key={type} className="flex items-center gap-2 cursor-pointer">
+          {facilityTypes.map((type) => (
+            <label key={type.id} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="type"
-                value={type}
-                checked={selectedType === type}
+                value={type.typeName}
+                checked={selectedType === type.typeName}
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="w-4 h-4 accent-primary"
               />
-              <span className="text-sm">{type}</span>
+              <span className="text-sm">{type.typeName}</span>
             </label>
           ))}
+          {facilityTypes.length === 0 && (
+            <p className="text-xs text-muted-foreground">Loading facility types...</p>
+          )}
         </div>
       </div>
 

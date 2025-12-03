@@ -182,13 +182,12 @@ export default function DashboardLayout({
             {filteredNavItems.map((item) => (
               <Link key={item.href} href={item.href}>
                 <button
-                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${
+                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     pathname === item.href
                       ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
                   }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>
                   {item.label}
                 </button>
               </Link>

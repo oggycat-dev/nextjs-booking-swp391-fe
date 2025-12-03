@@ -1,28 +1,152 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useProfile } from "@/hooks/use-profile"
+import { useAuth } from "@/hooks/use-auth"
+import type { UpdateProfileRequest } from "@/types"
 
 export default function ProfilePage() {
+  const { profile, updateProfile, isLoading, error: profileError } = useProfile()
+  const { changePassword, isLoading: isChangingPassword, getCurrentUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
-  const [profile, setProfile] = useState({
-    name: "Nguyen Van A",
-    email: "nguyen.van.a@student.fpt.com",
-    studentId: "SE123456",
-    phone: "+84912345678",
-    department: "Software Engineering",
-    major: "Web Development",
-    campus: "FPT HCM",
+  const [formData, setFormData] = useState<UpdateProfileRequest>({
+    fullName: "",
+    phoneNumber: "",
+    department: "",
+    major: "",
   })
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [updateSuccess, setUpdateSuccess] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
-  const [formData, setFormData] = useState(profile)
+  // Initialize form data when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        fullName: profile.fullName || "",
+        phoneNumber: profile.phoneNumber || "",
+        department: profile.department || "",
+        major: profile.major || "",
+      })
+    }
+  }, [profile])
 
-  const handleSave = () => {
-    setProfile(formData)
-    setIsEditing(false)
+  const handleSave = async () => {
+    setUpdateError(null)
+    setUpdateSuccess(false)
+    
+    if (!formData.fullName.trim()) {
+      setUpdateError("Full name is required")
+      return
+    }
+
+    const success = await updateProfile({
+      fullName: formData.fullName.trim(),
+      phoneNumber: formData.phoneNumber?.trim() || null,
+      department: formData.department?.trim() || null,
+      major: formData.major?.trim() || null,
+    })
+
+    if (success) {
+      setUpdateSuccess(true)
+      setIsEditing(false)
+      setTimeout(() => setUpdateSuccess(false), 3000)
+    }
+  }
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordError(null)
+    setPasswordSuccess(false)
+
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError("All fields are required")
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("New password and confirm password do not match")
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters")
+      return
+    }
+
+    const success = await changePassword({
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+    })
+
+    if (success) {
+      setPasswordSuccess(true)
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+      setTimeout(() => setPasswordSuccess(false), 3000)
+    } else {
+      setPasswordError("Failed to change password. Please check your current password.")
+    }
+  }
+
+  const getDisplayValue = (value: string | null | undefined): string => {
+    return value || "N/A"
+  }
+
+  // Get campus name with fallback to UserInfo from localStorage
+  const getCampusName = (): string => {
+    if (profile?.campusName) {
+      return profile.campusName
+    }
+    // Fallback to UserInfo from localStorage (set during login)
+    const userInfo = getCurrentUser()
+    if (userInfo?.campusName) {
+      return userInfo.campusName
+    }
+    return "N/A"
+  }
+
+  if (isLoading && !profile) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Profile</h1>
+          <p className="text-muted-foreground">Manage your account information</p>
+        </div>
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground">Loading profile...</p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Profile</h1>
+          <p className="text-muted-foreground">Manage your account information</p>
+        </div>
+        <Card className="p-12 text-center">
+          <p className="text-destructive">
+            {profileError || "Failed to load profile. Please try again later."}
+          </p>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -53,15 +177,29 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {updateError && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive rounded-md">
+                <p className="text-sm text-destructive">{updateError}</p>
+              </div>
+            )}
+
+            {updateSuccess && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-500 rounded-md">
+                <p className="text-sm text-green-700">Profile updated successfully!</p>
+              </div>
+            )}
+
             {!isEditing ? (
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Full Name</p>
-                  <p className="font-bold">{profile.name}</p>
+                  <p className="font-bold">{profile.fullName}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Student ID</p>
-                  <p className="font-bold">{profile.studentId}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {profile.role === "Student" ? "Student ID" : "User Code"}
+                  </p>
+                  <p className="font-bold">{profile.userCode}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Email</p>
@@ -69,63 +207,100 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                  <p className="font-bold">{profile.phone}</p>
+                  <p className="font-bold">{getDisplayValue(profile.phoneNumber)}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Department</p>
-                  <p className="font-bold">{profile.department}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Major</p>
-                  <p className="font-bold">{profile.major}</p>
-                </div>
+                {profile.department && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Department</p>
+                    <p className="font-bold">{profile.department}</p>
+                  </div>
+                )}
+                {profile.major && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Major</p>
+                    <p className="font-bold">{profile.major}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Campus</p>
-                  <p className="font-bold">{profile.campus}</p>
+                  <p className="font-bold">{getCampusName()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Role</p>
+                  <p className="font-bold">{profile.role}</p>
                 </div>
               </div>
             ) : (
               <form className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Full Name</label>
-                    <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                    <label className="block text-sm font-medium mb-2">Full Name *</label>
+                    <Input
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      placeholder="Enter full name"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Email</label>
                     <Input
                       type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={profile.email}
                       disabled
+                      className="bg-muted"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Phone</label>
+                    <label className="block text-sm font-medium mb-2">Phone Number</label>
                     <Input
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      value={formData.phoneNumber || ""}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      placeholder="Enter phone number"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Department</label>
                     <Input
-                      value={formData.department}
+                      value={formData.department || ""}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      placeholder="Enter department"
                     />
                   </div>
+                  {profile.role === "Student" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Major</label>
+                      <Input
+                        value={formData.major || ""}
+                        onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+                        placeholder="Enter major"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Save Changes
+                  <Button
+                    onClick={handleSave}
+                    disabled={isLoading}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    {isLoading ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setFormData(profile)
+                      setFormData({
+                        fullName: profile.fullName || "",
+                        phoneNumber: profile.phoneNumber || "",
+                        department: profile.department || "",
+                        major: profile.major || "",
+                      })
                       setIsEditing(false)
+                      setUpdateError(null)
                     }}
+                    disabled={isLoading}
                   >
                     Cancel
                   </Button>
@@ -138,20 +313,58 @@ export default function ProfilePage() {
         <TabsContent value="password" className="mt-6">
           <Card className="p-6">
             <h2 className="text-2xl font-bold mb-6">Change Password</h2>
-            <form className="space-y-4 max-w-md">
+            
+            {passwordError && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive rounded-md">
+                <p className="text-sm text-destructive">{passwordError}</p>
+              </div>
+            )}
+
+            {passwordSuccess && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-500 rounded-md">
+                <p className="text-sm text-green-700">Password changed successfully!</p>
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
               <div>
                 <label className="block text-sm font-medium mb-2">Current Password</label>
-                <Input type="password" placeholder="Enter current password" />
+                <Input
+                  type="password"
+                  placeholder="Enter current password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">New Password</label>
-                <Input type="password" placeholder="Enter new password" />
+                <Input
+                  type="password"
+                  placeholder="Enter new password (min 8 characters)"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  required
+                  minLength={8}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Confirm Password</label>
-                <Input type="password" placeholder="Confirm new password" />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  required
+                />
               </div>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">Update Password</Button>
+              <Button
+                type="submit"
+                disabled={isChangingPassword}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {isChangingPassword ? "Updating..." : "Update Password"}
+              </Button>
             </form>
           </Card>
         </TabsContent>
@@ -183,11 +396,12 @@ export default function ProfilePage() {
               </label>
             </div>
 
-            <Button className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">Save Preferences</Button>
+            <Button className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">
+              Save Preferences
+            </Button>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
   )
 }
-

@@ -4,19 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-
-interface Facility {
-  id: number
-  name: string
-  type: string
-  capacity: number
-  building: string
-  floor: number
-  equipment: string[]
-  image: string
-  rating: number
-  available: boolean
-}
+import type { Facility } from "@/types"
 
 interface BookingModalProps {
   facility: Facility
@@ -54,13 +42,20 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
     })
   }
 
+  const getEquipmentList = (): string[] => {
+    if (!facility.equipment) return []
+    return facility.equipment.split(",").map((e) => e.trim()).filter(Boolean)
+  }
+
+  const availableEquipment = getEquipmentList()
+
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Book {facility.name}</h2>
+          <h2 className="text-2xl font-bold">Book {facility.facilityName}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             ✕
           </button>
@@ -133,8 +128,16 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
         {step === 3 && (
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Equipment & Notes</h3>
+            {availableEquipment.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Available Equipment</label>
+                <div className="text-sm text-muted-foreground mb-3">
+                  This facility has: {availableEquipment.join(", ")}
+                </div>
+              </div>
+            )}
             <div>
-              <label className="block text-sm font-medium mb-2">Equipment Needed</label>
+              <label className="block text-sm font-medium mb-2">Additional Equipment Needed</label>
               <div className="space-y-2">
                 {["Projector", "Whiteboard", "Microphone", "Extra chairs/tables"].map((item) => (
                   <label key={item} className="flex items-center gap-2 cursor-pointer">
@@ -166,7 +169,16 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
             <h3 className="font-bold text-lg">Review Booking</h3>
             <div className="bg-muted p-4 rounded-lg space-y-3">
               <p>
-                <span className="font-medium">Facility:</span> {facility.name}
+                <span className="font-medium">Facility:</span> {facility.facilityName}
+              </p>
+              <p>
+                <span className="font-medium">Type:</span> {facility.typeName}
+              </p>
+              <p>
+                <span className="font-medium">Location:</span> {facility.campusName}
+                {facility.building && `, Building ${facility.building}`}
+                {facility.floor && `, Floor ${facility.floor}`}
+                {facility.roomNumber && `, Room ${facility.roomNumber}`}
               </p>
               <p>
                 <span className="font-medium">Date:</span> {date}
@@ -182,7 +194,12 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
               </p>
               {equipment.length > 0 && (
                 <p>
-                  <span className="font-medium">Equipment:</span> {equipment.join(", ")}
+                  <span className="font-medium">Additional Equipment:</span> {equipment.join(", ")}
+                </p>
+              )}
+              {notes && (
+                <p>
+                  <span className="font-medium">Notes:</span> {notes}
                 </p>
               )}
             </div>
