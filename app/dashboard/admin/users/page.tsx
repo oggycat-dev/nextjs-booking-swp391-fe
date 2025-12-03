@@ -23,6 +23,9 @@ export default function AdminUsersPage() {
   const [selectedCampusChange, setSelectedCampusChange] = useState<CampusChangeRequest | null>(null)
   const [campusChangeComment, setCampusChangeComment] = useState("")
   const [isEditMode, setIsEditMode] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   
   // Edit form states
   const [editFirstName, setEditFirstName] = useState("")
@@ -34,7 +37,7 @@ export default function AdminUsersPage() {
   const pageSize = 10
 
   const { users, fetchUsers, isLoading, error } = useUsers()
-  const { updateUser, deleteUser, isLoading: isMutating } = useUserMutations()
+  const { updateUser, deleteUser, resetPassword, isLoading: isMutating } = useUserMutations()
   const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
   const { requests: campusChangeRequests, fetchPending: fetchCampusChangeRequests, isLoading: isCampusChangeLoading } = useCampusChangeRequests()
   const { approveRequest: approveCampusChangeRequest, isLoading: isApprovingCampusChange } = useCampusChangeRequestMutations()
@@ -163,6 +166,28 @@ export default function AdminUsersPage() {
 
   const getStatusText = (isActive: boolean) => {
     return isActive ? "Active" : "Inactive"
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedUser || !newPassword || !confirmPassword) return
+    
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match!")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters!")
+      return
+    }
+
+    const success = await resetPassword(selectedUser.id, newPassword)
+    if (success) {
+      setShowResetPassword(false)
+      setNewPassword("")
+      setConfirmPassword("")
+      alert("Password reset successfully!")
+    }
   }
 
   const handleApproveRegistration = async (registration: PendingRegistration, approved: boolean) => {
@@ -656,6 +681,9 @@ export default function AdminUsersPage() {
                 onClick={() => {
                   setSelectedUser(null)
                   setIsEditMode(false)
+                  setShowResetPassword(false)
+                  setNewPassword("")
+                  setConfirmPassword("")
                 }} 
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -715,26 +743,94 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1 bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                    onClick={handleEditUser}
-                  >
-                    Edit User
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 bg-transparent"
-                    onClick={() => handleToggleActive(selectedUser)}
-                    disabled={isMutating}
-                  >
-                    {selectedUser.isActive ? "Deactivate User" : "Activate User"}
-                  </Button>
-                  <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedUser(null)}>
-                    Close
-                  </Button>
-                </div>
+                {!showResetPassword ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                      onClick={handleEditUser}
+                    >
+                      Edit User
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+                      onClick={() => setShowResetPassword(true)}
+                    >
+                      Reset Password
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      onClick={() => handleToggleActive(selectedUser)}
+                      disabled={isMutating}
+                    >
+                      {selectedUser.isActive ? "Deactivate User" : "Activate User"}
+                    </Button>
+                    <Button variant="outline" className="flex-1 bg-transparent" onClick={() => {
+                      setSelectedUser(null)
+                      setShowResetPassword(false)
+                      setNewPassword("")
+                      setConfirmPassword("")
+                    }}>
+                      Close
+                    </Button>
+                  </div>
+                ) : (
+                  // Reset Password Form
+                  <div className="space-y-4">
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <h3 className="font-semibold text-yellow-800 mb-3">Reset Password for {selectedUser.fullName}</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            New Password <span className="text-destructive">*</span>
+                          </label>
+                          <Input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password (min 6 characters)"
+                            className="border-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Confirm Password <span className="text-destructive">*</span>
+                          </label>
+                          <Input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm new password"
+                            className="border-2"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white"
+                        onClick={handleResetPassword}
+                        disabled={isMutating || !newPassword || !confirmPassword}
+                      >
+                        {isMutating ? "Resetting..." : "Confirm Reset"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 bg-transparent"
+                        onClick={() => {
+                          setShowResetPassword(false)
+                          setNewPassword("")
+                          setConfirmPassword("")
+                        }}
+                        disabled={isMutating}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               // Edit Mode

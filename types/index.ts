@@ -141,6 +141,11 @@ export interface GetUsersQuery {
   isActive?: boolean;
 }
 
+export interface ResetPasswordRequest {
+  userId: string;
+  newPassword: string;
+}
+
 // ============================================
 // Campus Types
 // ============================================
