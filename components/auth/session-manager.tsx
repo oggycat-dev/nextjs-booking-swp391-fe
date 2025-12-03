@@ -85,9 +85,9 @@ export function SessionManager() {
 
     window.addEventListener("storage", handleStorageChange);
 
-    // UNCOMMENT these lines if you want to auto-logout on browser close
-    // window.addEventListener("beforeunload", handleBeforeUnload);
-    // window.addEventListener("unload", handleUnload);
+    // Auto-logout on browser close enabled
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("unload", handleUnload);
 
     // Cleanup
     return () => {
@@ -96,8 +96,8 @@ export function SessionManager() {
         window.removeEventListener(event, resetIdleTimer);
       });
       window.removeEventListener("storage", handleStorageChange);
-      // window.removeEventListener("beforeunload", handleBeforeUnload);
-      // window.removeEventListener("unload", handleUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("unload", handleUnload);
     };
   }, [logout, isAuthenticated]);
 
