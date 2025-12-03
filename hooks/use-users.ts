@@ -152,10 +152,31 @@ export function useUserMutations() {
     }
   }, []);
 
+  const resetPassword = useCallback(async (id: string, newPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await usersApi.resetPassword(id, newPassword);
+      if (response.success) {
+        return true;
+      } else {
+        setError(response.message || "Failed to reset password");
+        return false;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to reset password";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     createUser,
     updateUser,
     deleteUser,
+    resetPassword,
     isLoading,
     error,
     clearError: () => setError(null),
