@@ -38,47 +38,105 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
     e.preventDefault()
     setError("")
 
-    // Validation
+    // Validation - matching backend RegisterCommandValidator
+    // Full Name validation
     if (!formData.fullName.trim()) {
       setError("Full name is required")
       return
     }
-
-    if (!formData.email.trim() || !formData.email.includes("@fpt.edu.vn")) {
-      setError("Please use your FPT email account (@fpt.edu.vn)")
+    if (formData.fullName.length > 100) {
+      setError("Full name cannot exceed 100 characters")
       return
     }
 
+    // Email validation
+    if (!formData.email.trim()) {
+      setError("Email is required")
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError("Invalid email format")
+      return
+    }
+    if (!formData.email.toLowerCase().endsWith("@fpt.edu.vn")) {
+      setError("Email must be @fpt.edu.vn domain")
+      return
+    }
+
+    // Password validation
+    if (!formData.password) {
+      setError("Password is required")
+      return
+    }
     if (formData.password.length < 8) {
       setError("Password must be at least 8 characters")
       return
     }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter")
+      return
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter")
+      return
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError("Password must contain at least one number")
+      return
+    }
+    if (!/[@$!%*?&#]/.test(formData.password)) {
+      setError("Password must contain at least one special character (@$!%*?&#)")
+      return
+    }
 
+    // Confirm Password validation
+    if (!formData.confirmPassword) {
+      setError("Confirm password is required")
+      return
+    }
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match")
       return
     }
 
+    // Phone Number validation
     if (!formData.phoneNumber.trim()) {
       setError("Phone number is required")
       return
     }
+    if (!/^[0-9]{10,11}$/.test(formData.phoneNumber)) {
+      setError("Phone number must be 10-11 digits")
+      return
+    }
 
+    // Campus validation
     if (!formData.campusId) {
-      setError("Please select a campus")
+      setError("Campus is required")
       return
     }
 
-    if (!formData.role || (formData.role !== "Student" && formData.role !== "Lecturer")) {
-      setError("Please select a valid role")
+    // Role validation
+    if (!formData.role) {
+      setError("Role is required")
+      return
+    }
+    if (formData.role !== "Student" && formData.role !== "Lecturer") {
+      setError("Role must be either Student or Lecturer")
       return
     }
 
-    // Fix cứng major và department là undefined
+    // Major validation - required for students
+    if (formData.role === "Student" && !formData.major?.trim()) {
+      setError("Major is required for students")
+      return
+    }
+
+    // Prepare registration data
     const registerData = {
       ...formData,
-      department: undefined,
-      major: undefined,
+      department: formData.role === "Lecturer" ? formData.department || undefined : undefined,
+      major: formData.role === "Student" ? formData.major || undefined : undefined,
     }
 
     const result = await register(registerData)
@@ -129,6 +187,7 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 disabled={isLoading}
                 required
+                maxLength={100}
                 className="h-11 border-2 focus:border-primary transition-colors"
               />
             </div>
@@ -152,7 +211,7 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
               <Input
                 id="password"
                 type="password"
-                placeholder="At least 8 characters"
+                placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 disabled={isLoading}
@@ -160,6 +219,9 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
                 minLength={8}
                 className="h-11 border-2 focus:border-primary transition-colors"
               />
+              <p className="text-xs text-muted-foreground">
+                Must contain: A-Z, a-z, 0-9, and special character (@$!%*?&#)
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -181,11 +243,16 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
               <Input
                 id="phoneNumber"
                 type="tel"
-                placeholder="0123456789"
+                placeholder="0123456789 (10-11 digits)"
                 value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                onChange={(e) => {
+                  // Only allow numbers
+                  const value = e.target.value.replace(/\D/g, '')
+                  setFormData({ ...formData, phoneNumber: value })
+                }}
                 disabled={isLoading}
                 required
+                maxLength={11}
                 className="h-11 border-2 focus:border-primary transition-colors"
               />
             </div>
@@ -226,6 +293,37 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
                 </SelectContent>
               </Select>
             </div>
+
+            {formData.role === "Student" && (
+              <div className="space-y-2">
+                <Label htmlFor="major" className="text-sm font-semibold">Major *</Label>
+                <Input
+                  id="major"
+                  type="text"
+                  placeholder="Software Engineering"
+                  value={formData.major || ""}
+                  onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+                  disabled={isLoading}
+                  required
+                  className="h-11 border-2 focus:border-primary transition-colors"
+                />
+              </div>
+            )}
+
+            {formData.role === "Lecturer" && (
+              <div className="space-y-2">
+                <Label htmlFor="department" className="text-sm font-semibold">Department</Label>
+                <Input
+                  id="department"
+                  type="text"
+                  placeholder="Computer Science"
+                  value={formData.department || ""}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  disabled={isLoading}
+                  className="h-11 border-2 focus:border-primary transition-colors"
+                />
+              </div>
+            )}
 
           </div>
 

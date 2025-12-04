@@ -141,7 +141,7 @@ export interface GetUsersQuery {
   pageNumber?: number;
   pageSize?: number;
   searchTerm?: string;
-  role?: UserRole;
+  role?: string; // "Student" | "Lecturer" | "Admin"
   isActive?: boolean;
 }
 
