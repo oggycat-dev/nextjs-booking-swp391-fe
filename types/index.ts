@@ -231,7 +231,7 @@ export interface CreateFacilityRequest {
   capacity: number;
   description?: string;
   equipment?: string;
-  imageUrl?: string;
+  images?: File[];  // Changed from imageUrl to images array
 }
 
 export interface UpdateFacilityRequest {
