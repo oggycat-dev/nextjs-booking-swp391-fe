@@ -185,7 +185,6 @@ export default function SearchPage() {
           facility={selectedFacility}
           isOpen={showBookingModal}
           onClose={() => setShowBookingModal(false)}
-          onSubmit={handleBookingSubmit}
         />
       )}
     </div>

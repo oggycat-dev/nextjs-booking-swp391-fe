@@ -91,8 +91,39 @@ export const facilityApi = {
 
   /**
    * Create a new facility (Admin only)
+   * Supports both JSON (for backward compatibility) and FormData (for file uploads)
    */
-  create: async (request: CreateFacilityRequest): Promise<ApiResponse<Facility>> => {
+  create: async (request: CreateFacilityRequest & { images?: File[] }): Promise<ApiResponse<Facility>> => {
+    // If images are provided, use FormData (multipart/form-data)
+    if (request.images && request.images.length > 0) {
+      const formData = new FormData();
+      
+      // Add all text fields
+      formData.append("facilityCode", request.facilityCode);
+      formData.append("facilityName", request.facilityName);
+      formData.append("typeId", request.typeId);
+      formData.append("campusId", request.campusId);
+      if (request.building) formData.append("building", request.building);
+      if (request.floor) formData.append("floor", request.floor);
+      if (request.roomNumber) formData.append("roomNumber", request.roomNumber);
+      formData.append("capacity", request.capacity.toString());
+      if (request.description) formData.append("description", request.description);
+      if (request.equipment) formData.append("equipment", request.equipment);
+      
+      // Add image files
+      request.images.forEach((image) => {
+        formData.append("images", image);
+      });
+      
+      const response = await fetch(`${API_URL}/Facility`, {
+        method: "POST",
+        headers: getAuthHeaders("multipart/form-data"),
+        body: formData,
+      });
+      return response.json();
+    }
+    
+    // Otherwise, use JSON (backward compatibility)
     const response = await fetch(`${API_URL}/Facility`, {
       method: "POST",
       headers: getAuthHeaders(),

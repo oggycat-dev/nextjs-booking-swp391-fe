@@ -22,12 +22,20 @@ export const getApiUrl = (endpoint: string): string => {
 /**
  * Get authentication headers with token
  */
-export function getAuthHeaders(): HeadersInit {
+export function getAuthHeaders(contentType: string = "application/json"): HeadersInit {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
+  const headers: HeadersInit = {};
+  
+  // Only set Content-Type if not multipart/form-data (browser will set it with boundary)
+  if (contentType !== "multipart/form-data") {
+    headers["Content-Type"] = contentType;
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  return headers;
 }
 
 /**

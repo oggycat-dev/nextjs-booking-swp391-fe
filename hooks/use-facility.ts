@@ -86,7 +86,7 @@ export function useFacilityMutations() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createFacility = useCallback(async (request: CreateFacilityRequest): Promise<Facility | null> => {
+  const createFacility = useCallback(async (request: CreateFacilityRequest & { images?: File[] }): Promise<Facility | null> => {
     setIsLoading(true);
     setError(null);
     try {

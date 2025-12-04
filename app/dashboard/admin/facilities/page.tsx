@@ -271,6 +271,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
   const [description, setDescription] = useState(facility?.description ?? "")
   const [equipment, setEquipment] = useState(facility?.equipment ?? "")
   const [imageUrl, setImageUrl] = useState(facility?.imageUrl ?? "")
+  const [images, setImages] = useState<File[]>([])
   const [status, setStatus] = useState<FacilityStatus>((facility?.status as FacilityStatus) ?? "Available")
   const [isActive, setIsActive] = useState(facility?.isActive ?? true)
 
@@ -329,6 +330,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
       description: description || undefined,
       equipment: equipment || undefined,
       imageUrl: imageUrl || undefined,
+      images: images.length > 0 ? images : undefined,
     })
     if (created) {
       toast({ title: "Facility created" })
@@ -480,14 +482,42 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Image URL</label>
+            <label className="block text-sm font-medium mb-2">Images</label>
+            <Input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                setImages(files)
+              }}
+              className="cursor-pointer"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Upload one or more images (JPG, PNG, etc.)
+            </p>
+            {images.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {images.map((image, index) => (
+                  <span key={index} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
+                    {image.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Image URL (Alternative)</label>
             <Input
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/image.jpg"
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground mt-1">Max 500 characters</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Or provide an image URL instead of uploading files
+            </p>
           </div>
 
           <div>

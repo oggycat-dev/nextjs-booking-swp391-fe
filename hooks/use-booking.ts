@@ -1,0 +1,329 @@
+/**
+ * Booking Hooks
+ * Provides hooks for booking operations
+ */
+
+import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { bookingApi } from '@/lib/api/booking';
+import type {
+  Booking,
+  CreateBookingRequest,
+  ApproveBookingRequest,
+  RejectBookingRequest,
+  GetBookingsQuery,
+} from '@/types';
+
+/**
+ * Hook to get all bookings with filters
+ */
+export function useBookings(query?: GetBookingsQuery) {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchBookings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getAll(query);
+      if (response.success && response.data) {
+        setBookings(response.data);
+      } else {
+        setError(response.message || "Failed to fetch bookings");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch bookings";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  return {
+    bookings,
+    fetchBookings,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook to get my bookings (Student/Lecturer)
+ */
+export function useMyBookings(query?: GetBookingsQuery) {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { getCurrentUser } = useAuth();
+
+  const fetchMyBookings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getMyBookings(query);
+      if (response.success && response.data) {
+        setBookings(response.data);
+      } else if (response.statusCode === 404) {
+        const user = getCurrentUser();
+        if (user?.id) {
+          const fallback = await bookingApi.getAll({ userId: user.id });
+          if (fallback.success && fallback.data) {
+            setBookings(fallback.data);
+          } else {
+            setError(fallback.message || "Failed to fetch my bookings");
+          }
+        } else {
+          setError(response.message || "Failed to fetch my bookings");
+        }
+      } else {
+        setError(response.message || "Failed to fetch my bookings");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch my bookings";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    fetchMyBookings();
+  }, [fetchMyBookings]);
+
+  return {
+    bookings,
+    fetchMyBookings,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook to get pending bookings for lecturer approval
+ */
+export function usePendingLecturerApprovals() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPendingApprovals = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getPendingLecturerApproval();
+      if (response.success && response.data) {
+        setBookings(response.data);
+      } else {
+        setError(response.message || "Failed to fetch pending approvals");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch pending approvals";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingApprovals();
+  }, [fetchPendingApprovals]);
+
+  return {
+    bookings,
+    fetchPendingApprovals,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook to get pending bookings for admin approval
+ */
+export function usePendingAdminApprovals() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPendingApprovals = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getPendingAdminApproval();
+      if (response.success && response.data) {
+        setBookings(response.data);
+      } else {
+        setError(response.message || "Failed to fetch pending approvals");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch pending approvals";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingApprovals();
+  }, [fetchPendingApprovals]);
+
+  return {
+    bookings,
+    fetchPendingApprovals,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook for booking mutations (create, approve, reject, cancel)
+ */
+export function useBookingMutations() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createBooking = useCallback(async (request: CreateBookingRequest): Promise<Booking | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.create(request);
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.message || "Failed to create booking");
+        return null;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create booking";
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const approveBooking = useCallback(async (id: string, request?: ApproveBookingRequest): Promise<Booking | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.approve(id, request);
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.message || "Failed to approve booking");
+        return null;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to approve booking";
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const rejectBooking = useCallback(async (id: string, request: RejectBookingRequest): Promise<Booking | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.reject(id, request);
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.message || "Failed to reject booking");
+        return null;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to reject booking";
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Lecturer review booking (approve or reject) using lecturer-approve endpoint
+   */
+  const approveBookingAsLecturer = useCallback(
+    async (id: string, comment?: string): Promise<Booking | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.lecturerApprove(id, { approved: true, comment });
+        if (response.success && response.data) {
+          return response.data;
+        } else {
+          setError(response.message || "Failed to approve booking");
+          return null;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to approve booking";
+        setError(message);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const rejectBookingAsLecturer = useCallback(
+    async (id: string, comment: string): Promise<Booking | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.lecturerApprove(id, { approved: false, comment });
+        if (response.success && response.data) {
+          return response.data;
+        } else {
+          setError(response.message || "Failed to reject booking");
+          return null;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to reject booking";
+        setError(message);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const cancelBooking = useCallback(async (id: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.cancel(id);
+      if (response.success) {
+        return true;
+      } else {
+        setError(response.message || "Failed to cancel booking");
+        return false;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to cancel booking";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return {
+    createBooking,
+    approveBooking,
+    rejectBooking,
+    approveBookingAsLecturer,
+    rejectBookingAsLecturer,
+    cancelBooking,
+    isLoading,
+    error,
+  };
+}
+
