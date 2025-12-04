@@ -5,48 +5,17 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const MOCK_BOOKINGS = [
-  {
-    id: "BK-20251205-001",
-    facilityName: "Meeting Room 301",
-    date: "2025-12-05",
-    time: "10:00 - 11:30",
-    purpose: "Team meeting",
-    participants: 5,
-    status: "Approved",
-    statusColor: "bg-green-100 text-green-700",
-  },
-  {
-    id: "BK-20251206-002",
-    facilityName: "Study Room 105",
-    date: "2025-12-06",
-    time: "14:00 - 16:00",
-    purpose: "Group study",
-    participants: 4,
-    status: "Pending",
-    statusColor: "bg-yellow-100 text-yellow-700",
-  },
-  {
-    id: "BK-20251201-003",
-    facilityName: "Computer Lab 201",
-    date: "2025-12-01",
-    time: "09:00 - 11:00",
-    purpose: "Project work",
-    participants: 3,
-    status: "Completed",
-    statusColor: "bg-blue-100 text-blue-700",
-  },
-]
-
 export default function BookingsPage() {
-  const [selectedBooking, setSelectedBooking] = useState<(typeof MOCK_BOOKINGS)[0] | null>(null)
+  // TODO: Integrate with real API
+  const bookings: any[] = []
+  const [selectedBooking, setSelectedBooking] = useState<any>(null)
 
   const getBookingsByStatus = (status: string) => {
-    if (status === "all") return MOCK_BOOKINGS
-    return MOCK_BOOKINGS.filter((b) => b.status.toLowerCase() === status.toLowerCase())
+    if (status === "all") return bookings
+    return bookings.filter((b) => b.status.toLowerCase() === status.toLowerCase())
   }
 
-  const renderBookingCard = (booking: (typeof MOCK_BOOKINGS)[0]) => (
+  const renderBookingCard = (booking: any) => (
     <Card key={booking.id} className="p-4 hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between">
         <div>
@@ -87,15 +56,15 @@ export default function BookingsPage() {
 
       <Tabs defaultValue="all" className="w-full">
         <TabsList>
-          <TabsTrigger value="all">All ({MOCK_BOOKINGS.length})</TabsTrigger>
+          <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
           <TabsTrigger value="pending">
-            Pending ({MOCK_BOOKINGS.filter((b) => b.status === "Pending").length})
+            Pending ({bookings.filter((b) => b.status === "Pending").length})
           </TabsTrigger>
           <TabsTrigger value="approved">
-            Approved ({MOCK_BOOKINGS.filter((b) => b.status === "Approved").length})
+            Approved ({bookings.filter((b) => b.status === "Approved").length})
           </TabsTrigger>
           <TabsTrigger value="completed">
-            Completed ({MOCK_BOOKINGS.filter((b) => b.status === "Completed").length})
+            Completed ({bookings.filter((b) => b.status === "Completed").length})
           </TabsTrigger>
         </TabsList>
 

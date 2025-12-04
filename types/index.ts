@@ -326,6 +326,29 @@ export interface MyCampusChangeRequest {
 }
 
 // ============================================
+// Booking Types
+// ============================================
+
+export interface BookingListDto {
+  id: string;
+  bookingCode: string;
+  facilityName: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  lecturerEmail?: string;
+  createdAt: string;
+}
+
+export interface ApproveBookingRequest {
+  approved: boolean;
+  comment?: string;
+}
+
+// ============================================
 // Auth Context Types
 // ============================================
 
