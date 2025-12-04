@@ -50,30 +50,33 @@ export const facilityApi = {
         throw new Error(`Expected JSON but got ${contentType || "unknown"}: ${text.substring(0, 100)}`);
       }
 
-      if (!response.ok) {
-        console.error("API Error - Status:", response.status);
-        console.error("API Error - URL:", url);
-        console.error("API Error - Response:", data);
+    console.log('Response status:', response.status);
 
-        let errorMessage = `Server error (${response.status})`;
-        if (data?.message) {
-          errorMessage = data.message;
-        } else if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-          errorMessage = data.errors.join(", ");
-        } else if (data?.title) {
-          errorMessage = data.title;
-        }
+    const text = await response.text();
+    console.log('Response text:', text);
 
-        throw new Error(errorMessage);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
       }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
 
+    if (!text || text.trim() === '') {
+      throw new Error('Empty response from server');
+    }
+
+    try {
+      const data = JSON.parse(text);
+      console.log('Parsed data:', data);
       return data;
-    } catch (error) {
-      console.error("Fetch error:", error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("An unexpected error occurred while fetching facilities");
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
   },
 
@@ -90,15 +93,59 @@ export const facilityApi = {
   },
 
   /**
-   * Create a new facility (Admin only)
+   * Create a new facility with images (Admin only)
    */
   create: async (request: CreateFacilityRequest): Promise<ApiResponse<Facility>> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    // Create FormData for multipart/form-data
+    const formData = new FormData();
+    formData.append("facilityCode", request.facilityCode);
+    formData.append("facilityName", request.facilityName);
+    formData.append("typeId", request.typeId);
+    formData.append("campusId", request.campusId);
+    formData.append("capacity", request.capacity.toString());
+    
+    // Optional fields
+    if (request.building) formData.append("building", request.building);
+    if (request.floor) formData.append("floor", request.floor);
+    if (request.roomNumber) formData.append("roomNumber", request.roomNumber);
+    if (request.description) formData.append("description", request.description);
+    if (request.equipment) formData.append("equipment", request.equipment);
+    
+    // Add images
+    if (request.images && request.images.length > 0) {
+      request.images.forEach((image) => {
+        formData.append("images", image);
+      });
+    }
+    
+    console.log('Creating facility with FormData');
+    
     const response = await fetch(`${API_URL}/Facility`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(request),
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        // Don't set Content-Type, let browser set it with boundary
+      },
+      body: formData,
     });
-    return response.json();
+    
+    const text = await response.text();
+    console.log('Response text:', text);
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
+    return JSON.parse(text);
   },
 
   /**
