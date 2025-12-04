@@ -123,15 +123,13 @@ export default function DashboardLayout({
       <nav className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-xl sticky top-0 z-50 border-b border-primary-foreground/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* System Title - Left Side */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-              <img src="/logo.png" alt="FPT" className="w-8 h-8 object-contain" />
-            </div>
+          <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity">
+            <img src="/logo.png" alt="FPT" className="w-14 h-14 object-contain" />
             <div>
               <h1 className="text-xl font-bold text-left">Facility Booking System</h1>
               <p className="text-xs text-primary-foreground/80 text-left">FPT University</p>
             </div>
-          </div>
+          </Link>
 
           {/* Profile Container - Right Side */}
           <div className="flex items-center gap-4">

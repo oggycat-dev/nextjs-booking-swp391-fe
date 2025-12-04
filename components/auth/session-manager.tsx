@@ -6,9 +6,8 @@ import { useAuth } from "@/hooks/use-auth";
 /**
  * SessionManager Component
  * Handles session management including:
- * - Auto logout on tab/window close (optional)
- * - Session timeout detection
- * - Idle timeout (optional)
+ * - Multi-tab sync (logout all tabs when logout in one tab)
+ * - Idle timeout (optional, can be disabled)
  */
 export function SessionManager() {
   const { logout, isAuthenticated } = useAuth();
@@ -18,41 +17,20 @@ export function SessionManager() {
       return;
     }
 
-    // Option 1: Clear session on browser/tab close
-    // This will logout user when they close the tab/browser
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only clear if user actually closes the browser/tab
-      // Not when just navigating within the app
-      if (performance.navigation.type === 1) {
-        // This is a page refresh, don't logout
-        return;
-      }
-      
-      // Store a flag to detect browser close
-      sessionStorage.setItem("browserClosing", "true");
-    };
-
-    const handleUnload = () => {
-      // Check if this is a browser close (not a refresh)
-      const browserClosing = sessionStorage.getItem("browserClosing");
-      
-      if (browserClosing === "true") {
-        // Clear all auth data
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("role");
-        localStorage.removeItem("user");
-        localStorage.removeItem("tokenExpiry");
+    // Detect when user opens multiple tabs - sync logout across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      // If token was removed in another tab, logout this tab too
+      if (e.key === "token" && e.newValue === null) {
+        window.location.href = "/";
       }
     };
 
-    // Option 2: Track session start time
-    const sessionStart = sessionStorage.getItem("sessionStart");
-    if (!sessionStart) {
-      sessionStorage.setItem("sessionStart", Date.now().toString());
-    }
+    window.addEventListener("storage", handleStorageChange);
 
-    // Option 3: Idle timeout - logout after X minutes of inactivity
+    // Optional: Idle timeout - logout after X minutes of inactivity
+    // Disabled by default - can be enabled if needed
+    // Uncomment below to enable idle timeout
+    /*
     let idleTimer: NodeJS.Timeout;
     const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
@@ -65,39 +43,22 @@ export function SessionManager() {
       }, IDLE_TIMEOUT);
     };
 
-    // Track user activity
     const activityEvents = ["mousedown", "keydown", "scroll", "touchstart", "click"];
-    
     activityEvents.forEach((event) => {
       window.addEventListener(event, resetIdleTimer);
     });
 
-    // Start idle timer
     resetIdleTimer();
-
-    // Detect when user opens multiple tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      // If token was removed in another tab, logout this tab too
-      if (e.key === "token" && e.newValue === null) {
-        window.location.href = "/";
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    // Auto-logout on browser close enabled
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("unload", handleUnload);
+    */
 
     // Cleanup
     return () => {
-      clearTimeout(idleTimer);
-      activityEvents.forEach((event) => {
-        window.removeEventListener(event, resetIdleTimer);
-      });
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("unload", handleUnload);
+      // Uncomment if using idle timeout
+      // clearTimeout(idleTimer);
+      // activityEvents.forEach((event) => {
+      //   window.removeEventListener(event, resetIdleTimer);
+      // });
     };
   }, [logout, isAuthenticated]);
 
