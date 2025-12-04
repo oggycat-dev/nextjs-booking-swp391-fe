@@ -102,13 +102,9 @@ export function RegisterForm({ onRegisterSuccess, onBackToLogin }: RegisterFormP
       
       <Card className="w-full max-w-2xl p-8 relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur-md max-h-[90vh] overflow-y-auto">
         <div className="text-center mb-8">
-          <div className="flex flex-col items-center justify-center gap-3 mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
-              <img src="/logo.png" alt="FPT" className="w-16 h-16 object-contain" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-muted-foreground">FPT Education</h2>
-              <h1 className="text-2xl font-bold text-foreground mt-1">FPT UNIVERSITY</h1>
+          <div className="flex flex-col items-center justify-center gap-4 mb-6">
+            <div className="w-32 h-32 rounded-2xl flex items-center justify-center">
+              <img src="/logo.png" alt="FPT" className="w-28 h-28 object-contain" />
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
