@@ -40,33 +40,33 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
               key={facility.id} 
               className="p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
             >
-              <div className="flex-1">
-                <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-4">
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
                     {facility.imageUrl ? (
-                      <img
+                  <img
                         src={facility.imageUrl}
                         alt={facility.facilityName}
-                        className="w-full h-full object-cover"
-                      />
+                    className="w-full h-full object-cover"
+                  />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                         No Image
                       </div>
                     )}
-                  </div>
-                  <div className="flex-1">
+                </div>
+                <div className="flex-1">
                     <h3 className="font-bold text-lg">{facility.facilityName}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-sm text-muted-foreground mb-2">
                       {facility.typeName} • {getLocationText(facility)}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span>Capacity: {facility.capacity} people</span>
+                  </p>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span>Capacity: {facility.capacity} people</span>
                       {available && (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                          Available
-                        </span>
-                      )}
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                        Available
+                      </span>
+                    )}
                       {!available && (
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
                           {facility.status || "Unavailable"}
@@ -90,17 +90,17 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
                         )}
                       </div>
                     )}
-                  </div>
                 </div>
               </div>
-              <Button
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => onBooking(facility)}
+            </div>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => onBooking(facility)}
                 disabled={!available}
-              >
+            >
                 {available ? "Book Now" : "Unavailable"}
-              </Button>
-            </Card>
+            </Button>
+          </Card>
           )
         })}
       </div>
@@ -118,67 +118,67 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
             key={facility.id} 
             className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
           >
-            <div className="relative w-full h-40 bg-muted overflow-hidden">
+          <div className="relative w-full h-40 bg-muted overflow-hidden">
               {facility.imageUrl ? (
-                <img
+            <img
                   src={facility.imageUrl}
                   alt={facility.facilityName}
-                  className="w-full h-full object-cover"
-                />
+              className="w-full h-full object-cover"
+            />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                   No Image Available
                 </div>
               )}
               {!available && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <span className="text-white font-bold">
                     {facility.status || "Unavailable"}
                   </span>
-                </div>
-              )}
-            </div>
-            <div className="p-4 flex-1 flex flex-col">
+              </div>
+            )}
+          </div>
+          <div className="p-4 flex-1 flex flex-col">
               <h3 className="font-bold text-lg mb-1">{facility.facilityName}</h3>
-              <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
                 {facility.typeName} • {getLocationText(facility)}
+            </p>
+            <div className="space-y-2 mb-4">
+              <p className="text-xs">
+                <span className="font-medium">Capacity:</span> {facility.capacity} people
               </p>
-              <div className="space-y-2 mb-4">
-                <p className="text-xs">
-                  <span className="font-medium">Capacity:</span> {facility.capacity} people
-                </p>
                 {facility.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">
                     {facility.description}
-                  </p>
+              </p>
                 )}
                 {equipment.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1 mt-2">
                     {equipment.slice(0, 2).map((eq) => (
                       <span 
                         key={eq} 
                         className="px-2 py-1 bg-primary/10 text-primary text-xs rounded"
                       >
-                        {eq}
-                      </span>
-                    ))}
+                      {eq}
+                    </span>
+                  ))}
                     {equipment.length > 2 && (
-                      <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded">
+                    <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded">
                         +{equipment.length - 2} more
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
-                onClick={() => onBooking(facility)}
-                disabled={!available}
-              >
-                {available ? "Book Now" : "Unavailable"}
-              </Button>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-          </Card>
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
+              onClick={() => onBooking(facility)}
+                disabled={!available}
+            >
+                {available ? "Book Now" : "Unavailable"}
+            </Button>
+          </div>
+        </Card>
         )
       })}
     </div>

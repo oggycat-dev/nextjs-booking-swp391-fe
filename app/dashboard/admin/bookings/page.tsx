@@ -1,23 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { usePendingAdminApprovals, useBookingMutations } from "@/hooks/use-booking"
+import { useFacility } from "@/hooks/use-facility"
 import type { Booking, BookingStatus } from "@/types"
 
 export default function AdminBookingsPage() {
   const { toast } = useToast()
   const { bookings: pendingBookings, fetchPendingApprovals, isLoading: isLoadingPending } = usePendingAdminApprovals()
-  const { approveBooking, rejectBooking, isLoading: isMutating } = useBookingMutations()
+  const { approveBookingAsAdmin, rejectBookingAsAdmin, isLoading: isMutating, error: mutationError } = useBookingMutations()
   
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
-  const [rejectReason, setRejectReason] = useState("")
+  const [comment, setComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
+  
+  // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
+  const { facility, isLoading: isLoadingFacility } = useFacility(
+    selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
+  )
+
+  useEffect(() => {
+    fetchPendingApprovals()
+  }, [fetchPendingApprovals])
 
   const filteredBookings = pendingBookings.filter(
     (b) =>
@@ -50,7 +61,7 @@ export default function AdminBookingsPage() {
   }
 
   const handleApprove = async (booking: Booking) => {
-    const result = await approveBooking(booking.id)
+    const result = await approveBookingAsAdmin(booking.id, comment || undefined)
     if (result) {
       toast({
         title: "Booking Approved",
@@ -58,7 +69,14 @@ export default function AdminBookingsPage() {
       })
       setSelectedBooking(null)
       setActionType(null)
+      setComment("")
       fetchPendingApprovals()
+    } else {
+      toast({
+        title: "Failed to Approve",
+        description: mutationError || "The booking could not be approved. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -72,7 +90,7 @@ export default function AdminBookingsPage() {
       return
     }
     
-    const result = await rejectBooking(booking.id, { reason: rejectReason })
+    const result = await rejectBookingAsAdmin(booking.id, rejectReason)
     if (result) {
       toast({
         title: "Booking Rejected",
@@ -82,17 +100,23 @@ export default function AdminBookingsPage() {
       setActionType(null)
       setRejectReason("")
       fetchPendingApprovals()
+    } else {
+      toast({
+        title: "Failed to Reject",
+        description: mutationError || "The booking could not be rejected. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Booking Management</h1>
-        <p className="text-muted-foreground">Review and approve facility booking requests</p>
-      </div>
+      <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({pendingBookings.length})</h3>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
           <p className="text-3xl font-bold text-primary">{pendingBookings.length}</p>
@@ -162,12 +186,12 @@ export default function AdminBookingsPage() {
                     <p className="text-xs">{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Purpose</p>
-                    <p className="font-medium">{booking.purpose}</p>
+                    <p className="text-muted-foreground text-xs">Lecturer Email</p>
+                    <p className="font-medium">{booking.lecturerEmail || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Participants</p>
-                    <p className="font-medium">{booking.participants}</p>
+                    <p className="text-muted-foreground text-xs">Created At</p>
+                    <p className="font-medium">{formatDate(booking.createdAt)}</p>
                   </div>
                 </div>
 
@@ -220,6 +244,7 @@ export default function AdminBookingsPage() {
           )}
         </TabsContent>
       </Tabs>
+      </Card>
 
       {/* Booking Details Modal */}
       {selectedBooking && !actionType && (
@@ -257,10 +282,57 @@ export default function AdminBookingsPage() {
                   <p className="font-bold">{formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground mb-1">Created At</p>
+                  <p className="font-bold">{formatDate(selectedBooking.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Participants</p>
+                  <p className="font-bold">{selectedBooking.participants}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground mb-1">Purpose</p>
                   <p className="font-bold">{selectedBooking.purpose}</p>
                 </div>
+                {isLoadingFacility ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Loading facility details...</p>
+                  </div>
+                ) : facility ? (
+                  <>
+                    {facility.building && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Tòa nhà (Building)</p>
+                        <p className="font-bold">{facility.building}</p>
+                      </div>
+                    )}
+                    {facility.floor && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Tầng (Floor)</p>
+                        <p className="font-bold">{facility.floor}</p>
+                      </div>
+                    )}
+                    {facility.roomNumber && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Phòng (Room)</p>
+                        <p className="font-bold">{facility.roomNumber}</p>
+                      </div>
+                    )}
+                    {facility.campusName && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Campus</p>
+                        <p className="font-bold">{facility.campusName}</p>
+                      </div>
+                    )}
+                  </>
+                ) : null}
               </div>
+              
+              {selectedBooking.notes && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="font-medium">{selectedBooking.notes}</p>
+                </div>
+              )}
 
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground mb-2">Requester Information</p>
@@ -273,6 +345,12 @@ export default function AdminBookingsPage() {
                     <p className="text-xs text-muted-foreground">Role</p>
                     <p className="font-medium">{selectedBooking.userRole}</p>
                   </div>
+                  {selectedBooking.lecturerEmail && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Lecturer Email</p>
+                      <p className="font-medium">{selectedBooking.lecturerEmail}</p>
+                    </div>
+                  )}
                   {selectedBooking.lecturerName && (
                     <div>
                       <p className="text-xs text-muted-foreground">Approved by Lecturer</p>
@@ -317,6 +395,16 @@ export default function AdminBookingsPage() {
               <p><span className="font-medium">Requester:</span> {selectedBooking.userName}</p>
             </div>
 
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Comment (Optional)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add any comments..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20"
+              />
+            </div>
+
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -330,6 +418,7 @@ export default function AdminBookingsPage() {
                 className="flex-1 bg-transparent"
                 onClick={() => {
                   setActionType(null)
+                  setComment("")
                 }}
                 disabled={isMutating}
               >

@@ -7,6 +7,8 @@ import type {
   LoginResponse,
   RegisterRequest,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   PendingRegistration,
   ApproveRegistrationRequest,
   UserInfo,
@@ -95,6 +97,46 @@ export function useAuth() {
     }
   }, []);
 
+  const forgotPassword = useCallback(async (request: ForgotPasswordRequest): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.forgotPassword(request);
+      if (response.success) {
+        return true;
+      } else {
+        setError(response.message || "Failed to send verification code");
+        return false;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send verification code";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (request: ResetPasswordRequest): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.resetPassword(request);
+      if (response.success) {
+        return true;
+      } else {
+        setError(response.message || "Failed to reset password");
+        return false;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to reset password";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const getCurrentUser = useCallback((): UserInfo | null => {
     if (typeof window === "undefined") return null;
     const userStr = localStorage.getItem("user");
@@ -120,6 +162,8 @@ export function useAuth() {
     register,
     logout,
     changePassword,
+    forgotPassword,
+    resetPassword,
     getCurrentUser,
     getToken,
     isAuthenticated,

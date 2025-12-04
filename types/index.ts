@@ -91,6 +91,16 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  verificationCode: string;
+  newPassword: string;
+}
+
 // ============================================
 // User Types
 // ============================================
@@ -141,15 +151,8 @@ export interface GetUsersQuery {
   pageNumber?: number;
   pageSize?: number;
   searchTerm?: string;
-  role?: UserRole;
+  role?: string; // "Student" | "Lecturer" | "Admin"
   isActive?: boolean;
-}
-
-export interface UpdateProfileRequest {
-  fullName: string;
-  phoneNumber?: string | null;
-  department?: string | null;
-  major?: string | null;
 }
 
 export interface UpdateProfileRequest {
@@ -231,7 +234,7 @@ export interface CreateFacilityRequest {
   capacity: number;
   description?: string;
   equipment?: string;
-  imageUrl?: string;
+  images?: File[];  // Changed from imageUrl to images array
 }
 
 export interface UpdateFacilityRequest {
@@ -364,6 +367,20 @@ export interface Booking {
   modifiedAt?: string | null;
 }
 
+export interface BookingListDto {
+  id: string;
+  bookingCode: string;
+  facilityName: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  lecturerEmail?: string;
+  createdAt: string;
+}
+
 export interface CreateBookingRequest {
   facilityId: string;
   bookingDate: string; // ISO date "YYYY-MM-DD" (date only; time handled by startTime/endTime)
@@ -376,6 +393,11 @@ export interface CreateBookingRequest {
 }
 
 export interface ApproveBookingRequest {
+  comment?: string;
+}
+
+export interface LecturerApproveBookingRequest {
+  approved: boolean;
   comment?: string;
 }
 
@@ -392,7 +414,6 @@ export interface GetBookingsQuery {
   pageNumber?: number;
   pageSize?: number;
 }
-
 // ============================================
 // Auth Context Types
 // ============================================

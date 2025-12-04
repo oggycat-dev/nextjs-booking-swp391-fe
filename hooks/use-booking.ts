@@ -315,12 +315,66 @@ export function useBookingMutations() {
     }
   }, []);
 
+  /**
+   * Admin approve booking (Admin only) - uses admin-approve endpoint
+   */
+  const approveBookingAsAdmin = useCallback(
+    async (id: string, comment?: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.adminApproveBooking(id, { approved: true, comment });
+        if (response.success) {
+          return true;
+        } else {
+          setError(response.message || "Failed to approve booking");
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to approve booking";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * Admin reject booking (Admin only) - uses admin-approve endpoint with approved: false
+   */
+  const rejectBookingAsAdmin = useCallback(
+    async (id: string, reason: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.adminApproveBooking(id, { approved: false, comment: reason });
+        if (response.success) {
+          return true;
+        } else {
+          setError(response.message || "Failed to reject booking");
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to reject booking";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     createBooking,
     approveBooking,
     rejectBooking,
     approveBookingAsLecturer,
     rejectBookingAsLecturer,
+    approveBookingAsAdmin,
+    rejectBookingAsAdmin,
     cancelBooking,
     isLoading,
     error,

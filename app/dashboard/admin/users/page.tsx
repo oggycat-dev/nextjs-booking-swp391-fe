@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Pagination } from "@/components/ui/pagination"
 import { useToast } from "@/hooks/use-toast"
 import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { usePendingRegistrations } from "@/hooks/use-auth"
@@ -14,7 +13,7 @@ import type { User, UserRole, PendingRegistration, CampusChangeRequest } from "@
 
 export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterRole, setFilterRole] = useState<UserRole | "">("")
+  const [filterRole, setFilterRole] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<boolean | "">("")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
@@ -173,13 +172,13 @@ export default function AdminUsersPage() {
     }
   }
 
-  const filteredUsers = users?.items || []
+  const displayUsers = users?.items || []
 
   const stats = {
     totalUsers: users?.totalCount || 0,
-    students: filteredUsers.filter((u) => u.role === "Student").length,
-    lecturers: filteredUsers.filter((u) => u.role === "Lecturer").length,
-    blocked: filteredUsers.filter((u) => !u.isActive).length,
+    students: displayUsers.filter((u) => u.role === "Student").length,
+    lecturers: displayUsers.filter((u) => u.role === "Lecturer").length,
+    blocked: displayUsers.filter((u) => !u.isActive).length,
   }
 
   const getStatusColor = (isActive: boolean) => {
@@ -418,8 +417,8 @@ export default function AdminUsersPage() {
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Role</label>
-            <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : (value as UserRole))}>
-              <SelectTrigger className="h-11 border-2 focus:border-primary">
+            <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : value)}>
+              <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
                 <SelectValue placeholder="All Roles" />
               </SelectTrigger>
               <SelectContent>
@@ -676,13 +675,29 @@ export default function AdminUsersPage() {
 
       {activeTab === "users" && !isLoading && !error && (
         <>
+          {/* Results Summary */}
+          <div className="flex items-center justify-between px-2">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{displayUsers.length}</span> of{" "}
+              <span className="font-semibold text-foreground">{users?.totalCount || 0}</span> users
+              {users && users.totalPages > 1 && (
+                <span> (Page {users.pageNumber} of {users.totalPages})</span>
+              )}
+            </p>
+            {users && users.totalPages > 1 && (
+              <p className="text-xs text-muted-foreground">
+                {users.hasPreviousPage && "← Previous"} {users.hasPreviousPage && users.hasNextPage && "•"} {users.hasNextPage && "Next →"}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3">
-            {filteredUsers.length === 0 ? (
+            {displayUsers.length === 0 ? (
               <Card className="p-12 text-center">
                 <p className="text-muted-foreground">No users found</p>
               </Card>
             ) : (
-              filteredUsers.map((user) => (
+              displayUsers.map((user) => (
                 <Card
                   key={user.id}
                   className="p-5 hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 group"
@@ -740,15 +755,91 @@ export default function AdminUsersPage() {
             )}
           </div>
 
+          {/* Pagination */}
           {users && users.totalPages > 1 && (
-            <Card className="p-4">
-              <Pagination
-                currentPage={users.pageNumber}
-                totalPages={users.totalPages}
-                onPageChange={setPageNumber}
-                hasPreviousPage={users.hasPreviousPage}
-                hasNextPage={users.hasNextPage}
-              />
+            <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPageNumber(1)}
+                    disabled={!users.hasPreviousPage}
+                    className="h-10"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPageNumber(pageNumber - 1)}
+                    disabled={!users.hasPreviousPage}
+                    className="h-10"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Page</span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, users.totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (users.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (users.pageNumber <= 3) {
+                        pageNum = i + 1;
+                      } else if (users.pageNumber >= users.totalPages - 2) {
+                        pageNum = users.totalPages - 4 + i;
+                      } else {
+                        pageNum = users.pageNumber - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === users.pageNumber ? "default" : "outline"}
+                          onClick={() => setPageNumber(pageNum)}
+                          className={`h-10 w-10 p-0 ${
+                            pageNum === users.pageNumber
+                              ? "bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary"
+                              : ""
+                          }`}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm text-muted-foreground">of {users.totalPages}</span>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPageNumber(pageNumber + 1)}
+                    disabled={!users.hasNextPage}
+                    className="h-10"
+                  >
+                    Next
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPageNumber(users.totalPages)}
+                    disabled={!users.hasNextPage}
+                    className="h-10"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
             </Card>
           )}
         </>

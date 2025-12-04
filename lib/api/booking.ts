@@ -7,8 +7,10 @@ import { getAuthHeaders, apiConfig } from '../api-client';
 import type {
   ApiResponse,
   Booking,
+  BookingListDto,
   CreateBookingRequest,
   ApproveBookingRequest,
+  LecturerApproveBookingRequest,
   RejectBookingRequest,
   GetBookingsQuery,
 } from '@/types';
@@ -116,6 +118,13 @@ export const bookingApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(request),
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
     return response.json();
   },
 
@@ -158,5 +167,50 @@ export const bookingApi = {
     });
     return response.json();
   },
-};
 
+  /**
+   * Get bookings waiting for admin approval (Admin only) - Alternative method
+   */
+  getPendingAdminApprovals: async (): Promise<ApiResponse<BookingListDto[]>> => {
+    const headers = getAuthHeaders();
+    const url = `${API_URL}/bookings/pending-admin-approval`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Admin approve or reject booking (Admin only)
+   */
+  adminApproveBooking: async (
+    bookingId: string,
+    request: LecturerApproveBookingRequest
+  ): Promise<ApiResponse<null>> => {
+    const headers = getAuthHeaders();
+    const url = `${API_URL}/bookings/${bookingId}/admin-approve`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+};

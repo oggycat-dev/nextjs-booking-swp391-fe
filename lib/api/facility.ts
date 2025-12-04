@@ -33,43 +33,44 @@ export const facilityApi = {
         headers: getAuthHeaders(),
       });
 
-      const contentType = response.headers.get("content-type");
-      let data: any;
-
-      if (contentType && contentType.includes("application/json")) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          const text = await response.text();
-          console.error("Failed to parse JSON response:", text);
-          throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
-        }
-      } else {
-        const text = await response.text();
-        console.error("Non-JSON response:", text);
-        throw new Error(`Expected JSON but got ${contentType || "unknown"}: ${text.substring(0, 100)}`);
-      }
-
       if (!response.ok) {
-        console.error("API Error - Status:", response.status);
-        console.error("API Error - URL:", url);
-        console.error("API Error - Response:", data);
-
-        let errorMessage = `Server error (${response.status})`;
-        if (data?.message) {
-          errorMessage = data.message;
-        } else if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-          errorMessage = data.errors.join(", ");
-        } else if (data?.title) {
-          errorMessage = data.title;
+        const contentType = response.headers.get("content-type");
+        let errorData: any;
+        
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            errorData = await response.json();
+          } catch {
+            errorData = null;
+          }
+        } else {
+          const text = await response.text();
+          try {
+            errorData = text ? JSON.parse(text) : null;
+          } catch {
+            errorData = null;
+          }
         }
-
+        
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
 
-      return data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return await response.json();
+      } else {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from server');
+        }
+        try {
+          return JSON.parse(text);
+        } catch (parseError) {
+          throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+        }
+      }
     } catch (error) {
-      console.error("Fetch error:", error);
       if (error instanceof Error) {
         throw error;
       }
@@ -90,45 +91,50 @@ export const facilityApi = {
   },
 
   /**
-   * Create a new facility (Admin only)
-   * Supports both JSON (for backward compatibility) and FormData (for file uploads)
+   * Create a new facility with images (Admin only)
+   * Supports FormData for file uploads
    */
-  create: async (request: CreateFacilityRequest & { images?: File[] }): Promise<ApiResponse<Facility>> => {
-    // If images are provided, use FormData (multipart/form-data)
+  create: async (request: CreateFacilityRequest): Promise<ApiResponse<Facility>> => {
+    // Create FormData for multipart/form-data
+    const formData = new FormData();
+    formData.append("facilityCode", request.facilityCode);
+    formData.append("facilityName", request.facilityName);
+    formData.append("typeId", request.typeId);
+    formData.append("campusId", request.campusId);
+    formData.append("capacity", request.capacity.toString());
+    
+    // Optional fields
+    if (request.building) formData.append("building", request.building);
+    if (request.floor) formData.append("floor", request.floor);
+    if (request.roomNumber) formData.append("roomNumber", request.roomNumber);
+    if (request.description) formData.append("description", request.description);
+    if (request.equipment) formData.append("equipment", request.equipment);
+    
+    // Add images
     if (request.images && request.images.length > 0) {
-      const formData = new FormData();
-      
-      // Add all text fields
-      formData.append("facilityCode", request.facilityCode);
-      formData.append("facilityName", request.facilityName);
-      formData.append("typeId", request.typeId);
-      formData.append("campusId", request.campusId);
-      if (request.building) formData.append("building", request.building);
-      if (request.floor) formData.append("floor", request.floor);
-      if (request.roomNumber) formData.append("roomNumber", request.roomNumber);
-      formData.append("capacity", request.capacity.toString());
-      if (request.description) formData.append("description", request.description);
-      if (request.equipment) formData.append("equipment", request.equipment);
-      
-      // Add image files
       request.images.forEach((image) => {
         formData.append("images", image);
       });
-      
-      const response = await fetch(`${API_URL}/Facility`, {
-        method: "POST",
-        headers: getAuthHeaders("multipart/form-data"),
-        body: formData,
-      });
-      return response.json();
     }
     
-    // Otherwise, use JSON (backward compatibility)
     const response = await fetch(`${API_URL}/Facility`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(request),
+      headers: getAuthHeaders("multipart/form-data"),
+      body: formData,
     });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
     return response.json();
   },
 

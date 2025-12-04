@@ -6,55 +6,11 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const MOCK_RECURRING_BOOKINGS = [
-  {
-    id: "RB-001",
-    facilityName: "Computer Lab 201",
-    type: "Lab",
-    courseCode: "SE101",
-    courseName: "Web Development Basics",
-    startDate: "2025-12-01",
-    endDate: "2026-02-28",
-    recurrence: "Weekly (Mon, Wed, Fri)",
-    time: "09:00 - 11:00",
-    capacity: 30,
-    status: "Active",
-    instances: 24,
-  },
-  {
-    id: "RB-002",
-    facilityName: "Meeting Room 301",
-    type: "Meeting Room",
-    courseCode: "SE102",
-    courseName: "Software Design Patterns",
-    startDate: "2025-12-02",
-    endDate: "2026-02-28",
-    recurrence: "Weekly (Tuesday, Thursday)",
-    time: "14:00 - 15:30",
-    capacity: 15,
-    status: "Active",
-    instances: 16,
-  },
-  {
-    id: "RB-003",
-    facilityName: "Auditorium",
-    type: "Auditorium",
-    courseCode: "SE103",
-    courseName: "Software Project Management",
-    startDate: "2025-11-20",
-    endDate: "2025-12-31",
-    recurrence: "Weekly (Monday)",
-    time: "10:00 - 12:00",
-    capacity: 100,
-    status: "Ended",
-    instances: 6,
-  },
-]
-
 export default function RecurringBookingsPage() {
-  const [bookings, setBookings] = useState(MOCK_RECURRING_BOOKINGS)
+  // TODO: Integrate with real API
+  const [bookings, setBookings] = useState<any[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedBooking, setSelectedBooking] = useState<(typeof MOCK_RECURRING_BOOKINGS)[0] | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<any>(null)
 
   const activeBookings = bookings.filter((b) => b.status === "Active")
   const endedBookings = bookings.filter((b) => b.status === "Ended")
