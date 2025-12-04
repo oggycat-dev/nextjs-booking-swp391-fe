@@ -44,10 +44,10 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
     
     if (result) {
       // onLoginSuccess will handle routing based on role
-      onLoginSuccess()
-    } else {
+        onLoginSuccess()
+      } else {
       setError(authError || "Login failed. Please check your credentials.")
-    }
+      }
   }
 
   return (
@@ -91,13 +91,13 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
           <div className="space-y-2">
             <Label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</Label>
             <div className="relative">
-              <Input
+            <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
                 className="h-11 border-2 focus:border-primary transition-colors pr-10"
               />
               <button

@@ -42,7 +42,10 @@ export interface UserInfo {
   userCode: string;
   fullName: string;
   email: string;
+  phoneNumber?: string | null;
   role: UserRole;
+  department?: string | null;
+  major?: string | null;
   campusId: string | null;
   campusName: string | null;
 }
@@ -142,9 +145,18 @@ export interface GetUsersQuery {
   isActive?: boolean;
 }
 
-export interface ResetPasswordRequest {
-  userId: string;
-  newPassword: string;
+export interface UpdateProfileRequest {
+  fullName: string;
+  phoneNumber?: string | null;
+  department?: string | null;
+  major?: string | null;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phoneNumber?: string | null;
+  department?: string | null;
+  major?: string | null;
 }
 
 // ============================================
