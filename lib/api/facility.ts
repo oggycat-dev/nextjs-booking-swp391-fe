@@ -28,8 +28,8 @@ export const facilityApi = {
     
     try {
       // Use auth headers so backend can auto-filter by campus for Student/Lecturer roles
-      const response = await fetch(url, {
-        method: "GET",
+    const response = await fetch(url, {
+      method: "GET",
         headers: getAuthHeaders(),
       });
 
