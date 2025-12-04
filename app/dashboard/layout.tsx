@@ -121,7 +121,18 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <nav className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-xl sticky top-0 z-50 border-b border-primary-foreground/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Profile Container - Left Side */}
+          {/* System Title - Left Side */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
+              <img src="/logo.png" alt="FPT" className="w-8 h-8 object-contain" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-left">Facility Booking System</h1>
+              <p className="text-xs text-primary-foreground/80 text-left">FPT University</p>
+            </div>
+          </div>
+
+          {/* Profile Container - Right Side */}
           <div className="flex items-center gap-4">
             <Link href="/dashboard/profile">
               <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
@@ -161,17 +172,6 @@ export default function DashboardLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </Button>
-          </div>
-
-          {/* System Title - Right Side */}
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-right">Facility Booking System</h1>
-              <p className="text-xs text-primary-foreground/80 text-right">FPT University</p>
-            </div>
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-              <img src="/logo.png" alt="FPT" className="w-8 h-8 object-contain" />
-            </div>
           </div>
         </div>
       </nav>
