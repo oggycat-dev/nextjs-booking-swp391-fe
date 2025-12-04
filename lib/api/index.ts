@@ -4,6 +4,7 @@
  */
 
 export { authApi } from './auth';
+export { bookingApi } from './booking';
 export { campusApi } from './campus';
 export { facilityApi } from './facility';
 export { facilityTypeApi } from './facility-type';

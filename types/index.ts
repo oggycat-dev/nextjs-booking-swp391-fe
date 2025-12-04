@@ -151,7 +151,7 @@ export interface GetUsersQuery {
   pageNumber?: number;
   pageSize?: number;
   searchTerm?: string;
-  role?: UserRole;
+  role?: string; // "Student" | "Lecturer" | "Admin"
   isActive?: boolean;
 }
 
@@ -333,6 +333,29 @@ export interface MyCampusChangeRequest {
   reviewComment: string | null;
   createdAt: string;
   reviewedAt: string | null;
+}
+
+// ============================================
+// Booking Types
+// ============================================
+
+export interface BookingListDto {
+  id: string;
+  bookingCode: string;
+  facilityName: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  lecturerEmail?: string;
+  createdAt: string;
+}
+
+export interface ApproveBookingRequest {
+  approved: boolean;
+  comment?: string;
 }
 
 // ============================================

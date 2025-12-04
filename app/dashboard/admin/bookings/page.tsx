@@ -1,158 +1,112 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-const MOCK_PENDING_BOOKINGS = [
-  {
-    id: "BK-20251205-001",
-    requesterName: "Nguyen Van A",
-    requesterRole: "Student",
-    requesterDept: "Software Engineering",
-    facilityName: "Computer Lab 201",
-    date: "2025-12-05",
-    time: "09:00 - 11:00",
-    purpose: "Project work",
-    participants: 5,
-    noShowCount: 0,
-    requestedAt: "2025-12-04 10:30",
-    status: "Pending",
-  },
-  {
-    id: "BK-20251206-002",
-    requesterName: "Tran Thi B",
-    requesterRole: "Student",
-    requesterDept: "Business",
-    facilityName: "Meeting Room 301",
-    date: "2025-12-06",
-    time: "14:00 - 15:30",
-    purpose: "Club meeting",
-    participants: 8,
-    noShowCount: 1,
-    requestedAt: "2025-12-04 14:15",
-    status: "Pending",
-  },
-  {
-    id: "BK-20251207-003",
-    requesterName: "Prof. Le Van C",
-    requesterRole: "Lecturer",
-    requesterDept: "Software Engineering",
-    facilityName: "Auditorium",
-    date: "2025-12-07",
-    time: "10:00 - 12:00",
-    purpose: "Class session",
-    participants: 100,
-    noShowCount: 0,
-    requestedAt: "2025-12-04 09:00",
-    status: "Pending",
-  },
-]
-
-const MOCK_APPROVED_BOOKINGS = [
-  {
-    id: "BK-20251201-001",
-    requesterName: "Pham Van D",
-    requesterRole: "Student",
-    facilityName: "Study Room 105",
-    date: "2025-12-01",
-    time: "16:00 - 18:00",
-    purpose: "Group study",
-    participants: 4,
-    approvedAt: "2025-11-30 11:20",
-    approvedBy: "Admin User",
-    status: "Approved",
-  },
-  {
-    id: "BK-20251202-002",
-    requesterName: "Hoang Thi E",
-    requesterRole: "Student",
-    facilityName: "Meeting Room 302",
-    date: "2025-12-02",
-    time: "10:00 - 11:30",
-    purpose: "Presentation",
-    participants: 6,
-    approvedAt: "2025-12-01 15:45",
-    approvedBy: "Admin User",
-    status: "Approved",
-  },
-]
+import { useAdminBookings } from "@/hooks/use-admin-bookings"
+import type { BookingListDto } from "@/types"
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState(MOCK_PENDING_BOOKINGS)
-  const [approvedBookings, setApprovedBookings] = useState(MOCK_APPROVED_BOOKINGS)
-  const [selectedBooking, setSelectedBooking] = useState<(typeof MOCK_PENDING_BOOKINGS)[0] | null>(null)
+  const { bookings, isLoading, error, fetchPendingApprovals, approveBooking } = useAdminBookings()
+  const [selectedBooking, setSelectedBooking] = useState<BookingListDto | null>(null)
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
-  const [rejectReason, setRejectReason] = useState("")
+  const [comment, setComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+
+  useEffect(() => {
+    fetchPendingApprovals()
+  }, [])
 
   const filteredBookings = bookings.filter(
     (b) =>
       b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.id.toLowerCase().includes(searchTerm.toLowerCase()),
+      b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const handleApprove = (id: string) => {
-    const booking = bookings.find((b) => b.id === id)
-    if (booking) {
-      const approvedBooking = {
-        ...booking,
-        approvedAt: new Date().toLocaleString(),
-        approvedBy: "Admin User",
-        status: "Approved",
+  const handleApprove = async (id: string) => {
+    const success = await approveBooking(id, {
+      approved: true,
+      comment: comment || undefined,
+    })
+    
+    if (success) {
+      setSelectedBooking(null)
+      setActionType(null)
+      setComment("")
+      alert("Booking approved successfully!")
+    } else {
+      alert(error || "Failed to approve booking")
+    }
+  }
+
+  const handleReject = async (id: string) => {
+    if (!comment.trim()) {
+      alert("Please provide a rejection reason")
+      return
+    }
+    
+    const success = await approveBooking(id, {
+      approved: false,
+      comment: comment,
+    })
+    
+    if (success) {
+      setSelectedBooking(null)
+      setActionType(null)
+      setComment("")
+      alert("Booking rejected successfully!")
+    } else {
+      alert(error || "Failed to reject booking")
+    }
+  }
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A';
+    
+    // Handle different time formats
+    // Could be "HH:mm:ss" or just "HH:mm" or a full datetime string
+    try {
+      if (timeString.includes('T')) {
+        // ISO datetime string
+        const date = new Date(timeString);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
       }
-      setApprovedBookings([approvedBooking, ...approvedBookings])
-      setBookings(bookings.filter((b) => b.id !== id))
-      setSelectedBooking(null)
-      setActionType(null)
+      
+      // Assume "HH:mm:ss" or "HH:mm" format
+      const parts = timeString.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+      
+      return timeString;
+    } catch (error) {
+      console.error('Error formatting time:', timeString, error);
+      return timeString;
     }
   }
 
-  const handleReject = (id: string) => {
-    if (rejectReason.trim()) {
-      setBookings(bookings.filter((b) => b.id !== id))
-      setSelectedBooking(null)
-      setActionType(null)
-      setRejectReason("")
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return dateString;
     }
-  }
-
-  const handleCancel = (id: string) => {
-    setApprovedBookings(approvedBookings.filter((b) => b.id !== id))
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Booking Management</h1>
-        <p className="text-muted-foreground">Review and approve facility booking requests</p>
-      </div>
+      <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({bookings.length})</h3>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
-          <p className="text-3xl font-bold text-primary">{bookings.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Approved This Month</p>
-          <p className="text-3xl font-bold text-primary">{approvedBookings.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Avg. Approval Time</p>
-          <p className="text-3xl font-bold text-primary">2.5h</p>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending">Pending ({bookings.length})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({approvedBookings.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending" className="mt-4 space-y-4">
+        <div className="space-y-4">
           <Card className="p-4">
             <Input
               placeholder="Search by facility, requester, or booking ID..."
@@ -161,7 +115,28 @@ export default function AdminBookingsPage() {
             />
           </Card>
 
-          {filteredBookings.length === 0 ? (
+          {isLoading ? (
+            <Card className="p-12 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-muted-foreground">Loading bookings...</p>
+              </div>
+            </Card>
+          ) : error ? (
+            <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
+              <p className="text-destructive">{error}</p>
+              <Button 
+                onClick={() => fetchPendingApprovals()} 
+                variant="outline"
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            </Card>
+          ) : filteredBookings.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground">
                 {searchTerm ? "No bookings found matching your search" : "No pending bookings"}
@@ -179,38 +154,31 @@ export default function AdminBookingsPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-bold text-lg">{booking.facilityName}</h3>
                       <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
-                        Pending
+                        {booking.status}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">Booking ID: {booking.id}</p>
+                    <p className="text-sm text-muted-foreground">Booking Code: {booking.bookingCode}</p>
                   </div>
-                  <span
-                    className={`px-3 py-1 text-xs font-medium rounded ${
-                      booking.noShowCount > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {booking.noShowCount > 0 ? `${booking.noShowCount} no-shows` : "No issues"}
-                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Requester</p>
-                    <p className="font-medium">{booking.requesterName}</p>
-                    <p className="text-xs text-muted-foreground">{booking.requesterRole}</p>
+                    <p className="font-medium">{booking.userName}</p>
+                    <p className="text-xs text-muted-foreground">{booking.userRole}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Date & Time</p>
-                    <p className="font-medium">{booking.date}</p>
-                    <p className="text-xs">{booking.time}</p>
+                    <p className="font-medium">{formatDate(booking.bookingDate)}</p>
+                    <p className="text-xs">{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Purpose</p>
-                    <p className="font-medium">{booking.purpose}</p>
+                    <p className="text-muted-foreground text-xs">Lecturer Email</p>
+                    <p className="font-medium">{booking.lecturerEmail || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Participants</p>
-                    <p className="font-medium">{booking.participants}</p>
+                    <p className="text-muted-foreground text-xs">Created At</p>
+                    <p className="font-medium">{formatDate(booking.createdAt)}</p>
                   </div>
                 </div>
 
@@ -252,49 +220,8 @@ export default function AdminBookingsPage() {
               </Card>
             ))
           )}
-        </TabsContent>
-
-        <TabsContent value="approved" className="mt-4 space-y-4">
-          {approvedBookings.length === 0 ? (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">No approved bookings</p>
-            </Card>
-          ) : (
-            approvedBookings.map((booking) => (
-              <Card key={booking.id} className="p-4 hover:shadow-lg transition-shadow border-l-4 border-green-400">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-lg">{booking.facilityName}</h3>
-                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
-                        Approved
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {booking.date} • {booking.time}
-                    </p>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <span>
-                        {booking.requesterName} ({booking.requesterRole})
-                      </span>
-                      <span>Approved: {booking.approvedAt}</span>
-                      <span>By: {booking.approvedBy}</span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive hover:text-destructive ml-4 bg-transparent"
-                    onClick={() => handleCancel(booking.id)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </Card>
 
       {selectedBooking && !actionType && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -309,12 +236,14 @@ export default function AdminBookingsPage() {
             <div className="space-y-4 mb-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Booking ID</p>
-                  <p className="font-bold">{selectedBooking.id}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Booking Code</p>
+                  <p className="font-bold">{selectedBooking.bookingCode}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">Pending</span>
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                    {selectedBooking.status}
+                  </span>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Facility</p>
@@ -322,15 +251,17 @@ export default function AdminBookingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Date</p>
-                  <p className="font-bold">{selectedBooking.date}</p>
+                  <p className="font-bold">{formatDate(selectedBooking.bookingDate)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Time</p>
-                  <p className="font-bold">{selectedBooking.time}</p>
+                  <p className="font-bold">
+                    {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Purpose</p>
-                  <p className="font-bold">{selectedBooking.purpose}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Created At</p>
+                  <p className="font-bold">{formatDate(selectedBooking.createdAt)}</p>
                 </div>
               </div>
 
@@ -339,21 +270,15 @@ export default function AdminBookingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Name</p>
-                    <p className="font-medium">{selectedBooking.requesterName}</p>
+                    <p className="font-medium">{selectedBooking.userName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="font-medium">{selectedBooking.requesterRole}</p>
+                    <p className="font-medium">{selectedBooking.userRole}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Department</p>
-                    <p className="font-medium">{selectedBooking.requesterDept}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">No-show Count</p>
-                    <p className={`font-medium ${selectedBooking.noShowCount > 0 ? "text-destructive" : ""}`}>
-                      {selectedBooking.noShowCount}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Lecturer Email</p>
+                    <p className="font-medium">{selectedBooking.lecturerEmail || "N/A"}</p>
                   </div>
                 </div>
               </div>
@@ -390,29 +315,42 @@ export default function AdminBookingsPage() {
                 <span className="font-medium">Facility:</span> {selectedBooking.facilityName}
               </p>
               <p>
-                <span className="font-medium">Date:</span> {selectedBooking.date}
+                <span className="font-medium">Date:</span> {formatDate(selectedBooking.bookingDate)}
               </p>
               <p>
-                <span className="font-medium">Time:</span> {selectedBooking.time}
+                <span className="font-medium">Time:</span> {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}
               </p>
               <p>
-                <span className="font-medium">Requester:</span> {selectedBooking.requesterName}
+                <span className="font-medium">Requester:</span> {selectedBooking.userName}
               </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Comment (Optional)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add any comments..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20"
+              />
             </div>
 
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => handleApprove(selectedBooking.id)}
+                disabled={isLoading}
               >
-                Confirm Approve
+                {isLoading ? "Approving..." : "Confirm Approve"}
               </Button>
               <Button
                 variant="outline"
                 className="flex-1 bg-transparent"
                 onClick={() => {
                   setActionType(null)
+                  setComment("")
                 }}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
@@ -426,21 +364,15 @@ export default function AdminBookingsPage() {
           <Card className="w-full max-w-md p-6">
             <h2 className="text-2xl font-bold mb-4">Reject Booking</h2>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Rejection Reason</label>
-              <select
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background mb-4"
-              >
-                <option value="">Select a reason</option>
-                <option value="Facility not suitable for purpose">Facility not suitable for purpose</option>
-                <option value="Overlapping booking">Overlapping booking</option>
-                <option value="User has too many active bookings">User has too many active bookings</option>
-                <option value="Insufficient information">Insufficient information</option>
-                <option value="Policy violation">Policy violation</option>
-                <option value="Other">Other (specify in notes)</option>
-              </select>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Rejection Reason *</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Please provide a reason for rejection..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-24"
+                required
+              />
             </div>
 
             <div className="flex gap-2">
@@ -448,11 +380,19 @@ export default function AdminBookingsPage() {
                 variant="outline"
                 className="flex-1 text-destructive hover:text-destructive bg-transparent"
                 onClick={() => handleReject(selectedBooking.id)}
-                disabled={!rejectReason}
+                disabled={!comment.trim() || isLoading}
               >
-                Reject
+                {isLoading ? "Rejecting..." : "Reject"}
               </Button>
-              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setActionType(null)}>
+              <Button 
+                variant="outline" 
+                className="flex-1 bg-transparent" 
+                onClick={() => {
+                  setActionType(null)
+                  setComment("")
+                }}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
             </div>
