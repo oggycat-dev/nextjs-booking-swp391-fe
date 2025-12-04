@@ -4,11 +4,14 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { RegisterForm } from "@/components/auth/register-form"
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
+import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 
-type AuthMode = "login" | "register"
+type AuthMode = "login" | "register" | "forgot-password" | "reset-password"
 
 export default function Home() {
   const [authMode, setAuthMode] = useState<AuthMode>("login")
+  const [resetEmail, setResetEmail] = useState<string>("")
   const router = useRouter()
 
   const handleLoginSuccess = () => {
@@ -56,6 +59,12 @@ export default function Home() {
 
   const handleBackToLogin = () => {
     setAuthMode("login")
+    setResetEmail("")
+  }
+
+  const handleForgotPasswordSuccess = (email: string) => {
+    setResetEmail(email)
+    setAuthMode("reset-password")
   }
 
   if (authMode === "register") {
@@ -67,12 +76,31 @@ export default function Home() {
     )
   }
 
+  if (authMode === "forgot-password") {
+    return (
+      <ForgotPasswordForm
+        onSuccess={handleForgotPasswordSuccess}
+        onBackToLogin={handleBackToLogin}
+      />
+    )
+  }
+
+  if (authMode === "reset-password") {
+    return (
+      <ResetPasswordForm
+        email={resetEmail}
+        onBackToLogin={handleBackToLogin}
+      />
+    )
+  }
+
   // Login mode (default)
   return (
     <div className="relative">
       <LoginForm 
         onLoginSuccess={handleLoginSuccess} 
         onSwitchToRegister={() => setAuthMode("register")}
+        onForgotPassword={() => setAuthMode("forgot-password")}
       />
     </div>
   )

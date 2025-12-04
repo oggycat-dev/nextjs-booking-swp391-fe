@@ -26,13 +26,29 @@ export const facilityApi = {
 
     const url = `${API_URL}/Facility${params.toString() ? `?${params.toString()}` : ""}`;
     
-    console.log('Fetching facilities from:', url);
-    
-    // Use auth headers so backend can auto-filter by campus for Student/Lecturer roles
+    try {
+      // Use auth headers so backend can auto-filter by campus for Student/Lecturer roles
     const response = await fetch(url, {
       method: "GET",
-      headers: getAuthHeaders(),
-    });
+        headers: getAuthHeaders(),
+      });
+
+      const contentType = response.headers.get("content-type");
+      let data: any;
+
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          const text = await response.text();
+          console.error("Failed to parse JSON response:", text);
+          throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+        }
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        throw new Error(`Expected JSON but got ${contentType || "unknown"}: ${text.substring(0, 100)}`);
+      }
 
     console.log('Response status:', response.status);
 
