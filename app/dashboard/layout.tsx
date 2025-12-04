@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
 import { SessionManager } from "@/components/auth/session-manager"
+import { Bell } from "lucide-react"
 
 export default function DashboardLayout({
   children,
@@ -134,6 +135,24 @@ export default function DashboardLayout({
 
           {/* Profile Container - Right Side */}
           <div className="flex items-center gap-4">
+            {/* Notifications Button - Only for Admin */}
+            {userRole === "admin" && (
+              <Link href="/dashboard/notifications">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 w-10 p-0 hover:bg-white/20 text-primary-foreground bg-white/10 rounded-xl relative"
+                  title="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {/* Badge for unread count - TODO: Fetch real count from API */}
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    3
+                  </span>
+                </Button>
+              </Link>
+            )}
+            
             <Link href="/dashboard/profile">
               <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">

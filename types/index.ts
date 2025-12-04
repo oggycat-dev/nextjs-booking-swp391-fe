@@ -91,6 +91,16 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  verificationCode: string;
+  newPassword: string;
+}
+
 // ============================================
 // User Types
 // ============================================
