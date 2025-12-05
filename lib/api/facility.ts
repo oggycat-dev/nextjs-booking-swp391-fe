@@ -159,15 +159,62 @@ export const facilityApi = {
   },
 
   /**
-   * Update a facility (Admin only)
+   * Update a facility with images (Admin only)
    */
   update: async (id: string, request: UpdateFacilityRequest): Promise<ApiResponse<Facility>> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    // Create FormData for multipart/form-data
+    const formData = new FormData();
+    formData.append("facilityName", request.facilityName);
+    formData.append("typeId", request.typeId);
+    formData.append("capacity", request.capacity.toString());
+    formData.append("status", request.status);
+    formData.append("isActive", request.isActive.toString());
+    
+    // Optional fields
+    if (request.building) formData.append("building", request.building);
+    if (request.floor) formData.append("floor", request.floor);
+    if (request.roomNumber) formData.append("roomNumber", request.roomNumber);
+    if (request.description) formData.append("description", request.description);
+    if (request.equipment) formData.append("equipment", request.equipment);
+    
+    // Add imageUrl if provided (for keeping existing images)
+    if (request.imageUrl) formData.append("imageUrl", request.imageUrl);
+    
+    // Add new images if provided
+    if (request.images && request.images.length > 0) {
+      request.images.forEach((image) => {
+        formData.append("images", image);
+      });
+    }
+    
+    console.log('Updating facility with FormData');
+    
     const response = await fetch(`${API_URL}/Facility/${id}`, {
       method: "PUT",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(request),
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        // Don't set Content-Type, let browser set it with boundary
+      },
+      body: formData,
     });
-    return response.json();
+    
+    const text = await response.text();
+    console.log('Update response text:', text);
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
+    return JSON.parse(text);
   },
 
   /**

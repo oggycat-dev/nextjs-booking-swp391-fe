@@ -504,6 +504,28 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     }
 
     if (isEdit && facility) {
+      // Validate new images in edit mode
+      if (images.length > 0) {
+        images.forEach((file, index) => {
+          if (file.size > 5 * 1024 * 1024) {
+            errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
+          }
+          const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+          if (!validTypes.includes(file.type.toLowerCase())) {
+            errors.push(`Image ${index + 1} (${file.name}) must be JPEG, JPG, PNG, or GIF`)
+          }
+        })
+        
+        if (errors.length > 0) {
+          toast({ 
+            title: "Validation Error", 
+            description: errors.join("; "),
+            variant: "destructive" 
+          })
+          return
+        }
+      }
+
       const updated = await updateFacility(facility.id, {
         facilityName,
         typeId,
@@ -513,6 +535,8 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         capacity: Number(capacity),
         description: description || undefined,
         equipment: equipment || undefined,
+        imageUrl: facility.imageUrl || undefined,  // Keep existing images
+        images: images.length > 0 ? images : undefined,  // Add new images
         status,
         isActive,
       })
@@ -766,23 +790,60 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             </p>
           </div>
 
-          {!isEdit && (
-            <div>
-              <label className="block text-sm font-semibold mb-2">Images (Multiple files allowed)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  multiple
-                  onChange={handleImageChange}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                />
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Images {isEdit ? "(Add more images)" : "(Multiple files allowed)"}
+            </label>
+            
+            {/* Show existing images in edit mode */}
+            {isEdit && facility?.imageUrl && (
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground mb-2">Current images:</p>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {(() => {
+                    try {
+                      const urls = JSON.parse(facility.imageUrl);
+                      return (Array.isArray(urls) ? urls : [facility.imageUrl]).map((url: string, idx: number) => (
+                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border">
+                          <img
+                            src={url}
+                            alt={`Current ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                      ));
+                    } catch {
+                      return (
+                        <div className="relative aspect-square rounded-lg overflow-hidden border">
+                          <img
+                            src={facility.imageUrl}
+                            alt="Current"
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} file(s) selected</span>}
-              </p>
+            )}
+            
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif"
+                multiple
+                onChange={handleImageChange}
+                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+              />
             </div>
-          )}
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} new file(s) selected</span>}
+              {isEdit && " New images will be added to existing ones."}
+            </p>
+          </div>
 
           <div>
             <label className="block text-sm font-semibold mb-2">Description</label>
