@@ -490,4 +490,107 @@ export const bookingApi = {
       throw error;
     }
   },
+
+  /**
+   * Check-in to a booking (Student/Lecturer only)
+   */
+  checkIn: async (bookingId: string): Promise<ApiResponse<null>> => {
+    const headers = getAuthHeaders();
+    const url = `${API_URL}/bookings/${bookingId}/check-in`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return data;
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+  },
+
+  /**
+   * Check-out from a booking (Student/Lecturer only)
+   */
+  checkOut: async (bookingId: string): Promise<ApiResponse<null>> => {
+    const headers = getAuthHeaders();
+    const url = `${API_URL}/bookings/${bookingId}/check-out`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return data;
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+  },
+
+  /**
+   * Get my booking history (Student/Lecturer)
+   */
+  getMyBookingHistory: async (): Promise<ApiResponse<BookingListDto[]>> => {
+    const headers = getAuthHeaders();
+    const url = `${API_URL}/bookings/my-history`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // Not JSON
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    if (!text || text.trim() === '') {
+      throw new Error('Empty response from server');
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return data;
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+  },
 };

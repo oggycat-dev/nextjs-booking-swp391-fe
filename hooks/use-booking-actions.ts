@@ -1,6 +1,6 @@
 /**
  * Booking Actions Hook
- * Provides hooks for check-in and check-out actions
+ * Custom hook for check-in and check-out operations (Student/Lecturer only)
  */
 
 import { useState, useCallback } from 'react';
@@ -10,6 +10,9 @@ export function useBookingActions() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Check-in to a booking
+   */
   const checkIn = useCallback(async (bookingId: string): Promise<boolean> => {
     setIsProcessing(true);
     setError(null);
@@ -18,18 +21,22 @@ export function useBookingActions() {
       if (response.success) {
         return true;
       } else {
-        setError(response.message || "Failed to check in");
+        setError(response.message || 'Failed to check-in');
         return false;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to check in";
-      setError(message);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during check-in';
+      setError(errorMessage);
+      console.error('Error checking in:', err);
       return false;
     } finally {
       setIsProcessing(false);
     }
   }, []);
 
+  /**
+   * Check-out from a booking
+   */
   const checkOut = useCallback(async (bookingId: string): Promise<boolean> => {
     setIsProcessing(true);
     setError(null);
@@ -38,16 +45,24 @@ export function useBookingActions() {
       if (response.success) {
         return true;
       } else {
-        setError(response.message || "Failed to check out");
+        setError(response.message || 'Failed to check-out');
         return false;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to check out";
-      setError(message);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during check-out';
+      setError(errorMessage);
+      console.error('Error checking out:', err);
       return false;
     } finally {
       setIsProcessing(false);
     }
+  }, []);
+
+  /**
+   * Reset error state
+   */
+  const resetError = useCallback(() => {
+    setError(null);
   }, []);
 
   return {
@@ -55,6 +70,6 @@ export function useBookingActions() {
     checkOut,
     isProcessing,
     error,
+    resetError,
   };
 }
-

@@ -3,18 +3,24 @@
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+<<<<<<< HEAD
 import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
 import { usePendingLecturerApprovals, useBookingMutations } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingListDto, Booking } from "@/types"
+=======
+import { useBookingActions } from "@/hooks/use-booking-actions"
+import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
+import { bookingApi } from "@/lib/api/booking"
+import type { BookingListDto } from "@/types"
+>>>>>>> origin/main
 import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
 
 export default function BookingsPage() {
@@ -24,6 +30,7 @@ export default function BookingsPage() {
   const [checkInDialog, setCheckInDialog] = useState(false)
   const [checkOutDialog, setCheckOutDialog] = useState(false)
   const [validationWarning, setValidationWarning] = useState<string | null>(null)
+<<<<<<< HEAD
   const [approveDialog, setApproveDialog] = useState(false)
   const [rejectDialog, setRejectDialog] = useState(false)
   const [comment, setComment] = useState("")
@@ -62,6 +69,14 @@ export default function BookingsPage() {
       fetchPendingApprovals()
     }
   }, [isLecturer, fetchPendingApprovals])
+=======
+  const { checkIn, checkOut, isProcessing, error } = useBookingActions()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    fetchBookings()
+  }, [])
+>>>>>>> origin/main
 
   useEffect(() => {
     if (error) {
@@ -70,6 +85,7 @@ export default function BookingsPage() {
         title: "Error",
         description: error,
       })
+<<<<<<< HEAD
     }
   }, [error, toast])
 
@@ -162,8 +178,136 @@ export default function BookingsPage() {
         variant: "destructive",
         title: "Cannot Check-out",
         description: validation.error,
+=======
+    }
+  }, [error, toast])
+
+  const fetchBookings = async () => {
+    setIsLoading(true)
+    try {
+      const response = await bookingApi.getMyBookingHistory()
+      if (response.success && response.data) {
+        setBookings(response.data)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.message || "Failed to fetch bookings",
+        })
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "An error occurred",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handler for check-in from popup (with toast validation)
+  const handleCheckInClickFromPopup = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    
+    // Debug logging
+    console.log('=== Check-in Validation Debug ===')
+    console.log('Current time:', new Date())
+    console.log('Booking date:', booking.bookingDate)
+    console.log('Start time:', booking.startTime)
+    console.log('Booking status:', booking.status)
+    console.log('Already checked in:', booking.checkedInAt)
+    
+    const validation = validateCheckIn(booking)
+    console.log('Validation result:', validation)
+    
+    if (!validation.isValid) {
+      const bookingDate = formatDate(booking.bookingDate)
+      const startTime = formatTime(booking.startTime)
+      toast({
+        variant: "destructive",
+        title: "Check-in Not Available",
+        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nStart Time: ${startTime}`,
+        duration: 3000,
+>>>>>>> origin/main
       })
       return
+    }
+    
+    if (validation.warningMessage) {
+      setValidationWarning(validation.warningMessage)
+    }
+    
+<<<<<<< HEAD
+    setCheckOutDialog(true)
+  }
+
+=======
+    console.log('Opening check-in dialog')
+    setCheckInDialog(true)
+  }
+
+  // Handler for check-in from card (no toast, just open dialog)
+  const handleCheckInClick = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    setSelectedBooking(booking)
+    
+    const validation = validateCheckIn(booking)
+    if (!validation.isValid) {
+      return // Silent fail for card click
+    }
+    
+    if (validation.warningMessage) {
+      setValidationWarning(validation.warningMessage)
+    }
+    
+    setCheckInDialog(true)
+  }
+
+  // Handler for check-out from popup (with toast validation)
+  const handleCheckOutClickFromPopup = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    
+    // Debug logging
+    console.log('=== Check-out Validation Debug ===')
+    console.log('Current time:', new Date())
+    console.log('Booking date:', booking.bookingDate)
+    console.log('End time:', booking.endTime)
+    console.log('Booking status:', booking.status)
+    console.log('Checked in at:', booking.checkedInAt)
+    console.log('Already checked out:', booking.checkedOutAt)
+    
+    const validation = validateCheckOut(booking)
+    console.log('Validation result:', validation)
+    
+    if (!validation.isValid) {
+      const bookingDate = formatDate(booking.bookingDate)
+      const endTime = formatTime(booking.endTime)
+      toast({
+        variant: "destructive",
+        title: "Check-out Not Available",
+        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nEnd Time: ${endTime}`,
+        duration: 3000,
+      })
+      return
+    }
+    
+    if (validation.warningMessage) {
+      setValidationWarning(validation.warningMessage)
+    }
+    
+    console.log('Opening check-out dialog')
+    setCheckOutDialog(true)
+  }
+
+  // Handler for check-out from card (no toast, just open dialog)
+  const handleCheckOutClick = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    setSelectedBooking(booking)
+    
+    const validation = validateCheckOut(booking)
+    if (!validation.isValid) {
+      return // Silent fail for card click
     }
     
     if (validation.warningMessage) {
@@ -173,6 +317,7 @@ export default function BookingsPage() {
     setCheckOutDialog(true)
   }
 
+>>>>>>> origin/main
   const handleCheckIn = async () => {
     if (!selectedBooking) return
     
@@ -205,6 +350,7 @@ export default function BookingsPage() {
     }
   }
 
+<<<<<<< HEAD
   const handleApproveClick = (booking: Booking) => {
     setSelectedBooking({
       id: booking.id,
@@ -327,7 +473,24 @@ export default function BookingsPage() {
         description: err instanceof Error ? err.message : "Failed to approve booking",
       })
       fetchPendingApprovals()
+=======
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
+      "WaitingLecturerApproval": { variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
+      "WaitingAdminApproval": { variant: "outline", className: "border-blue-500 text-blue-700 bg-blue-50" },
+      "Approved": { variant: "default", className: "bg-green-600 text-white hover:bg-green-700 border-green-600" },
+      "Completed": { variant: "secondary", className: "bg-gray-500 text-white" },
+      "Rejected": { variant: "destructive", className: "bg-red-600 text-white" },
+      "Cancelled": { variant: "destructive", className: "bg-red-600 text-white" },
+      "NoShow": { variant: "destructive", className: "bg-orange-600 text-white" },
+>>>>>>> origin/main
     }
+    const statusInfo = statusMap[status] || { variant: "outline" as const, className: "text-gray-600" }
+    return (
+      <Badge variant={statusInfo.variant} className={statusInfo.className}>
+        {status}
+      </Badge>
+    )
   }
 
   const handleReject = async () => {
@@ -459,6 +622,7 @@ export default function BookingsPage() {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
+<<<<<<< HEAD
   const renderPendingApprovalCard = (booking: Booking) => (
     <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-yellow-200">
       <div className="flex flex-col sm:flex-row">
@@ -577,6 +741,8 @@ export default function BookingsPage() {
     </Card>
   )
 
+=======
+>>>>>>> origin/main
   const renderBookingCard = (booking: BookingListDto) => (
     <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
       <div className="flex flex-col sm:flex-row">
@@ -650,8 +816,40 @@ export default function BookingsPage() {
             </div>
           </div>
             
+<<<<<<< HEAD
             {/* Right Section - Actions */}
             <div className="flex flex-col gap-2 flex-shrink-0">
+=======
+            {/* Right Section - Status & Actions */}
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              {/* Check-in/Check-out Status Badges */}
+              <div className="flex flex-col gap-1.5 mb-2">
+                {booking.checkedInAt ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-md font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Checked In</span>
+                  </div>
+                ) : canCheckIn(booking) ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-md font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Check-in</span>
+                  </div>
+                ) : null}
+                
+                {booking.checkedOutAt ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-md font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Checked Out</span>
+                  </div>
+                ) : booking.checkedInAt && canCheckOut(booking) ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-md font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Check-out</span>
+                  </div>
+                ) : null}
+              </div>
+              
+>>>>>>> origin/main
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -660,6 +858,7 @@ export default function BookingsPage() {
               >
                 Details
               </Button>
+<<<<<<< HEAD
               {canCheckIn(booking) && (
                 <Button 
                   size="sm" 
@@ -680,6 +879,8 @@ export default function BookingsPage() {
                   Check-out
                 </Button>
               )}
+=======
+>>>>>>> origin/main
             </div>
           </div>
         </div>
@@ -702,11 +903,16 @@ export default function BookingsPage() {
         <p className="text-muted-foreground">View and manage all your facility bookings</p>
       </div>
 
+<<<<<<< HEAD
       {bookings.length === 0 && (!isLecturer || filteredPendingApprovals.length === 0) ? (
+=======
+      {bookings.length === 0 ? (
+>>>>>>> origin/main
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">No bookings found</p>
         </Card>
       ) : (
+<<<<<<< HEAD
         <Tabs defaultValue={isLecturer ? "pending" : "all"} className="w-full">
           <TabsList>
             {isLecturer && (
@@ -714,6 +920,10 @@ export default function BookingsPage() {
                 Pending Approvals ({filteredPendingApprovals.length})
               </TabsTrigger>
             )}
+=======
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+>>>>>>> origin/main
             <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
             <TabsTrigger value="approved">
               Approved ({bookings.filter((b) => b.status === "Approved").length})
@@ -729,6 +939,7 @@ export default function BookingsPage() {
             </TabsTrigger>
           </TabsList>
 
+<<<<<<< HEAD
           {isLecturer && (
             <TabsContent value="pending" className="space-y-4 mt-4">
               {isLoadingPending ? (
@@ -744,6 +955,8 @@ export default function BookingsPage() {
               )}
             </TabsContent>
           )}
+=======
+>>>>>>> origin/main
           <TabsContent value="all" className="space-y-4 mt-4">
             {getBookingsByStatus("all").map(renderBookingCard)}
           </TabsContent>
@@ -763,7 +976,11 @@ export default function BookingsPage() {
       )}
 
       {/* Booking Details Modal */}
+<<<<<<< HEAD
       {selectedBooking && !checkInDialog && !checkOutDialog && !approveDialog && !rejectDialog && (
+=======
+      {selectedBooking && !checkInDialog && !checkOutDialog && (
+>>>>>>> origin/main
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedBooking(null)}>
           <Card className="w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -824,7 +1041,11 @@ export default function BookingsPage() {
               {canCheckIn(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+<<<<<<< HEAD
                   onClick={() => handleCheckInClick(selectedBooking)}
+=======
+                  onClick={() => handleCheckInClickFromPopup(selectedBooking)}
+>>>>>>> origin/main
                 >
                   Check-in
                 </Button>
@@ -832,7 +1053,11 @@ export default function BookingsPage() {
               {canCheckOut(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+<<<<<<< HEAD
                   onClick={() => handleCheckOutClick(selectedBooking)}
+=======
+                  onClick={() => handleCheckOutClickFromPopup(selectedBooking)}
+>>>>>>> origin/main
                 >
                   Check-out
                 </Button>
@@ -916,6 +1141,7 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+<<<<<<< HEAD
 
       {/* Approve Confirmation Dialog */}
       <AlertDialog 
@@ -1009,6 +1235,8 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+=======
+>>>>>>> origin/main
     </div>
   )
 }

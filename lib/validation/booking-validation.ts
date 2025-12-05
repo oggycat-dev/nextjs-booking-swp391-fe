@@ -1,3 +1,8 @@
+/**
+ * Booking Check-in/Check-out Validation
+ * Frontend validation matching backend business rules
+ */
+
 import type { BookingListDto } from "@/types"
 
 export interface ValidationResult {
@@ -7,238 +12,222 @@ export interface ValidationResult {
 }
 
 /**
- * Validates if a booking can be checked in
+ * Parse time string to Date object for comparison
+ */
+function parseTimeToDate(dateString: string, timeString: string): Date {
+  // Parse the booking date (format: "2025-12-10T00:00:00")
+  const bookingDate = new Date(dateString)
+  
+  // Handle TimeSpan format (HH:mm:ss) from backend
+  if (timeString.includes(':') && !timeString.includes('T')) {
+    const [hours, minutes, seconds] = timeString.split(':').map(Number)
+    // Create new date with booking date + time
+    const result = new Date(bookingDate)
+    result.setHours(hours, minutes, seconds || 0, 0)
+    return result
+  } else if (timeString.includes('T')) {
+    // Handle full ISO datetime format
+    return new Date(timeString)
+  }
+  
+  return bookingDate
+}
+
+/**
+ * Format time for display
+ */
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
+/**
+ * Validate check-in eligibility
+ * Business Rules:
+ * 1. Booking must be Approved
+ * 2. Must not be already checked in
+ * 3. Current time must be within check-in window (start time to 15 minutes after)
  */
 export function validateCheckIn(booking: BookingListDto): ValidationResult {
-  // Check if already checked in
+  // Rule 1: Booking must be approved
+  if (booking.status !== "Approved") {
+    return {
+      isValid: false,
+      error: `Cannot check-in. Booking status is ${booking.status}`
+    }
+  }
+
+  // Rule 2: Must not be already checked in
   if (booking.checkedInAt) {
     return {
       isValid: false,
-      error: "This booking has already been checked in",
+      error: "This booking has already been checked in"
     }
   }
 
-  // Check if already checked out
-  if (booking.checkedOutAt) {
-    return {
-      isValid: false,
-      error: "Cannot check in to a booking that has already been checked out",
-    }
-  }
-
-  // Check booking status
-  const status = booking.status?.toLowerCase() || ""
-  
-  if (status === "rejected" || status === "cancelled") {
-    return {
-      isValid: false,
-      error: `Cannot check in to a booking with status: ${booking.status}`,
-    }
-  }
-
-  if (status === "waitinglecturerapproval" || status === "waitingadminapproval") {
-    return {
-      isValid: false,
-      error: "Cannot check in to a booking that is pending approval",
-    }
-  }
-
-  if (status === "completed") {
-    return {
-      isValid: false,
-      error: "Cannot check in to a completed booking",
-    }
-  }
-
-  if (status === "noshow") {
-    return {
-      isValid: false,
-      error: "Cannot check in to a no-show booking",
-    }
-  }
-
-  // Check if booking date is valid
-  const bookingDate = new Date(booking.bookingDate)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  bookingDate.setHours(0, 0, 0, 0)
-
-  const daysDifference = Math.floor((bookingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  // Allow check-in on the booking date or up to 1 day before
-  if (daysDifference < -1) {
-    return {
-      isValid: false,
-      error: "Cannot check in to a booking that is more than 1 day past the booking date",
-    }
-  }
-
-  // Warning for early check-in (more than 1 day before)
-  if (daysDifference > 1) {
-    return {
-      isValid: true,
-      warningMessage: "You are checking in more than 1 day before the booking date",
-    }
-  }
-
-  // Warning for late check-in (on the day after)
-  if (daysDifference === -1) {
-    return {
-      isValid: true,
-      warningMessage: "You are checking in 1 day after the booking date",
-    }
-  }
-
-  // Check time window (optional - can check in up to 30 minutes before start time)
+  // Rule 3: Check time window
   const now = new Date()
-  const bookingDateTime = new Date(`${booking.bookingDate}T${booking.startTime}`)
-  
-  // Parse time string (HH:mm:ss or HH:mm)
-  const timeParts = booking.startTime.split(":")
-  const startHour = parseInt(timeParts[0], 10)
-  const startMinute = parseInt(timeParts[1], 10)
-  
-  bookingDateTime.setHours(startHour, startMinute, 0, 0)
-  
-  const timeDifference = bookingDateTime.getTime() - now.getTime()
-  const minutesDifference = timeDifference / (1000 * 60)
+  const bookingDateTime = parseTimeToDate(booking.bookingDate, booking.startTime)
+  const checkInWindowStart = new Date(bookingDateTime)
+  const checkInWindowEnd = new Date(bookingDateTime.getTime() + 15 * 60 * 1000) // +15 minutes
 
-  // Warning if checking in more than 30 minutes before start time
-  if (minutesDifference > 30 && daysDifference === 0) {
+  // Debug logging
+  console.log('Check-in time window validation:')
+  console.log('  Current time:', now)
+  console.log('  Booking datetime:', bookingDateTime)
+  console.log('  Window start:', checkInWindowStart)
+  console.log('  Window end:', checkInWindowEnd)
+  console.log('  Is too early?', now < checkInWindowStart)
+  console.log('  Is too late?', now > checkInWindowEnd)
+
+  // Too early
+  if (now < checkInWindowStart) {
     return {
-      isValid: true,
-      warningMessage: "You are checking in more than 30 minutes before the booking start time",
+      isValid: false,
+      error: `Check-in is not available yet. You can check in from ${formatTime(checkInWindowStart)}`
     }
   }
 
-  // Warning if checking in after the end time
-  const endTimeParts = booking.endTime.split(":")
-  const endHour = parseInt(endTimeParts[0], 10)
-  const endMinute = parseInt(endTimeParts[1], 10)
-  const bookingEndDateTime = new Date(`${booking.bookingDate}T${booking.endTime}`)
-  bookingEndDateTime.setHours(endHour, endMinute, 0, 0)
-  
-  if (now > bookingEndDateTime && daysDifference === 0) {
+  // Too late - check-in window expired
+  if (now > checkInWindowEnd) {
     return {
-      isValid: true,
-      warningMessage: "You are checking in after the booking end time",
+      isValid: false,
+      error: `Check-in window has expired (until ${formatTime(checkInWindowEnd)}). This booking will be marked as no-show if you proceed.`,
+      warningMessage: "⚠️ Late check-in will count as a no-show"
     }
   }
 
-  return {
-    isValid: true,
+  // Show warning if close to deadline (within last 5 minutes)
+  const fiveMinutesBeforeEnd = new Date(checkInWindowEnd.getTime() - 5 * 60 * 1000)
+  if (now > fiveMinutesBeforeEnd) {
+    return {
+      isValid: true,
+      warningMessage: `⚠️ Check-in window closes at ${formatTime(checkInWindowEnd)}`
+    }
   }
+
+  return { isValid: true }
 }
 
 /**
- * Validates if a booking can be checked out
+ * Validate check-out eligibility
+ * Business Rules:
+ * 1. Must be checked in first
+ * 2. Must not be already checked out
+ * 3. Current time must be within check-out window (end time to 15 minutes after)
  */
 export function validateCheckOut(booking: BookingListDto): ValidationResult {
-  // Check if not checked in
+  // Rule 1: Must be checked in first
   if (!booking.checkedInAt) {
     return {
       isValid: false,
-      error: "Cannot check out from a booking that has not been checked in",
+      error: "Cannot check-out without checking in first"
     }
   }
 
-  // Check if already checked out
+  // Rule 2: Must not be already checked out
   if (booking.checkedOutAt) {
     return {
       isValid: false,
-      error: "This booking has already been checked out",
+      error: "This booking has already been checked out"
     }
   }
 
-  // Check booking status
-  const status = booking.status?.toLowerCase() || ""
-  
-  if (status === "rejected" || status === "cancelled") {
+  // Rule 3: Check time window
+  const now = new Date()
+  const bookingEndDateTime = parseTimeToDate(booking.bookingDate, booking.endTime)
+  const checkOutWindowStart = new Date(bookingEndDateTime)
+  const checkOutWindowEnd = new Date(bookingEndDateTime.getTime() + 15 * 60 * 1000) // +15 minutes
+
+  // Debug logging
+  console.log('Check-out time window validation:')
+  console.log('  Current time:', now)
+  console.log('  Booking end datetime:', bookingEndDateTime)
+  console.log('  Window start:', checkOutWindowStart)
+  console.log('  Window end:', checkOutWindowEnd)
+  console.log('  Is too early?', now < checkOutWindowStart)
+  console.log('  Is too late?', now > checkOutWindowEnd)
+
+  // Too early
+  if (now < checkOutWindowStart) {
     return {
       isValid: false,
-      error: `Cannot check out from a booking with status: ${booking.status}`,
+      error: `Check-out is not available yet. You can check out from ${formatTime(checkOutWindowStart)}`
     }
   }
 
-  if (status === "completed") {
+  // Too late - check-out window expired
+  if (now > checkOutWindowEnd) {
     return {
       isValid: false,
-      error: "This booking has already been completed",
+      error: `Check-out window has expired (until ${formatTime(checkOutWindowEnd)}). This booking will be marked as no-show if you proceed.`,
+      warningMessage: "⚠️ Late check-out will count as a no-show"
+    }
+  }
+
+  // Show warning if close to deadline (within last 5 minutes)
+  const fiveMinutesBeforeEnd = new Date(checkOutWindowEnd.getTime() - 5 * 60 * 1000)
+  if (now > fiveMinutesBeforeEnd) {
+    return {
+      isValid: true,
+      warningMessage: `⚠️ Check-out window closes at ${formatTime(checkOutWindowEnd)}`
+    }
+  }
+
+  return { isValid: true }
+}
+
+/**
+ * Check if check-in button should be visible
+ */
+export function canShowCheckInButton(booking: BookingListDto): boolean {
+  return booking.status === "Approved" && !booking.checkedInAt
+}
+
+/**
+ * Check if check-out button should be visible
+ */
+export function canShowCheckOutButton(booking: BookingListDto): boolean {
+  return booking.status === "Approved" && !!booking.checkedInAt && !booking.checkedOutAt
+}
+
+/**
+ * Get booking time status for display
+ */
+export function getBookingTimeStatus(booking: BookingListDto): {
+  status: 'upcoming' | 'in-progress' | 'completed' | 'expired'
+  message: string
+} {
+  const now = new Date()
+  const startTime = parseTimeToDate(booking.bookingDate, booking.startTime)
+  const endTime = parseTimeToDate(booking.bookingDate, booking.endTime)
+
+  if (now < startTime) {
+    return {
+      status: 'upcoming',
+      message: `Starts at ${formatTime(startTime)}`
+    }
+  }
+
+  if (now >= startTime && now <= endTime) {
+    return {
+      status: 'in-progress',
+      message: `In progress until ${formatTime(endTime)}`
+    }
+  }
+
+  if (now > endTime && now <= new Date(endTime.getTime() + 15 * 60 * 1000)) {
+    return {
+      status: 'completed',
+      message: 'Ending soon'
     }
   }
 
   return {
-    isValid: true,
+    status: 'expired',
+    message: 'Time expired'
   }
 }
-
-/**
- * Determines if the check-in button should be shown for a booking
- */
-export function canShowCheckInButton(booking: BookingListDto): boolean {
-  // Don't show if already checked in
-  if (booking.checkedInAt) {
-    return false
-  }
-
-  // Don't show if already checked out
-  if (booking.checkedOutAt) {
-    return false
-  }
-
-  // Don't show for certain statuses
-  const status = booking.status?.toLowerCase() || ""
-  
-  if (
-    status === "rejected" ||
-    status === "cancelled" ||
-    status === "completed" ||
-    status === "noshow"
-  ) {
-    return false
-  }
-
-  // Show for approved bookings or checked-in status (edge case)
-  if (status === "approved" || status === "checkedin") {
-    return true
-  }
-
-  // Don't show for pending approvals
-  if (status === "waitinglecturerapproval" || status === "waitingadminapproval") {
-    return false
-  }
-
-  // Default: show if status is not explicitly blocked
-  return true
-}
-
-/**
- * Determines if the check-out button should be shown for a booking
- */
-export function canShowCheckOutButton(booking: BookingListDto): boolean {
-  // Must be checked in
-  if (!booking.checkedInAt) {
-    return false
-  }
-
-  // Don't show if already checked out
-  if (booking.checkedOutAt) {
-    return false
-  }
-
-  // Don't show for certain statuses
-  const status = booking.status?.toLowerCase() || ""
-  
-  if (
-    status === "rejected" ||
-    status === "cancelled" ||
-    status === "completed" ||
-    status === "noshow"
-  ) {
-    return false
-  }
-
-  // Show if checked in (regardless of status, as long as not completed)
-  return true
-}
-

@@ -246,7 +246,8 @@ export interface UpdateFacilityRequest {
   capacity: number;
   description?: string;
   equipment?: string;
-  imageUrl?: string;
+  imageUrl?: string;  // Keep existing images (JSON string)
+  images?: File[];     // New images to upload
   status: string; // "Available" | "UnderMaintenance" | "Unavailable"
   isActive: boolean;
 }
@@ -423,6 +424,26 @@ export interface GetBookingsQuery {
   pageNumber?: number;
   pageSize?: number;
 }
+// ============================================
+// Holiday Types
+// ============================================
+
+export interface Holiday {
+  id: string;
+  holidayName: string;
+  holidayDate: string; // ISO date string
+  isRecurring: boolean;
+  description?: string | null;
+  createdAt: string;
+}
+
+export interface CreateHolidayRequest {
+  holidayName: string;
+  holidayDate: string; // ISO date string
+  isRecurring: boolean;
+  description?: string;
+}
+
 // ============================================
 // Auth Context Types
 // ============================================

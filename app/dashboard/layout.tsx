@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -94,12 +95,12 @@ export default function DashboardLayout({
     { href: "/dashboard/search", label: "Search Facilities", roles: ["student", "lecturer"] },
     { href: "/dashboard/bookings", label: "My Bookings", roles: ["student", "lecturer"] },
     { href: "/dashboard/calendar", label: "Calendar View", roles: ["student", "lecturer"] },
-    { href: "/dashboard/recurring-bookings", label: "Recurring Bookings", roles: ["lecturer"] },
-    { href: "/dashboard/department-reports", label: "Department Reports", roles: ["lecturer"] },
+    { href: "/dashboard/holidays", label: "Holidays", roles: ["student", "lecturer"] },
     { href: "/dashboard/history", label: "Booking History", roles: ["student", "lecturer"] },
     { href: "/dashboard/admin/campuses", label: "Manage Campuses", roles: ["admin"] },
     { href: "/dashboard/admin/facilities", label: "Manage Facilities", roles: ["admin"] },
     { href: "/dashboard/admin/facility-types", label: "Facility Types", roles: ["admin"] },
+    { href: "/dashboard/admin/holidays", label: "Manage Holidays", roles: ["admin"] },
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
     { href: "/dashboard/admin/analytics", label: "Analytics", roles: ["admin"] },
@@ -219,6 +220,7 @@ export default function DashboardLayout({
           </TokenRefreshProvider>
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }
