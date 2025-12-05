@@ -370,14 +370,23 @@ export interface Booking {
 export interface BookingListDto {
   id: string;
   bookingCode: string;
+  facilityId: string;
   facilityName: string;
+  userId: string;
   userName: string;
   userRole: string;
   bookingDate: string;
   startTime: string;
   endTime: string;
+  purpose: string;
+  participants: number;
   status: string;
-  lecturerEmail?: string;
+  lecturerEmail?: string | null;
+  lecturerName?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  checkedInAt?: string | null;
+  checkedOutAt?: string | null;
   createdAt: string;
 }
 
