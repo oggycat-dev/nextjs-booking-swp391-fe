@@ -381,3 +381,49 @@ export function useBookingMutations() {
   };
 }
 
+/**
+ * Hook to get booking history (approved/completed bookings)
+ */
+export function useBookingHistory() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getMyHistory();
+      if (response.success && response.data) {
+        // Filter to only show approved/completed bookings
+        const historyBookings = response.data.filter(
+          (booking: Booking) => 
+            booking.status === "Approved" || 
+            booking.status === "Completed" || 
+            booking.status === "CheckedIn" ||
+            booking.status === "NoShow"
+        );
+        setBookings(historyBookings);
+      } else {
+        setError(response.message || "Failed to fetch booking history");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch booking history";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  return {
+    bookings,
+    fetchHistory,
+    isLoading,
+    error,
+  };
+}
+

@@ -213,4 +213,16 @@ export const bookingApi = {
 
     return response.json();
   },
+
+  /**
+   * Get my booking history (Student/Lecturer)
+   * Returns bookings that have been approved/completed
+   */
+  getMyHistory: async (): Promise<ApiResponse<Booking[]>> => {
+    const response = await fetch(`${API_URL}/bookings/my-history`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+    return response.json();
+  },
 };
