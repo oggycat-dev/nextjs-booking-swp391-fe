@@ -41,6 +41,62 @@ export const bookingApi = {
   },
 
   /**
+   * Get bookings for calendar view
+   * Maps to: GET /api/bookings/calendar
+   */
+  getCalendarBookings: async (params: {
+    startDate: string; // YYYY-MM-DD
+    endDate: string; // YYYY-MM-DD
+    facilityId?: string;
+    campusId?: string;
+  }): Promise<ApiResponse<BookingCalendarDto[]>> => {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append("startDate", params.startDate);
+      queryParams.append("endDate", params.endDate);
+      if (params.facilityId) queryParams.append("facilityId", params.facilityId);
+      if (params.campusId) queryParams.append("campusId", params.campusId);
+
+      const url = `${API_URL}/bookings/calendar?${queryParams.toString()}`;
+      console.log('Fetching calendar bookings:', url);
+      
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }, // No auth needed - AllowAnonymous
+      });
+
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No bookings found",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching calendar bookings:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get booking by ID
    */
   getById: async (id: string): Promise<ApiResponse<Booking>> => {
@@ -176,59 +232,176 @@ export const bookingApi = {
     id: string,
     request: { approved: boolean; comment?: string }
   ): Promise<ApiResponse<Booking>> => {
+    console.log('🔵 lecturerApprove API call');
+    console.log('URL:', `${API_URL}/bookings/${id}/lecturer-approve`);
+    console.log('Request body:', JSON.stringify(request));
+    
     const response = await fetch(`${API_URL}/bookings/${id}/lecturer-approve`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(request),
     });
     
+    console.log('Response status:', response.status, response.statusText);
+    console.log('Response ok:', response.ok);
+    
+    const text = await response.text();
+    console.log('Response text:', text);
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        console.error('Failed to parse error response as JSON');
+      }
       const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      console.error('❌ API Error:', errorMessage);
       throw new Error(errorMessage);
     }
     
-    return response.json();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+      console.log('✅ Parsed response data:', data);
+    } catch (e) {
+      console.error('Failed to parse success response as JSON');
+      throw new Error('Invalid JSON response from server');
+    }
+    
+    return data;
   },
 
   /**
    * Get pending bookings for lecturer approval (Lecturer only)
+   * Maps to: GET /api/bookings/pending-lecturer-approval
    */
   getPendingLecturerApproval: async (): Promise<ApiResponse<Booking[]>> => {
-    const response = await fetch(`${API_URL}/bookings/pending-lecturer-approval`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/bookings/pending-lecturer-approval`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Handle empty response
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No pending approvals",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching pending lecturer approvals:', error);
+      throw error;
+    }
   },
 
   /**
    * Get pending bookings for admin approval (Admin only)
+   * Maps to: GET /api/bookings/pending-admin-approval
    */
   getPendingAdminApproval: async (): Promise<ApiResponse<Booking[]>> => {
-    const response = await fetch(`${API_URL}/bookings/pending-admin-approval`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/bookings/pending-admin-approval`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Handle empty response
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No pending approvals",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching pending admin approvals:', error);
+      throw error;
+    }
   },
 
   /**
    * Get my bookings (Student/Lecturer)
+   * Maps to: GET /api/bookings/my-history
    */
   getMyBookings: async (query?: GetBookingsQuery): Promise<ApiResponse<Booking[]>> => {
-    const params = new URLSearchParams();
-    if (query?.status) params.append("status", query.status);
-    if (query?.startDate) params.append("startDate", query.startDate);
-    if (query?.endDate) params.append("endDate", query.endDate);
+    try {
+      const url = `${API_URL}/bookings/my-history`;
+      
+      console.log('Fetching my bookings from:', url);
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
 
-    const url = `${API_URL}/bookings/my-bookings${params.toString() ? `?${params.toString()}` : ""}`;
-    
-    const response = await fetch(url, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-    return response.json();
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Handle empty response
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No bookings found",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching my bookings:', error);
+      throw error;
+    }
   },
 
   /**
