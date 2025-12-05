@@ -8,6 +8,7 @@ import { FacilityGrid } from "@/components/facilities/facility-grid"
 import { BookingModal } from "@/components/facilities/booking-modal"
 import { useFacilities } from "@/hooks/use-facility"
 import { useFacilityTypes } from "@/hooks/use-facility-type"
+import { facilityApi } from "@/lib/api/facility"
 import type { Facility } from "@/types"
 
 interface FilterOptions {
@@ -24,6 +25,7 @@ export default function SearchPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
   const [showBookingModal, setShowBookingModal] = useState(false)
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
 
   // Fetch facility types for filter dropdown
   const { facilityTypes } = useFacilityTypes(true) // Only active types
@@ -83,9 +85,37 @@ export default function SearchPage() {
     })
   }
 
+  const handleFacilityClick = async (facility: Facility) => {
+    try {
+      setIsLoadingDetail(true)
+      console.log(`Fetching facility details for ID: ${facility.id}`)
+      
+      // Call API to get facility by ID
+      const response = await facilityApi.getById(facility.id)
+      console.log('Facility detail response:', response)
+      
+      if (response.success && response.data) {
+        setSelectedFacility(response.data)
+        setShowBookingModal(true)
+      } else {
+        console.error('Failed to fetch facility details:', response.message)
+        // Fallback to using the facility from list
+        setSelectedFacility(facility)
+        setShowBookingModal(true)
+      }
+    } catch (error) {
+      console.error('Error fetching facility details:', error)
+      // Fallback to using the facility from list
+      setSelectedFacility(facility)
+      setShowBookingModal(true)
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
   const handleBooking = (facility: Facility) => {
-    setSelectedFacility(facility)
-    setShowBookingModal(true)
+    // When clicking "Book Now" button, also fetch details
+    handleFacilityClick(facility)
   }
 
   const handleBookingSubmit = (data: any) => {
@@ -174,7 +204,8 @@ export default function SearchPage() {
             <FacilityGrid 
               facilities={filteredFacilities} 
               viewMode={viewMode} 
-              onBooking={handleBooking} 
+              onBooking={handleBooking}
+              onFacilityClick={handleFacilityClick}
             />
           )}
         </div>

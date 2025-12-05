@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFacilities, useFacilityMutations } from "@/hooks/use-facility"
 import { useFacilityTypes } from "@/hooks/use-facility-type"
 import { useCampuses } from "@/hooks/use-campus"
+import { facilityApi } from "@/lib/api/facility"
 import type { Facility, FacilityStatus } from "@/types"
 
 type AdminFacility = Facility
@@ -27,6 +28,8 @@ export default function AdminFacilitiesPage() {
 
   const [showModal, setShowModal] = useState(false)
   const [editingFacility, setEditingFacility] = useState<AdminFacility | null>(null)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [viewingFacility, setViewingFacility] = useState<AdminFacility | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTypeId, setFilterTypeId] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<string>("")
@@ -47,9 +50,50 @@ export default function AdminFacilitiesPage() {
     setShowModal(true)
   }
 
-  const handleEdit = (facility: AdminFacility) => {
-    setEditingFacility(facility)
-    setShowModal(true)
+  const handleView = async (facility: AdminFacility) => {
+    try {
+      console.log('Fetching facility details for view...')
+      const response = await facilityApi.getById(facility.id)
+      if (response.success && response.data) {
+        setViewingFacility(response.data)
+        setShowViewModal(true)
+      } else {
+        toast({ 
+          title: "Error", 
+          description: response.message || "Failed to fetch facility details",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching facility details:', error)
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to fetch facility details",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleEdit = async (facility: AdminFacility) => {
+    try {
+      const response = await facilityApi.getById(facility.id)
+      if (response.success && response.data) {
+        setEditingFacility(response.data)
+        setShowModal(true)
+      } else {
+        toast({ 
+          title: "Error", 
+          description: response.message || "Failed to fetch facility details",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to fetch facility details",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleDelete = async (facility: AdminFacility) => {
@@ -166,7 +210,11 @@ export default function AdminFacilitiesPage() {
           </Card>
         ) : (
           filteredFacilities.map((facility) => (
-            <Card key={facility.id} className="p-4 hover:shadow-lg transition-shadow">
+            <Card 
+              key={facility.id} 
+              className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleView(facility)}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -200,13 +248,17 @@ export default function AdminFacilitiesPage() {
                   <Button
                     size="sm"
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => handleEdit(facility)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(facility)
+                    }}
                   >
                     Edit
                   </Button>
                   <select
                     value={facility.status}
                     onChange={(e) => handleStatusChange(facility, e.target.value as FacilityStatus)}
+                    onClick={(e) => e.stopPropagation()}
                     className="px-2 py-1 text-xs border border-input rounded-lg bg-background"
                   >
                     <option value="Available">Available</option>
@@ -217,7 +269,10 @@ export default function AdminFacilitiesPage() {
                     size="sm"
                     variant="outline"
                     className="border-destructive text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(facility)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(facility)
+                    }}
                   >
                     Delete
                   </Button>
@@ -238,6 +293,21 @@ export default function AdminFacilitiesPage() {
           onSaved={async () => {
             setShowModal(false)
             await fetchFacilities()
+          }}
+        />
+      )}
+
+      {showViewModal && viewingFacility && (
+        <FacilityViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false)
+            setViewingFacility(null)
+          }}
+          facility={viewingFacility}
+          onEdit={() => {
+            setShowViewModal(false)
+            handleEdit(viewingFacility)
           }}
         />
       )}
@@ -272,6 +342,39 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
   const [images, setImages] = useState<File[]>([])
   const [status, setStatus] = useState<FacilityStatus>((facility?.status as FacilityStatus) ?? "Available")
   const [isActive, setIsActive] = useState(facility?.isActive ?? true)
+
+  // Sync state when facility prop changes (when editing different facilities)
+  useEffect(() => {
+    if (facility) {
+      setFacilityCode(facility.facilityCode ?? "")
+      setFacilityName(facility.facilityName ?? "")
+      setCampusId(facility.campusId ?? "")
+      setTypeId(facility.typeId ?? "")
+      setBuilding(facility.building ?? "")
+      setFloor(facility.floor ?? "")
+      setRoomNumber(facility.roomNumber ?? "")
+      setCapacity(facility.capacity?.toString() ?? "")
+      setDescription(facility.description ?? "")
+      setEquipment(facility.equipment ?? "")
+      setStatus((facility.status as FacilityStatus) ?? "Available")
+      setIsActive(facility.isActive ?? true)
+    } else {
+      // Reset form for create mode
+      setFacilityCode("")
+      setFacilityName("")
+      setCampusId("")
+      setTypeId("")
+      setBuilding("")
+      setFloor("")
+      setRoomNumber("")
+      setCapacity("")
+      setDescription("")
+      setEquipment("")
+      setStatus("Available")
+      setIsActive(true)
+      setImages([])
+    }
+  }, [facility])
 
   if (!isOpen) return null
 
@@ -363,51 +466,60 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-        <div className="flex items-center justify-between mb-4">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold">{isEdit ? "Edit Facility" : "Create Facility"}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl px-2">
             ✕
           </button>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4">
+        <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+          {/* Basic Information */}
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Basic Information</h3>
+            <p className="text-sm text-muted-foreground">Enter the facility details</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2">
                 Facility Code <span className="text-destructive">*</span>
               </label>
               <Input
                 value={facilityCode}
                 onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
-                placeholder="e.g., LAB-201"
+                placeholder="ABC"
                 disabled={isEdit}
                 maxLength={20}
                 pattern="[A-Z0-9-]+"
                 title="Only uppercase letters, numbers, and hyphens allowed"
+                className="h-11"
               />
-              <p className="text-xs text-muted-foreground mt-1">Only uppercase, numbers, and hyphens (max 20 chars)</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Only uppercase, numbers, and hyphens (max 20 chars)</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2">
                 Facility Name <span className="text-destructive">*</span>
               </label>
               <Input
                 value={facilityName}
                 onChange={(e) => setFacilityName(e.target.value)}
-                placeholder="e.g., Computer Lab 201"
+                placeholder="abc"
                 maxLength={200}
+                className="h-11"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2">
                 Campus <span className="text-destructive">*</span>
               </label>
               <select
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
                 disabled={isEdit}
@@ -421,11 +533,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2">
                 Type <span className="text-destructive">*</span>
               </label>
               <select
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 value={typeId}
                 onChange={(e) => setTypeId(e.target.value)}
               >
@@ -439,24 +551,36 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Location */}
+          <div className="space-y-1 pt-2">
+            <h3 className="text-lg font-semibold">Location</h3>
+            <p className="text-sm text-muted-foreground">Specify the facility location</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Building</label>
-              <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="A" />
+              <label className="block text-sm font-semibold mb-2">Building</label>
+              <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="A" className="h-11" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Floor</label>
-              <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="2" />
+              <label className="block text-sm font-semibold mb-2">Floor</label>
+              <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="2" className="h-11" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Room Number</label>
-              <Input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="201" />
+              <label className="block text-sm font-semibold mb-2">Room Number</label>
+              <Input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="201" className="h-11" />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Settings */}
+          <div className="space-y-1 pt-2">
+            <h3 className="text-lg font-semibold">Settings</h3>
+            <p className="text-sm text-muted-foreground">Configure capacity and availability</p>
+          </div>
+
+          <div className={`grid grid-cols-1 ${isEdit ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-4`}>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-semibold mb-2">
                 Capacity <span className="text-destructive">*</span>
               </label>
               <Input
@@ -466,83 +590,331 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                 placeholder="30"
                 min="1"
                 max="1000"
+                className="h-11"
               />
-              <p className="text-xs text-muted-foreground mt-1">Must be between 1-1000</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Must be between 1-1000</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as FacilityStatus)}
-              >
-                <option value="Available">Available</option>
-                <option value="UnderMaintenance">Under maintenance</option>
-                <option value="Unavailable">Unavailable</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2 pt-6">
-              <input
-                id="facility-active"
-                type="checkbox"
-                className="w-4 h-4 accent-primary"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-              />
-              <label htmlFor="facility-active" className="text-sm">Active</label>
-            </div>
+            {isEdit && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Status</label>
+                  <select
+                    className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as FacilityStatus)}
+                  >
+                    <option value="Available">Available</option>
+                    <option value="UnderMaintenance">Under maintenance</option>
+                    <option value="Unavailable">Unavailable</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 pt-8">
+                  <input
+                    id="facility-active"
+                    type="checkbox"
+                    className="w-5 h-5 accent-primary cursor-pointer"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                  />
+                  <label htmlFor="facility-active" className="text-sm font-medium cursor-pointer">Active</label>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Additional Information */}
+          <div className="space-y-1 pt-2">
+            <h3 className="text-lg font-semibold">Additional Information</h3>
+            <p className="text-sm text-muted-foreground">Equipment and description</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Equipment (comma separated)</label>
+            <label className="block text-sm font-semibold mb-2">Equipment (comma separated)</label>
             <Input
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
               placeholder="Projector, Whiteboard, PCs"
               maxLength={500}
+              className="h-11"
             />
-            <p className="text-xs text-muted-foreground mt-1">Max 500 characters</p>
+            <p className="text-xs text-muted-foreground mt-1.5">Max 500 characters</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Images (Multiple files allowed)</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/gif"
-              multiple
-              onChange={handleImageChange}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && `${images.length} file(s) selected`}
-            </p>
-          </div>
+          {!isEdit && (
+            <div>
+              <label className="block text-sm font-semibold mb-2">Images (Multiple files allowed)</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  multiple
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} file(s) selected</span>}
+              </p>
+            </div>
+          )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-semibold mb-2">Description</label>
             <textarea
               placeholder="Enter facility description..."
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-24"
+              className="w-full px-3 py-2.5 border border-input rounded-lg bg-background min-h-28 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={1000}
             />
-            <p className="text-xs text-muted-foreground mt-1">Max 1000 characters</p>
+            <p className="text-xs text-muted-foreground mt-1.5">Max 1000 characters</p>
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-3 pt-6 border-t">
             <Button
               type="submit"
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               disabled={isLoading}
             >
-              {isEdit ? "Update Facility" : "Create Facility"}
+              {isLoading ? "Saving..." : isEdit ? "Update Facility" : "Create Facility"}
             </Button>
-            <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={onClose}>
+            <Button type="button" variant="outline" className="flex-1 h-11 bg-transparent font-semibold" onClick={onClose}>
               Cancel
             </Button>
           </div>
         </form>
+      </Card>
+    </div>
+  )
+}
+
+interface FacilityViewModalProps {
+  isOpen: boolean
+  onClose: () => void
+  facility: AdminFacility
+  onEdit: () => void
+}
+
+function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewModalProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  
+  if (!isOpen) return null
+
+  // Parse imageUrl - backend returns JSON array string or comma-separated URLs
+  const getImageUrls = (): string[] => {
+    if (!facility.imageUrl) {
+      console.log('No imageUrl found')
+      return []
+    }
+    
+    console.log('Raw imageUrl:', facility.imageUrl)
+    console.log('Type of imageUrl:', typeof facility.imageUrl)
+    
+    try {
+      // Try to parse as JSON array first
+      const parsed = JSON.parse(facility.imageUrl)
+      console.log('Parsed as JSON:', parsed)
+      if (Array.isArray(parsed)) {
+        console.log('Image URLs array:', parsed)
+        return parsed.filter(url => url && typeof url === 'string')
+      }
+      return [facility.imageUrl]
+    } catch (error) {
+      console.log('Failed to parse as JSON, treating as string:', error)
+      // If not JSON, treat as comma-separated or single URL
+      const urls = facility.imageUrl.split(',').map(url => url.trim()).filter(Boolean)
+      console.log('Split URLs:', urls)
+      return urls
+    }
+  }
+
+  const imageUrls = getImageUrls()
+  const hasImages = imageUrls.length > 0
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % imageUrls.length)
+  }
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + imageUrls.length) % imageUrls.length)
+  }
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      Available: "bg-green-100 text-green-700",
+      UnderMaintenance: "bg-yellow-100 text-yellow-700",
+      Unavailable: "bg-red-100 text-red-700",
+    }
+    return colors[status] ?? "bg-gray-100 text-gray-700"
+  }
+
+  const getEquipmentList = (): string[] => {
+    if (!facility.equipment) return []
+    return facility.equipment.split(',').map(e => e.trim()).filter(Boolean)
+  }
+
+  const equipment = getEquipmentList()
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
+          <div>
+            <h2 className="text-2xl font-bold">{facility.facilityName}</h2>
+            <p className="text-sm text-muted-foreground mt-1">Code: {facility.facilityCode}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl px-2">
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Image Gallery */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Images</h3>
+            {hasImages ? (
+              <div className="relative w-full h-[450px] bg-muted rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={imageUrls[currentImageIndex]}
+                  alt={`${facility.facilityName} - Image ${currentImageIndex + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Failed to load image:', imageUrls[currentImageIndex])
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                  onLoad={() => console.log('Image loaded successfully:', imageUrls[currentImageIndex])}
+                />
+                {imageUrls.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                    >
+                      →
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-sm font-medium">
+                      {currentImageIndex + 1} / {imageUrls.length}
+                    </div>
+                  </>
+                )}
+                {imageUrls.length > 1 && (
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {imageUrls.map((url, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${
+                          idx === currentImageIndex ? 'border-primary shadow-md scale-105' : 'border-muted hover:border-primary/50'
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-64 bg-muted rounded-xl flex flex-col items-center justify-center text-muted-foreground">
+                <svg className="w-20 h-20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-lg font-medium">No images available</p>
+                <p className="text-sm mt-1">Images will appear here when uploaded</p>
+              </div>
+            )}
+          </div>
+
+          {/* Facility Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-5 bg-muted/30">
+              <h3 className="font-semibold text-lg mb-4">Basic Information</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="font-medium">{facility.typeName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Campus:</span>
+                  <span className="font-medium">{facility.campusName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Capacity:</span>
+                  <span className="font-medium">{facility.capacity} people</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(facility.status)}`}>
+                    {facility.status}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Active:</span>
+                  <span className="font-medium">{facility.isActive ? '✓ Yes' : '✗ No'}</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5 bg-muted/30">
+              <h3 className="font-semibold text-lg mb-4">Location</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Building:</span>
+                  <span className="font-medium">{facility.building || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Floor:</span>
+                  <span className="font-medium">{facility.floor || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Room Number:</span>
+                  <span className="font-medium">{facility.roomNumber || '-'}</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Description */}
+          {facility.description && (
+            <Card className="p-5 bg-muted/30">
+              <h3 className="font-semibold text-lg mb-3">Description</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{facility.description}</p>
+            </Card>
+          )}
+
+          {/* Equipment */}
+          {equipment.length > 0 && (
+            <Card className="p-5 bg-muted/30">
+              <h3 className="font-semibold text-lg mb-3">Equipment</h3>
+              <div className="flex flex-wrap gap-2">
+                {equipment.map((eq) => (
+                  <span key={eq} className="px-4 py-2 bg-primary/10 text-primary text-sm rounded-lg font-medium border border-primary/20">
+                    {eq}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-background border-t p-6 flex justify-end">
+          <Button onClick={onEdit} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            Edit Facility
+          </Button>
+        </div>
       </Card>
     </div>
   )

@@ -8,9 +8,10 @@ interface FacilityGridProps {
   facilities: Facility[]
   viewMode: "grid" | "list"
   onBooking: (facility: Facility) => void
+  onFacilityClick?: (facility: Facility) => void
 }
 
-export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridProps) {
+export function FacilityGrid({ facilities, viewMode, onBooking, onFacilityClick }: FacilityGridProps) {
   const getEquipmentList = (equipment: string | null): string[] => {
     if (!equipment) return []
     return equipment.split(",").map((e) => e.trim()).filter(Boolean)
@@ -38,7 +39,8 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
           return (
             <Card 
               key={facility.id} 
-              className="p-4 flex items-center justify-between hover:shadow-lg transition-shadow"
+              className="p-4 flex items-center justify-between hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => onFacilityClick?.(facility)}
             >
             <div className="flex-1">
               <div className="flex items-center gap-4">
@@ -95,7 +97,10 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
             </div>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={() => onBooking(facility)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onBooking(facility)
+              }}
                 disabled={!available}
             >
                 {available ? "Book Now" : "Unavailable"}
@@ -116,7 +121,8 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
         return (
           <Card 
             key={facility.id} 
-            className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+            className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col cursor-pointer"
+            onClick={() => onFacilityClick?.(facility)}
           >
           <div className="relative w-full h-40 bg-muted overflow-hidden">
               {facility.imageUrl ? (
@@ -172,7 +178,10 @@ export function FacilityGrid({ facilities, viewMode, onBooking }: FacilityGridPr
             </div>
             <Button
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
-              onClick={() => onBooking(facility)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onBooking(facility)
+              }}
                 disabled={!available}
             >
                 {available ? "Book Now" : "Unavailable"}
