@@ -4,22 +4,34 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
+import { useBookingMutations } from "@/hooks/use-booking"
 import type { Facility } from "@/types"
 
 interface BookingModalProps {
   facility: Facility
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any) => void
+  onBookingCreated?: () => void
 }
 
-export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingModalProps) {
+export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: BookingModalProps) {
+  const { toast } = useToast()
+  const { getCurrentUser } = useAuth()
+  const { createBooking, isLoading, error } = useBookingMutations()
+  
+  const user = getCurrentUser()
+  const userRole = user?.role ? String(user.role).toLowerCase() : ""
+  const isStudent = userRole === "student"
+  
   const [step, setStep] = useState(1)
   const [date, setDate] = useState("")
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
   const [purpose, setPurpose] = useState("")
   const [participants, setParticipants] = useState("")
+  const [lecturerEmail, setLecturerEmail] = useState("")
   const [equipment, setEquipment] = useState<string[]>([])
   const [notes, setNotes] = useState("")
 
@@ -29,17 +41,71 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
     setEquipment((prev) => (prev.includes(item) ? prev.filter((e) => e !== item) : [...prev, item]))
   }
 
-  const handleSubmit = () => {
-    onSubmit({
+  const handleSubmit = async () => {
+    if (!date || !startTime || !endTime || !purpose || !participants) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isStudent && !lecturerEmail) {
+      toast({
+        title: "Lecturer Email Required",
+        description: "Please provide your lecturer's email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Convert "HH:mm" (from input[type=time]) to "HH:mm:ss" as backend expects seconds
+    const startTimeFormatted = startTime.length === 5 ? `${startTime}:00` : startTime
+    const endTimeFormatted = endTime.length === 5 ? `${endTime}:00` : endTime
+
+    const bookingData = {
       facilityId: facility.id,
-      date,
-      startTime,
-      endTime,
+      bookingDate: date,
+      // API expects "HH:mm:ss" (TimeSpan) for startTime/endTime
+      startTime: startTimeFormatted,
+      endTime: endTimeFormatted,
       purpose,
-      participants,
-      equipment,
-      notes,
-    })
+      participants: Number.parseInt(participants),
+      lecturerEmail: isStudent ? lecturerEmail : undefined,
+      notes: notes || undefined,
+    }
+
+    const result = await createBooking(bookingData)
+    
+    if (result) {
+      toast({
+        title: "Booking Created",
+        description: isStudent 
+          ? "Your booking request has been sent to the lecturer for approval"
+          : "Your booking request has been sent to admin for approval",
+      })
+      onClose()
+      // Reset form
+      setStep(1)
+      setDate("")
+      setStartTime("")
+      setEndTime("")
+      setPurpose("")
+      setParticipants("")
+      setLecturerEmail("")
+      setEquipment([])
+      setNotes("")
+      if (onBookingCreated) {
+        onBookingCreated()
+      }
+    } else {
+      toast({
+        title: "Failed to Create Booking",
+        description: error || "Please try again",
+        variant: "destructive",
+      })
+    }
   }
 
   const getEquipmentList = (): string[] => {
@@ -122,6 +188,23 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
                 onChange={(e) => setParticipants(e.target.value)}
               />
             </div>
+            {isStudent && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Lecturer Email <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="email"
+                  value={lecturerEmail}
+                  onChange={(e) => setLecturerEmail(e.target.value)}
+                  placeholder="lecturer@fpt.edu.vn"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your booking will be sent to this lecturer for approval
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -227,8 +310,12 @@ export function BookingModal({ facility, isOpen, onClose, onSubmit }: BookingMod
               Continue
             </Button>
           ) : (
-            <Button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSubmit}>
-              Submit Booking
+            <Button 
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" 
+              onClick={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? "Submitting..." : "Submit Booking"}
             </Button>
           )}
           <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">

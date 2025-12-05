@@ -4,98 +4,108 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useAdminBookings } from "@/hooks/use-admin-bookings"
-import type { BookingListDto } from "@/types"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
+import { usePendingAdminApprovals, useBookingMutations } from "@/hooks/use-booking"
+import { useFacility } from "@/hooks/use-facility"
+import type { Booking, BookingStatus } from "@/types"
 
 export default function AdminBookingsPage() {
-  const { bookings, isLoading, error, fetchPendingApprovals, approveBooking } = useAdminBookings()
-  const [selectedBooking, setSelectedBooking] = useState<BookingListDto | null>(null)
+  const { toast } = useToast()
+  const { bookings: pendingBookings, fetchPendingApprovals, isLoading: isLoadingPending } = usePendingAdminApprovals()
+  const { approveBookingAsAdmin, rejectBookingAsAdmin, isLoading: isMutating, error: mutationError } = useBookingMutations()
+  
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
   const [comment, setComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
+  
+  // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
+  const { facility, isLoading: isLoadingFacility } = useFacility(
+    selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
+  )
 
   useEffect(() => {
     fetchPendingApprovals()
-  }, [])
+  }, [fetchPendingApprovals])
 
-  const filteredBookings = bookings.filter(
+  const filteredBookings = pendingBookings.filter(
     (b) =>
       b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase()),
+      b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleApprove = async (id: string) => {
-    const success = await approveBooking(id, {
-      approved: true,
-      comment: comment || undefined,
-    })
-    
-    if (success) {
-      setSelectedBooking(null)
-      setActionType(null)
-      setComment("")
-      alert("Booking approved successfully!")
-    } else {
-      alert(error || "Failed to approve booking")
+  const getStatusColor = (status: BookingStatus) => {
+    const colors: Record<string, string> = {
+      WaitingLecturerApproval: "bg-yellow-100 text-yellow-700",
+      WaitingAdminApproval: "bg-blue-100 text-blue-700",
+      Approved: "bg-green-100 text-green-700",
+      Rejected: "bg-red-100 text-red-700",
+      Cancelled: "bg-gray-100 text-gray-700",
+      Completed: "bg-purple-100 text-purple-700",
+      CheckedIn: "bg-indigo-100 text-indigo-700",
+      NoShow: "bg-orange-100 text-orange-700",
+      Pending: "bg-blue-100 text-blue-700",
     }
-  }
-
-  const handleReject = async (id: string) => {
-    if (!comment.trim()) {
-      alert("Please provide a rejection reason")
-      return
-    }
-    
-    const success = await approveBooking(id, {
-      approved: false,
-      comment: comment,
-    })
-    
-    if (success) {
-      setSelectedBooking(null)
-      setActionType(null)
-      setComment("")
-      alert("Booking rejected successfully!")
-    } else {
-      alert(error || "Failed to reject booking")
-    }
-  }
-
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'N/A';
-    
-    // Handle different time formats
-    // Could be "HH:mm:ss" or just "HH:mm" or a full datetime string
-    try {
-      if (timeString.includes('T')) {
-        // ISO datetime string
-        const date = new Date(timeString);
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      }
-      
-      // Assume "HH:mm:ss" or "HH:mm" format
-      const parts = timeString.split(':');
-      if (parts.length >= 2) {
-        return `${parts[0]}:${parts[1]}`;
-      }
-      
-      return timeString;
-    } catch (error) {
-      console.error('Error formatting time:', timeString, error);
-      return timeString;
-    }
+    return colors[status] || "bg-gray-100 text-gray-700"
   }
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString("vi-VN")
+  }
+
+  const formatTime = (timeString: string) => {
+    return timeString.substring(0, 5)
+  }
+
+  const handleApprove = async (booking: Booking) => {
+    const result = await approveBookingAsAdmin(booking.id, comment || undefined)
+    if (result) {
+      toast({
+        title: "Booking Approved",
+        description: "The booking has been approved successfully",
+      })
+      setSelectedBooking(null)
+      setActionType(null)
+      setComment("")
+      fetchPendingApprovals()
+    } else {
+      toast({
+        title: "Failed to Approve",
+        description: mutationError || "The booking could not be approved. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleReject = async (booking: Booking) => {
+    if (!rejectReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for rejection",
+        variant: "destructive",
+      })
+      return
+    }
     
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch (error) {
-      console.error('Error formatting date:', dateString, error);
-      return dateString;
+    const result = await rejectBookingAsAdmin(booking.id, rejectReason)
+    if (result) {
+      toast({
+        title: "Booking Rejected",
+        description: "The booking has been rejected",
+      })
+      setSelectedBooking(null)
+      setActionType(null)
+      setRejectReason("")
+      fetchPendingApprovals()
+    } else {
+      toast({
+        title: "Failed to Reject",
+        description: mutationError || "The booking could not be rejected. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -103,38 +113,41 @@ export default function AdminBookingsPage() {
     <div className="space-y-6">
       <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({bookings.length})</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({pendingBookings.length})</h3>
         </div>
 
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
+          <p className="text-3xl font-bold text-primary">{pendingBookings.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Approved This Month</p>
+          <p className="text-3xl font-bold text-primary">-</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Avg. Approval Time</p>
+          <p className="text-3xl font-bold text-primary">-</p>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList>
+          <TabsTrigger value="pending">Pending ({pendingBookings.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="mt-4 space-y-4">
           <Card className="p-4">
             <Input
-              placeholder="Search by facility, requester, or booking ID..."
+              placeholder="Search by facility, requester, or booking code..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </Card>
 
-          {isLoading ? (
+          {isLoadingPending ? (
             <Card className="p-12 text-center">
-              <div className="flex flex-col items-center gap-4">
-                <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-muted-foreground">Loading bookings...</p>
-              </div>
-            </Card>
-          ) : error ? (
-            <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
-              <p className="text-destructive">{error}</p>
-              <Button 
-                onClick={() => fetchPendingApprovals()} 
-                variant="outline"
-                className="mt-4"
-              >
-                Retry
-              </Button>
+              <p className="text-muted-foreground">Loading pending bookings...</p>
             </Card>
           ) : filteredBookings.length === 0 ? (
             <Card className="p-12 text-center">
@@ -146,14 +159,14 @@ export default function AdminBookingsPage() {
             filteredBookings.map((booking) => (
               <Card
                 key={booking.id}
-                className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-yellow-400"
+                className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-400"
                 onClick={() => setSelectedBooking(booking)}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-bold text-lg">{booking.facilityName}</h3>
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                      <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(booking.status)}`}>
                         {booking.status}
                       </span>
                     </div>
@@ -182,6 +195,13 @@ export default function AdminBookingsPage() {
                   </div>
                 </div>
 
+                {booking.lecturerName && (
+                  <div className="mb-4 text-sm">
+                    <p className="text-muted-foreground text-xs">Approved by Lecturer</p>
+                    <p className="font-medium">{booking.lecturerName}</p>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -191,6 +211,7 @@ export default function AdminBookingsPage() {
                       setSelectedBooking(booking)
                       setActionType("approve")
                     }}
+                    disabled={isMutating}
                   >
                     Approve
                   </Button>
@@ -203,6 +224,7 @@ export default function AdminBookingsPage() {
                       setSelectedBooking(booking)
                       setActionType("reject")
                     }}
+                    disabled={isMutating}
                   >
                     Reject
                   </Button>
@@ -220,9 +242,11 @@ export default function AdminBookingsPage() {
               </Card>
             ))
           )}
-        </div>
+        </TabsContent>
+      </Tabs>
       </Card>
 
+      {/* Booking Details Modal */}
       {selectedBooking && !actionType && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl p-6">
@@ -241,7 +265,7 @@ export default function AdminBookingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(selectedBooking.status)}`}>
                     {selectedBooking.status}
                   </span>
                 </div>
@@ -255,15 +279,60 @@ export default function AdminBookingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Time</p>
-                  <p className="font-bold">
-                    {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}
-                  </p>
+                  <p className="font-bold">{formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Created At</p>
                   <p className="font-bold">{formatDate(selectedBooking.createdAt)}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Participants</p>
+                  <p className="font-bold">{selectedBooking.participants}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Purpose</p>
+                  <p className="font-bold">{selectedBooking.purpose}</p>
+                </div>
+                {isLoadingFacility ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Loading facility details...</p>
+                  </div>
+                ) : facility ? (
+                  <>
+                    {facility.building && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Tòa nhà (Building)</p>
+                        <p className="font-bold">{facility.building}</p>
+                      </div>
+                    )}
+                    {facility.floor && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Tầng (Floor)</p>
+                        <p className="font-bold">{facility.floor}</p>
+                      </div>
+                    )}
+                    {facility.roomNumber && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Phòng (Room)</p>
+                        <p className="font-bold">{facility.roomNumber}</p>
+                      </div>
+                    )}
+                    {facility.campusName && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Campus</p>
+                        <p className="font-bold">{facility.campusName}</p>
+                      </div>
+                    )}
+                  </>
+                ) : null}
               </div>
+              
+              {selectedBooking.notes && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="font-medium">{selectedBooking.notes}</p>
+                </div>
+              )}
 
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground mb-2">Requester Information</p>
@@ -276,10 +345,18 @@ export default function AdminBookingsPage() {
                     <p className="text-xs text-muted-foreground">Role</p>
                     <p className="font-medium">{selectedBooking.userRole}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Lecturer Email</p>
-                    <p className="font-medium">{selectedBooking.lecturerEmail || "N/A"}</p>
-                  </div>
+                  {selectedBooking.lecturerEmail && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Lecturer Email</p>
+                      <p className="font-medium">{selectedBooking.lecturerEmail}</p>
+                    </div>
+                  )}
+                  {selectedBooking.lecturerName && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Approved by Lecturer</p>
+                      <p className="font-medium">{selectedBooking.lecturerName}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -306,23 +383,16 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
+      {/* Approve Modal */}
       {selectedBooking && actionType === "approve" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md p-6">
             <h2 className="text-2xl font-bold mb-4">Approve Booking?</h2>
             <div className="bg-muted p-4 rounded-lg mb-6 text-sm space-y-1">
-              <p>
-                <span className="font-medium">Facility:</span> {selectedBooking.facilityName}
-              </p>
-              <p>
-                <span className="font-medium">Date:</span> {formatDate(selectedBooking.bookingDate)}
-              </p>
-              <p>
-                <span className="font-medium">Time:</span> {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}
-              </p>
-              <p>
-                <span className="font-medium">Requester:</span> {selectedBooking.userName}
-              </p>
+              <p><span className="font-medium">Facility:</span> {selectedBooking.facilityName}</p>
+              <p><span className="font-medium">Date:</span> {formatDate(selectedBooking.bookingDate)}</p>
+              <p><span className="font-medium">Time:</span> {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}</p>
+              <p><span className="font-medium">Requester:</span> {selectedBooking.userName}</p>
             </div>
 
             <div className="mb-4">
@@ -338,10 +408,10 @@ export default function AdminBookingsPage() {
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => handleApprove(selectedBooking.id)}
-                disabled={isLoading}
+                onClick={() => handleApprove(selectedBooking)}
+                disabled={isMutating}
               >
-                {isLoading ? "Approving..." : "Confirm Approve"}
+                {isMutating ? "Approving..." : "Confirm Approve"}
               </Button>
               <Button
                 variant="outline"
@@ -350,7 +420,7 @@ export default function AdminBookingsPage() {
                   setActionType(null)
                   setComment("")
                 }}
-                disabled={isLoading}
+                disabled={isMutating}
               >
                 Cancel
               </Button>
@@ -359,39 +429,46 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
+      {/* Reject Modal */}
       {selectedBooking && actionType === "reject" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md p-6">
             <h2 className="text-2xl font-bold mb-4">Reject Booking</h2>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Rejection Reason *</label>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Please provide a reason for rejection..."
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-24"
-                required
-              />
+            <div>
+              <label className="block text-sm font-medium mb-2">Rejection Reason <span className="text-destructive">*</span></label>
+              <select
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background mb-4"
+              >
+                <option value="">Select a reason</option>
+                <option value="Facility not suitable for purpose">Facility not suitable for purpose</option>
+                <option value="Overlapping booking">Overlapping booking</option>
+                <option value="User has too many active bookings">User has too many active bookings</option>
+                <option value="Insufficient information">Insufficient information</option>
+                <option value="Policy violation">Policy violation</option>
+                <option value="Other">Other (specify in notes)</option>
+              </select>
             </div>
 
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 className="flex-1 text-destructive hover:text-destructive bg-transparent"
-                onClick={() => handleReject(selectedBooking.id)}
-                disabled={!comment.trim() || isLoading}
+                onClick={() => handleReject(selectedBooking)}
+                disabled={!rejectReason || isMutating}
               >
-                {isLoading ? "Rejecting..." : "Reject"}
+                {isMutating ? "Rejecting..." : "Reject"}
               </Button>
               <Button 
                 variant="outline" 
                 className="flex-1 bg-transparent" 
                 onClick={() => {
                   setActionType(null)
-                  setComment("")
+                  setRejectReason("")
                 }}
-                disabled={isLoading}
+                disabled={isMutating}
               >
                 Cancel
               </Button>
@@ -402,4 +479,3 @@ export default function AdminBookingsPage() {
     </div>
   )
 }
-

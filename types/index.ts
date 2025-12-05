@@ -162,13 +162,6 @@ export interface UpdateProfileRequest {
   major?: string | null;
 }
 
-export interface UpdateProfileRequest {
-  fullName: string;
-  phoneNumber?: string | null;
-  department?: string | null;
-  major?: string | null;
-}
-
 // ============================================
 // Campus Types
 // ============================================
@@ -340,6 +333,41 @@ export interface MyCampusChangeRequest {
 // Booking Types
 // ============================================
 
+export type BookingStatus = 
+  | "WaitingLecturerApproval" 
+  | "WaitingAdminApproval" 
+  | "Approved" 
+  | "Rejected" 
+  | "Cancelled" 
+  | "Completed" 
+  | "CheckedIn" 
+  | "NoShow"
+  | "Pending";
+
+export interface Booking {
+  id: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string; // ISO date string
+  startTime: string; // TimeSpan "HH:mm:ss"
+  endTime: string; // TimeSpan "HH:mm:ss"
+  purpose: string;
+  participants: number;
+  status: BookingStatus;
+  lecturerEmail?: string | null;
+  lecturerName?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  checkedInAt?: string | null;
+  checkedOutAt?: string | null;
+  createdAt: string;
+  modifiedAt?: string | null;
+}
+
 export interface BookingListDto {
   id: string;
   bookingCode: string;
@@ -356,11 +384,39 @@ export interface BookingListDto {
   createdAt: string;
 }
 
+export interface CreateBookingRequest {
+  facilityId: string;
+  bookingDate: string; // ISO date "YYYY-MM-DD" (date only; time handled by startTime/endTime)
+  startTime: string; // TimeSpan "HH:mm:ss"
+  endTime: string; // TimeSpan "HH:mm:ss"
+  purpose: string;
+  participants: number;
+  lecturerEmail?: string; // Required for Student bookings
+  notes?: string;
+}
+
 export interface ApproveBookingRequest {
+  comment?: string;
+}
+
+export interface LecturerApproveBookingRequest {
   approved: boolean;
   comment?: string;
 }
 
+export interface RejectBookingRequest {
+  reason: string;
+}
+
+export interface GetBookingsQuery {
+  status?: BookingStatus;
+  facilityId?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
 // ============================================
 // Holiday Types
 // ============================================

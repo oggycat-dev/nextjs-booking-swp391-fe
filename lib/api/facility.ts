@@ -33,32 +33,48 @@ export const facilityApi = {
         headers: getAuthHeaders(),
       });
 
-      console.log('Response status:', response.status);
-
-      const text = await response.text();
-      console.log('Response text:', text);
-
       if (!response.ok) {
-        let errorData;
-        try {
-          errorData = text ? JSON.parse(text) : null;
-        } catch (e) {
-          // Not JSON
+        const contentType = response.headers.get("content-type");
+        let errorData: any;
+        
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            errorData = await response.json();
+          } catch {
+            errorData = null;
+          }
+        } else {
+          const text = await response.text();
+          try {
+            errorData = text ? JSON.parse(text) : null;
+          } catch {
+            errorData = null;
+          }
         }
+        
         const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
 
-      if (!text || text.trim() === '') {
-        throw new Error('Empty response from server');
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return await response.json();
+      } else {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from server');
+        }
+        try {
+          return JSON.parse(text);
+        } catch (parseError) {
+          throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+        }
       }
-
-      const data = JSON.parse(text);
-      console.log('Parsed data:', data);
-      return data;
     } catch (error) {
-      console.error('Error fetching facilities:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("An unexpected error occurred while fetching facilities");
     }
   },
 
@@ -104,10 +120,9 @@ export const facilityApi = {
 
   /**
    * Create a new facility with images (Admin only)
+   * Supports FormData for file uploads
    */
   create: async (request: CreateFacilityRequest): Promise<ApiResponse<Facility>> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    
     // Create FormData for multipart/form-data
     const formData = new FormData();
     formData.append("facilityCode", request.facilityCode);
@@ -130,21 +145,14 @@ export const facilityApi = {
       });
     }
     
-    console.log('Creating facility with FormData');
-    
     const response = await fetch(`${API_URL}/Facility`, {
       method: "POST",
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-        // Don't set Content-Type, let browser set it with boundary
-      },
+      headers: getAuthHeaders("multipart/form-data"),
       body: formData,
     });
     
-    const text = await response.text();
-    console.log('Response text:', text);
-    
     if (!response.ok) {
+      const text = await response.text();
       let errorData;
       try {
         errorData = text ? JSON.parse(text) : null;
@@ -155,7 +163,7 @@ export const facilityApi = {
       throw new Error(errorMessage);
     }
     
-    return JSON.parse(text);
+    return response.json();
   },
 
   /**
