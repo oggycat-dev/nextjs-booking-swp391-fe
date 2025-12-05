@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Facility } from "@/types"
@@ -12,6 +13,24 @@ interface FacilityGridProps {
 }
 
 export function FacilityGrid({ facilities, viewMode, onBooking, onFacilityClick }: FacilityGridProps) {
+  // Parse imageUrl JSON string to get first image URL
+  const getImageUrl = (facility: Facility): string | null => {
+    if (!facility.imageUrl) return null
+    
+    try {
+      // imageUrl is a JSON string containing array of URLs
+      const urls = JSON.parse(facility.imageUrl)
+      if (Array.isArray(urls) && urls.length > 0) {
+        return urls[0] // Return first image
+      }
+      // If it's already a single URL string
+      return facility.imageUrl
+    } catch (e) {
+      // If not JSON, treat as single URL
+      return facility.imageUrl
+    }
+  }
+
   const getEquipmentList = (equipment: string | null): string[] => {
     if (!equipment) return []
     return equipment.split(",").map((e) => e.trim()).filter(Boolean)
@@ -46,11 +65,17 @@ export function FacilityGrid({ facilities, viewMode, onBooking, onFacilityClick 
               <div className="flex items-center gap-4">
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
                     {facility.imageUrl ? (
-                  <img
+                      <img
                         src={facility.imageUrl}
                         alt={facility.facilityName}
-                    className="w-full h-full object-cover"
-                  />
+                        className="w-full h-full object-cover"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          console.error('Image load error:', facility.imageUrl)
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                         No Image
@@ -125,12 +150,13 @@ export function FacilityGrid({ facilities, viewMode, onBooking, onFacilityClick 
             onClick={() => onFacilityClick?.(facility)}
           >
           <div className="relative w-full h-40 bg-muted overflow-hidden">
-              {facility.imageUrl ? (
-            <img
-                  src={facility.imageUrl}
+              {getImageUrl(facility) ? (
+                <img
+                  src={getImageUrl(facility)!}
                   alt={facility.facilityName}
-              className="w-full h-full object-cover"
-            />
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                   No Image Available

@@ -34,6 +34,24 @@ export default function AdminFacilitiesPage() {
   const [filterTypeId, setFilterTypeId] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<string>("")
 
+  // Parse imageUrl JSON string to get first image URL
+  const getImageUrl = (facility: AdminFacility): string | null => {
+    if (!facility.imageUrl) return null
+    
+    try {
+      // imageUrl is a JSON string containing array of URLs
+      const urls = JSON.parse(facility.imageUrl)
+      if (Array.isArray(urls) && urls.length > 0) {
+        return urls[0] // Return first image
+      }
+      // If it's already a single URL string
+      return facility.imageUrl
+    } catch (e) {
+      // If not JSON, treat as single URL
+      return facility.imageUrl
+    }
+  }
+
   const filteredFacilities = useMemo(() => {
     return facilities.filter((f) => {
       const matchesSearch =
@@ -193,13 +211,13 @@ export default function AdminFacilitiesPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {isLoading ? (
-          <Card className="p-12 text-center">
+          <Card className="col-span-full p-12 text-center">
             <p className="text-muted-foreground">Loading facilities...</p>
           </Card>
         ) : filteredFacilities.length === 0 ? (
-          <Card className="p-12 text-center">
+          <Card className="col-span-full p-12 text-center">
             <p className="text-muted-foreground mb-4">No facilities found</p>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -212,42 +230,79 @@ export default function AdminFacilitiesPage() {
           filteredFacilities.map((facility) => (
             <Card 
               key={facility.id} 
-              className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+              className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer flex flex-col"
               onClick={() => handleView(facility)}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">{facility.facilityName}</h3>
-                    <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(facility.status)}`}>
-                      {facility.status}
+              {/* Image Section */}
+              <div className="relative w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-700 dark:to-gray-600">
+                {getImageUrl(facility) ? (
+                  <img
+                    src={getImageUrl(facility)!}
+                    alt={facility.facilityName}
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+                {facility.status !== "Available" && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">
+                      {facility.status === "UnderMaintenance" ? "Under Maintenance" : "Unavailable"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Code: {facility.facilityCode} • Type: {facility.typeName} • Campus: {facility.campusName} •
-                    Building {facility.building ?? "-"}, Floor {facility.floor ?? "-"} • Capacity: {facility.capacity}
-                  </p>
-                  <div className="flex items-center gap-4 mb-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Equipment</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {(facility.equipment ?? "")
-                          .split(",")
-                          .map((e) => e.trim())
-                          .filter(Boolean)
-                          .map((eq) => (
-                            <span key={eq} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                              {eq}
-                            </span>
-                          ))}
-                      </div>
+                )}
+              </div>
+
+              {/* Content Section */}
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-lg">{facility.facilityName}</h3>
+                  <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${getStatusColor(facility.status)}`}>
+                    {facility.status}
+                  </span>
+                </div>
+                
+                <p className="text-xs text-muted-foreground mb-1">
+                  Code: <span className="font-medium">{facility.facilityCode}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {facility.typeName} • Campus: {facility.campusName} • Building {facility.building ?? "-"}, Floor {facility.floor ?? "-"} • Capacity: {facility.capacity}
+                </p>
+
+                {/* Equipment */}
+                {facility.equipment && (
+                  <div className="mb-4">
+                    <p className="text-xs text-muted-foreground mb-1">Equipment</p>
+                    <div className="flex flex-wrap gap-1">
+                      {facility.equipment
+                        .split(",")
+                        .map((e) => e.trim())
+                        .filter(Boolean)
+                        .slice(0, 3)
+                        .map((eq) => (
+                          <span key={eq} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
+                            {eq}
+                          </span>
+                        ))}
+                      {facility.equipment.split(",").filter(Boolean).length > 3 && (
+                        <span className="px-2 py-1 bg-muted text-xs rounded">
+                          +{facility.equipment.split(",").filter(Boolean).length - 3}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 ml-4">
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2 mt-auto pt-4 border-t">
                   <Button
                     size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(facility)
@@ -259,7 +314,7 @@ export default function AdminFacilitiesPage() {
                     value={facility.status}
                     onChange={(e) => handleStatusChange(facility, e.target.value as FacilityStatus)}
                     onClick={(e) => e.stopPropagation()}
-                    className="px-2 py-1 text-xs border border-input rounded-lg bg-background"
+                    className="px-2 py-1.5 text-xs border border-input rounded-lg bg-background w-full"
                   >
                     <option value="Available">Available</option>
                     <option value="UnderMaintenance">Under maintenance</option>
@@ -268,7 +323,7 @@ export default function AdminFacilitiesPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/10"
+                    className="border-destructive text-destructive hover:bg-destructive/10 w-full"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDelete(facility)
@@ -382,17 +437,67 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     e.preventDefault()
 
     // Validate required fields
-    const missingFields = []
-    if (!facilityCode) missingFields.push("Facility Code")
-    if (!facilityName) missingFields.push("Facility Name")
-    if (!campusId) missingFields.push("Campus")
-    if (!typeId) missingFields.push("Type")
-    if (!capacity || Number(capacity) <= 0) missingFields.push("Capacity (must be > 0)")
+    const errors: string[] = []
 
-    if (missingFields.length > 0) {
+    // Common validations for both create and update
+    if (!facilityName.trim()) {
+      errors.push("Facility name is required")
+    } else if (facilityName.length > 200) {
+      errors.push("Facility name cannot exceed 200 characters")
+    }
+
+    if (!typeId) {
+      errors.push("Facility type is required")
+    }
+
+    if (!capacity || isNaN(Number(capacity))) {
+      errors.push("Capacity is required")
+    } else if (Number(capacity) <= 0) {
+      errors.push("Capacity must be greater than 0")
+    } else if (Number(capacity) > 1000) {
+      errors.push("Capacity cannot exceed 1000")
+    }
+
+    if (description && description.length > 1000) {
+      errors.push("Description cannot exceed 1000 characters")
+    }
+
+    if (equipment && equipment.length > 500) {
+      errors.push("Equipment cannot exceed 500 characters")
+    }
+
+    // Create-specific validations
+    if (!isEdit) {
+      if (!facilityCode.trim()) {
+        errors.push("Facility code is required")
+      } else if (facilityCode.length > 20) {
+        errors.push("Facility code cannot exceed 20 characters")
+      } else if (!/^[A-Z0-9-]+$/.test(facilityCode)) {
+        errors.push("Facility code must contain only uppercase letters, numbers, and hyphens")
+      }
+
+      if (!campusId) {
+        errors.push("Campus is required")
+      }
+
+      // Validate images
+      if (images.length > 0) {
+        images.forEach((file, index) => {
+          if (file.size > 5 * 1024 * 1024) {
+            errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
+          }
+          const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+          if (!validTypes.includes(file.type.toLowerCase())) {
+            errors.push(`Image ${index + 1} (${file.name}) must be JPEG, JPG, PNG, or GIF`)
+          }
+        })
+      }
+    }
+
+    if (errors.length > 0) {
       toast({ 
-        title: "Missing Required Fields", 
-        description: `Please fill in: ${missingFields.join(", ")}`,
+        title: "Validation Error", 
+        description: errors.join("; "),
         variant: "destructive" 
       })
       return
@@ -485,7 +590,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Facility Code <span className="text-destructive">*</span>
+                Facility Code <span className="text-red-500">*</span>
               </label>
               <Input
                 value={facilityCode}
@@ -497,29 +602,32 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                 title="Only uppercase letters, numbers, and hyphens allowed"
                 className="h-11"
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Only uppercase, numbers, and hyphens (max 20 chars)</p>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Only uppercase, numbers, and hyphens (max 20 chars)
+              </p>
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Facility Name <span className="text-destructive">*</span>
+                Facility Name <span className="text-red-500">*</span>
               </label>
               <Input
                 value={facilityName}
                 onChange={(e) => setFacilityName(e.target.value)}
-                placeholder="abc"
+                placeholder="Room name"
                 maxLength={200}
                 className="h-11"
               />
+              <p className="text-xs text-muted-foreground mt-1.5">Max 200 characters</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Campus <span className="text-destructive">*</span>
+                Campus <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
                 disabled={isEdit}
@@ -531,10 +639,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                   </option>
                 ))}
               </select>
+              {isEdit && <p className="text-xs text-muted-foreground mt-1.5">Cannot change campus after creation</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Type <span className="text-destructive">*</span>
+                Type <span className="text-red-500">*</span>
               </label>
               <select
                 className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
@@ -560,15 +669,30 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold mb-2">Building</label>
-              <Input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="A" className="h-11" />
+              <Input 
+                value={building} 
+                onChange={(e) => setBuilding(e.target.value)} 
+                placeholder="A" 
+                className="h-11" 
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Floor</label>
-              <Input value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="2" className="h-11" />
+              <Input 
+                value={floor} 
+                onChange={(e) => setFloor(e.target.value)} 
+                placeholder="2" 
+                className="h-11" 
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Room Number</label>
-              <Input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="201" className="h-11" />
+              <Input 
+                value={roomNumber} 
+                onChange={(e) => setRoomNumber(e.target.value)} 
+                placeholder="201" 
+                className="h-11" 
+              />
             </div>
           </div>
 
@@ -581,7 +705,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           <div className={`grid grid-cols-1 ${isEdit ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-4`}>
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Capacity <span className="text-destructive">*</span>
+                Capacity <span className="text-red-500">*</span>
               </label>
               <Input
                 type="number"
@@ -637,7 +761,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               maxLength={500}
               className="h-11"
             />
-            <p className="text-xs text-muted-foreground mt-1.5">Max 500 characters</p>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {equipment.length}/500 characters
+            </p>
           </div>
 
           {!isEdit && (
@@ -667,7 +793,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
               onChange={(e) => setDescription(e.target.value)}
               maxLength={1000}
             />
-            <p className="text-xs text-muted-foreground mt-1.5">Max 1000 characters</p>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {description.length}/1000 characters
+            </p>
           </div>
 
           <div className="flex gap-3 pt-6 border-t">
