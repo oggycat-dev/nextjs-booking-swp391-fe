@@ -62,18 +62,49 @@ export default function BookingsPage() {
     }
   }
 
+  // Handler for check-in from popup (with toast validation)
+  const handleCheckInClickFromPopup = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    
+    // Debug logging
+    console.log('=== Check-in Validation Debug ===')
+    console.log('Current time:', new Date())
+    console.log('Booking date:', booking.bookingDate)
+    console.log('Start time:', booking.startTime)
+    console.log('Booking status:', booking.status)
+    console.log('Already checked in:', booking.checkedInAt)
+    
+    const validation = validateCheckIn(booking)
+    console.log('Validation result:', validation)
+    
+    if (!validation.isValid) {
+      const bookingDate = formatDate(booking.bookingDate)
+      const startTime = formatTime(booking.startTime)
+      toast({
+        variant: "destructive",
+        title: "Check-in Not Available",
+        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nStart Time: ${startTime}`,
+        duration: 3000,
+      })
+      return
+    }
+    
+    if (validation.warningMessage) {
+      setValidationWarning(validation.warningMessage)
+    }
+    
+    console.log('Opening check-in dialog')
+    setCheckInDialog(true)
+  }
+
+  // Handler for check-in from card (no toast, just open dialog)
   const handleCheckInClick = (booking: BookingListDto) => {
     setValidationWarning(null)
     setSelectedBooking(booking)
     
     const validation = validateCheckIn(booking)
     if (!validation.isValid) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Check-in",
-        description: validation.error,
-      })
-      return
+      return // Silent fail for card click
     }
     
     if (validation.warningMessage) {
@@ -83,18 +114,50 @@ export default function BookingsPage() {
     setCheckInDialog(true)
   }
 
+  // Handler for check-out from popup (with toast validation)
+  const handleCheckOutClickFromPopup = (booking: BookingListDto) => {
+    setValidationWarning(null)
+    
+    // Debug logging
+    console.log('=== Check-out Validation Debug ===')
+    console.log('Current time:', new Date())
+    console.log('Booking date:', booking.bookingDate)
+    console.log('End time:', booking.endTime)
+    console.log('Booking status:', booking.status)
+    console.log('Checked in at:', booking.checkedInAt)
+    console.log('Already checked out:', booking.checkedOutAt)
+    
+    const validation = validateCheckOut(booking)
+    console.log('Validation result:', validation)
+    
+    if (!validation.isValid) {
+      const bookingDate = formatDate(booking.bookingDate)
+      const endTime = formatTime(booking.endTime)
+      toast({
+        variant: "destructive",
+        title: "Check-out Not Available",
+        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nEnd Time: ${endTime}`,
+        duration: 3000,
+      })
+      return
+    }
+    
+    if (validation.warningMessage) {
+      setValidationWarning(validation.warningMessage)
+    }
+    
+    console.log('Opening check-out dialog')
+    setCheckOutDialog(true)
+  }
+
+  // Handler for check-out from card (no toast, just open dialog)
   const handleCheckOutClick = (booking: BookingListDto) => {
     setValidationWarning(null)
     setSelectedBooking(booking)
     
     const validation = validateCheckOut(booking)
     if (!validation.isValid) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Check-out",
-        description: validation.error,
-      })
-      return
+      return // Silent fail for card click
     }
     
     if (validation.warningMessage) {
@@ -264,8 +327,35 @@ export default function BookingsPage() {
             </div>
           </div>
             
-            {/* Right Section - Actions */}
+            {/* Right Section - Status & Actions */}
             <div className="flex flex-col gap-2 flex-shrink-0">
+              {/* Check-in/Check-out Status Badges */}
+              <div className="flex flex-col gap-1.5 mb-2">
+                {booking.checkedInAt ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-md font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Checked In</span>
+                  </div>
+                ) : canCheckIn(booking) ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-md font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Check-in</span>
+                  </div>
+                ) : null}
+                
+                {booking.checkedOutAt ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-md font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Checked Out</span>
+                  </div>
+                ) : booking.checkedInAt && canCheckOut(booking) ? (
+                  <div className="flex items-center gap-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-md font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Check-out</span>
+                  </div>
+                ) : null}
+              </div>
+              
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -274,26 +364,6 @@ export default function BookingsPage() {
               >
                 Details
               </Button>
-              {canCheckIn(booking) && (
-                <Button 
-                  size="sm" 
-                  className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
-                  onClick={() => handleCheckInClick(booking)}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                  Check-in
-                </Button>
-              )}
-              {canCheckOut(booking) && (
-                <Button 
-                  size="sm" 
-                  className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-                  onClick={() => handleCheckOutClick(booking)}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                  Check-out
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -418,7 +488,7 @@ export default function BookingsPage() {
               {canCheckIn(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handleCheckInClick(selectedBooking)}
+                  onClick={() => handleCheckInClickFromPopup(selectedBooking)}
                 >
                   Check-in
                 </Button>
@@ -426,7 +496,7 @@ export default function BookingsPage() {
               {canCheckOut(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => handleCheckOutClick(selectedBooking)}
+                  onClick={() => handleCheckOutClickFromPopup(selectedBooking)}
                 >
                   Check-out
                 </Button>
