@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -221,6 +222,7 @@ export default function DashboardLayout({
           </TokenRefreshProvider>
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }

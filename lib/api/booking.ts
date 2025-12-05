@@ -231,7 +231,7 @@ export const bookingApi = {
    */
   checkIn: async (bookingId: string): Promise<ApiResponse<null>> => {
     const headers = getAuthHeaders();
-    const url = `${API_URL}/api/bookings/${bookingId}/check-in`;
+    const url = `${API_URL}/bookings/${bookingId}/check-in`;
     
     const response = await fetch(url, {
       method: "POST",
@@ -264,7 +264,7 @@ export const bookingApi = {
    */
   checkOut: async (bookingId: string): Promise<ApiResponse<null>> => {
     const headers = getAuthHeaders();
-    const url = `${API_URL}/api/bookings/${bookingId}/check-out`;
+    const url = `${API_URL}/bookings/${bookingId}/check-out`;
     
     const response = await fetch(url, {
       method: "POST",
@@ -297,7 +297,7 @@ export const bookingApi = {
    */
   getMyBookingHistory: async (): Promise<ApiResponse<BookingListDto[]>> => {
     const headers = getAuthHeaders();
-    const url = `${API_URL}/api/bookings/my-history`;
+    const url = `${API_URL}/bookings/my-history`;
     
     const response = await fetch(url, {
       method: "GET",

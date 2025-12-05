@@ -15,18 +15,22 @@ export interface ValidationResult {
  * Parse time string to Date object for comparison
  */
 function parseTimeToDate(dateString: string, timeString: string): Date {
-  const date = new Date(dateString)
+  // Parse the booking date (format: "2025-12-10T00:00:00")
+  const bookingDate = new Date(dateString)
   
-  // Handle TimeSpan format (HH:mm:ss)
-  if (timeString.includes(':')) {
+  // Handle TimeSpan format (HH:mm:ss) from backend
+  if (timeString.includes(':') && !timeString.includes('T')) {
     const [hours, minutes, seconds] = timeString.split(':').map(Number)
-    date.setHours(hours, minutes, seconds || 0, 0)
+    // Create new date with booking date + time
+    const result = new Date(bookingDate)
+    result.setHours(hours, minutes, seconds || 0, 0)
+    return result
   } else if (timeString.includes('T')) {
-    // Handle ISO datetime format
+    // Handle full ISO datetime format
     return new Date(timeString)
   }
   
-  return date
+  return bookingDate
 }
 
 /**
@@ -69,6 +73,15 @@ export function validateCheckIn(booking: BookingListDto): ValidationResult {
   const bookingDateTime = parseTimeToDate(booking.bookingDate, booking.startTime)
   const checkInWindowStart = new Date(bookingDateTime)
   const checkInWindowEnd = new Date(bookingDateTime.getTime() + 15 * 60 * 1000) // +15 minutes
+
+  // Debug logging
+  console.log('Check-in time window validation:')
+  console.log('  Current time:', now)
+  console.log('  Booking datetime:', bookingDateTime)
+  console.log('  Window start:', checkInWindowStart)
+  console.log('  Window end:', checkInWindowEnd)
+  console.log('  Is too early?', now < checkInWindowStart)
+  console.log('  Is too late?', now > checkInWindowEnd)
 
   // Too early
   if (now < checkInWindowStart) {
@@ -128,6 +141,15 @@ export function validateCheckOut(booking: BookingListDto): ValidationResult {
   const bookingEndDateTime = parseTimeToDate(booking.bookingDate, booking.endTime)
   const checkOutWindowStart = new Date(bookingEndDateTime)
   const checkOutWindowEnd = new Date(bookingEndDateTime.getTime() + 15 * 60 * 1000) // +15 minutes
+
+  // Debug logging
+  console.log('Check-out time window validation:')
+  console.log('  Current time:', now)
+  console.log('  Booking end datetime:', bookingEndDateTime)
+  console.log('  Window start:', checkOutWindowStart)
+  console.log('  Window end:', checkOutWindowEnd)
+  console.log('  Is too early?', now < checkOutWindowStart)
+  console.log('  Is too late?', now > checkOutWindowEnd)
 
   // Too early
   if (now < checkOutWindowStart) {

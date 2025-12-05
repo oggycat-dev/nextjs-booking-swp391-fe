@@ -67,8 +67,9 @@ function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void
     if (!validation.isValid) {
       toast({
         variant: "destructive",
-        title: "Cannot Check-in",
+        title: "❌ Check-in Not Available",
         description: validation.error,
+        duration: 5000,
       })
       return
     }
@@ -88,8 +89,9 @@ function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void
     if (!validation.isValid) {
       toast({
         variant: "destructive",
-        title: "Cannot Check-out",
+        title: "❌ Check-out Not Available",
         description: validation.error,
+        duration: 5000,
       })
       return
     }
