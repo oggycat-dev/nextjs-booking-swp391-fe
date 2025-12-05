@@ -19,7 +19,10 @@ export function useFacilities(initialQuery?: GetFacilitiesQuery) {
     setError(null);
     try {
       const response = await facilityApi.getAll(query);
+      console.log('=== Facilities API Response ===', response);
       if (response.success && response.data) {
+        console.log('Facilities data:', response.data);
+        console.log('First facility imageUrl:', response.data[0]?.imageUrl);
         setFacilities(response.data);
       } else {
         setError(response.message || "Failed to fetch facilities");

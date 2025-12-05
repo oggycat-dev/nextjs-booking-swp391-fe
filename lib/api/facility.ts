@@ -82,12 +82,40 @@ export const facilityApi = {
    * Get facility by ID
    */
   getById: async (id: string): Promise<ApiResponse<Facility>> => {
-    // Use auth headers for consistency and potential role-based filtering
-    const response = await fetch(`${API_URL}/Facility/${id}`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-    return response.json();
+    try {
+      console.log(`Fetching facility by ID: ${id}`);
+      const response = await fetch(`${API_URL}/Facility/${id}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      console.log('Response status:', response.status);
+
+      const text = await response.text();
+      console.log('Response text:', text);
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      if (!text || text.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+
+      const data = JSON.parse(text);
+      console.log('Parsed facility detail:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching facility by ID:', error);
+      throw error;
+    }
   },
 
   /**

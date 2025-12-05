@@ -378,6 +378,8 @@ export interface BookingListDto {
   endTime: string;
   status: string;
   lecturerEmail?: string;
+  checkedInAt?: string | null;
+  checkedOutAt?: string | null;
   createdAt: string;
 }
 
@@ -414,6 +416,26 @@ export interface GetBookingsQuery {
   pageNumber?: number;
   pageSize?: number;
 }
+// ============================================
+// Holiday Types
+// ============================================
+
+export interface Holiday {
+  id: string;
+  holidayName: string;
+  holidayDate: string; // ISO date string
+  isRecurring: boolean;
+  description?: string | null;
+  createdAt: string;
+}
+
+export interface CreateHolidayRequest {
+  holidayName: string;
+  holidayDate: string; // ISO date string
+  isRecurring: boolean;
+  description?: string;
+}
+
 // ============================================
 // Auth Context Types
 // ============================================
