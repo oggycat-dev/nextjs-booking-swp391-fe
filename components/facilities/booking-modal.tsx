@@ -60,49 +60,100 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
       return
     }
 
+    // Validate participants
+    const participantsNum = Number.parseInt(participants, 10)
+    if (isNaN(participantsNum) || participantsNum < 1) {
+      toast({
+        title: "Invalid Participants",
+        description: "Please enter a valid number of participants (at least 1)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (participantsNum > facility.capacity) {
+      toast({
+        title: "Exceeds Capacity",
+        description: `Maximum capacity is ${facility.capacity} participants`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate time range
+    if (startTime >= endTime) {
+      toast({
+        title: "Invalid Time Range",
+        description: "End time must be after start time",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Convert "HH:mm" (from input[type=time]) to "HH:mm:ss" as backend expects seconds
     const startTimeFormatted = startTime.length === 5 ? `${startTime}:00` : startTime
     const endTimeFormatted = endTime.length === 5 ? `${endTime}:00` : endTime
 
-    const bookingData = {
+    // Build booking data object, only including defined fields
+    const bookingData: any = {
       facilityId: facility.id,
       bookingDate: date,
       // API expects "HH:mm:ss" (TimeSpan) for startTime/endTime
       startTime: startTimeFormatted,
       endTime: endTimeFormatted,
-      purpose,
-      participants: Number.parseInt(participants),
-      lecturerEmail: isStudent ? lecturerEmail : undefined,
-      notes: notes || undefined,
+      purpose: purpose.trim(),
+      participants: participantsNum,
     }
 
-    const result = await createBooking(bookingData)
-    
-    if (result) {
-      toast({
-        title: "Booking Created",
-        description: isStudent 
-          ? "Your booking request has been sent to the lecturer for approval"
-          : "Your booking request has been sent to admin for approval",
-      })
-      onClose()
-      // Reset form
-      setStep(1)
-      setDate("")
-      setStartTime("")
-      setEndTime("")
-      setPurpose("")
-      setParticipants("")
-      setLecturerEmail("")
-      setEquipment([])
-      setNotes("")
-      if (onBookingCreated) {
-        onBookingCreated()
+    // Only add lecturerEmail if it's a student booking
+    if (isStudent && lecturerEmail.trim()) {
+      bookingData.lecturerEmail = lecturerEmail.trim()
+    }
+
+    // Only add notes if it's not empty
+    if (notes.trim()) {
+      bookingData.notes = notes.trim()
+    }
+
+    // Debug log (remove in production)
+    console.log("Submitting booking data:", bookingData)
+
+    try {
+      const result = await createBooking(bookingData)
+      
+      if (result) {
+        toast({
+          title: "Booking Created",
+          description: isStudent 
+            ? "Your booking request has been sent to the lecturer for approval"
+            : "Your booking request has been sent to admin for approval",
+        })
+        onClose()
+        // Reset form
+        setStep(1)
+        setDate("")
+        setStartTime("")
+        setEndTime("")
+        setPurpose("")
+        setParticipants("")
+        setLecturerEmail("")
+        setEquipment([])
+        setNotes("")
+        if (onBookingCreated) {
+          onBookingCreated()
+        }
+      } else {
+        toast({
+          title: "Failed to Create Booking",
+          description: error || "Please try again",
+          variant: "destructive",
+        })
       }
-    } else {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to create booking"
       toast({
         title: "Failed to Create Booking",
-        description: error || "Please try again",
+        description: errorMessage,
         variant: "destructive",
       })
     }

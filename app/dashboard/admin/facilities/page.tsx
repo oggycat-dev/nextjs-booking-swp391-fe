@@ -569,9 +569,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     }
   }
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-50" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold">{isEdit ? "Edit Facility" : "Create Facility"}</h2>
@@ -580,7 +582,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           </button>
         </div>
 
-        <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+        <form className="p-6 space-y-6" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
           {/* Basic Information */}
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Basic Information</h3>

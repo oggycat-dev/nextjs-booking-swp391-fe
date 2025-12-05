@@ -3,15 +3,18 @@
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
+import { usePendingLecturerApprovals, useBookingMutations } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
 import { bookingApi } from "@/lib/api/booking"
-import type { BookingListDto } from "@/types"
+import type { BookingListDto, Booking } from "@/types"
 import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
 
 export default function BookingsPage() {
@@ -21,12 +24,44 @@ export default function BookingsPage() {
   const [checkInDialog, setCheckInDialog] = useState(false)
   const [checkOutDialog, setCheckOutDialog] = useState(false)
   const [validationWarning, setValidationWarning] = useState<string | null>(null)
+  const [approveDialog, setApproveDialog] = useState(false)
+  const [rejectDialog, setRejectDialog] = useState(false)
+  const [comment, setComment] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
+  const [processedBookingIds, setProcessedBookingIds] = useState<Set<string>>(new Set())
   const { checkIn, checkOut, isProcessing, error } = useBookingActions()
   const { toast } = useToast()
+  const { getCurrentUser } = useAuth()
+  const user = getCurrentUser()
+  const userRole = user?.role ? String(user.role).toLowerCase() : ""
+  const isLecturer = userRole === "lecturer"
+  
+  // For Lecturer: fetch pending approvals
+  const { 
+    bookings: pendingApprovals, 
+    fetchPendingApprovals, 
+    isLoading: isLoadingPending 
+  } = usePendingLecturerApprovals()
+  
+  // Filter out processed bookings from pending approvals
+  const filteredPendingApprovals = pendingApprovals.filter(
+    booking => !processedBookingIds.has(booking.id)
+  )
+  const { 
+    approveBookingAsLecturer, 
+    rejectBookingAsLecturer, 
+    isLoading: isMutating 
+  } = useBookingMutations()
 
   useEffect(() => {
     fetchBookings()
   }, [])
+
+  useEffect(() => {
+    if (isLecturer) {
+      fetchPendingApprovals()
+    }
+  }, [isLecturer, fetchPendingApprovals])
 
   useEffect(() => {
     if (error) {
@@ -41,22 +76,56 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     setIsLoading(true)
     try {
-      const response = await bookingApi.getMyBookingHistory()
+      // Use getMyBookings to get all bookings (including pending ones)
+      // This will show bookings for both Student and Lecturer
+      const response = await bookingApi.getMyBookings()
+      
       if (response.success && response.data) {
-        setBookings(response.data)
+        // Convert Booking[] to BookingListDto[] format if needed
+        const bookingsData = response.data.map((booking: Booking): BookingListDto => ({
+          id: booking.id,
+          bookingCode: booking.bookingCode,
+          facilityId: booking.facilityId,
+          facilityName: booking.facilityName,
+          userId: booking.userId,
+          userName: booking.userName,
+          userRole: booking.userRole,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          purpose: booking.purpose,
+          participants: booking.participants,
+          status: booking.status,
+          lecturerEmail: booking.lecturerEmail || null,
+          lecturerName: booking.lecturerName || null,
+          rejectionReason: booking.rejectionReason || null,
+          notes: booking.notes || null,
+          checkedInAt: booking.checkedInAt || null,
+          checkedOutAt: booking.checkedOutAt || null,
+          createdAt: booking.createdAt,
+        }))
+        setBookings(bookingsData)
       } else {
+        setBookings([])
+        if (response.message && !response.message.includes("not available")) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: response.message || "Failed to fetch bookings",
+          })
+        }
+      }
+    } catch (err) {
+      setBookings([])
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      // Don't show toast for 404 errors (endpoint not available)
+      if (!errorMessage.includes("404") && !errorMessage.includes("Not Found")) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: response.message || "Failed to fetch bookings",
+          description: errorMessage,
         })
       }
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err instanceof Error ? err.message : "An error occurred",
-      })
     } finally {
       setIsLoading(false)
     }
@@ -136,6 +205,205 @@ export default function BookingsPage() {
     }
   }
 
+  const handleApproveClick = (booking: Booking) => {
+    setSelectedBooking({
+      id: booking.id,
+      bookingCode: booking.bookingCode,
+      facilityId: booking.facilityId,
+      facilityName: booking.facilityName,
+      userId: booking.userId,
+      userName: booking.userName,
+      userRole: booking.userRole,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      participants: booking.participants,
+      status: booking.status,
+      lecturerEmail: booking.lecturerEmail || null,
+      lecturerName: booking.lecturerName || null,
+      rejectionReason: booking.rejectionReason || null,
+      notes: booking.notes || null,
+      checkedInAt: booking.checkedInAt || null,
+      checkedOutAt: booking.checkedOutAt || null,
+      createdAt: booking.createdAt,
+    })
+    setComment("")
+    setRejectDialog(false) // Close reject dialog if open
+    // Don't close selectedBooking here - we need it for the approve dialog
+    setApproveDialog(true)
+  }
+
+  const handleRejectClick = (booking: Booking) => {
+    setSelectedBooking({
+      id: booking.id,
+      bookingCode: booking.bookingCode,
+      facilityId: booking.facilityId,
+      facilityName: booking.facilityName,
+      userId: booking.userId,
+      userName: booking.userName,
+      userRole: booking.userRole,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      participants: booking.participants,
+      status: booking.status,
+      lecturerEmail: booking.lecturerEmail || null,
+      lecturerName: booking.lecturerName || null,
+      rejectionReason: booking.rejectionReason || null,
+      notes: booking.notes || null,
+      checkedInAt: booking.checkedInAt || null,
+      checkedOutAt: booking.checkedOutAt || null,
+      createdAt: booking.createdAt,
+    })
+    setRejectReason("")
+    setApproveDialog(false) // Close approve dialog if open
+    // Don't close selectedBooking here - we need it for the reject dialog
+    setRejectDialog(true)
+  }
+
+  const handleApprove = async () => {
+    if (!selectedBooking) return
+    
+    const bookingId = selectedBooking.id
+    
+    // Close dialog immediately
+    setApproveDialog(false)
+    setRejectDialog(false)
+    
+    // Optimistic update: mark as processed immediately
+    setProcessedBookingIds(prev => new Set(prev).add(bookingId))
+    
+    try {
+      const result = await approveBookingAsLecturer(bookingId, comment || undefined)
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Booking approved successfully",
+        })
+        setSelectedBooking(null)
+        setComment("")
+        
+        // Refresh immediately
+        await fetchBookings()
+        await fetchPendingApprovals()
+        
+        // Backup refresh after a short delay to ensure backend is updated
+        setTimeout(() => {
+          fetchPendingApprovals()
+          fetchBookings()
+          // Clear processed ID after refresh to allow re-fetching
+          setProcessedBookingIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(bookingId)
+            return newSet
+          })
+        }, 1000)
+      } else {
+        // Revert optimistic update on error
+        setProcessedBookingIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(bookingId)
+          return newSet
+        })
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to approve booking",
+        })
+        fetchPendingApprovals()
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setProcessedBookingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(bookingId)
+        return newSet
+      })
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to approve booking",
+      })
+      fetchPendingApprovals()
+    }
+  }
+
+  const handleReject = async () => {
+    if (!selectedBooking || !rejectReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please provide a rejection reason",
+      })
+      return
+    }
+    
+    const bookingId = selectedBooking.id
+    
+    // Close dialog immediately
+    setRejectDialog(false)
+    setApproveDialog(false)
+    
+    // Optimistic update: mark as processed immediately
+    setProcessedBookingIds(prev => new Set(prev).add(bookingId))
+    
+    try {
+      const result = await rejectBookingAsLecturer(bookingId, rejectReason)
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Booking rejected successfully",
+        })
+        setSelectedBooking(null)
+        setRejectReason("")
+        
+        // Refresh immediately
+        await fetchBookings()
+        await fetchPendingApprovals()
+        
+        // Backup refresh after a short delay to ensure backend is updated
+        setTimeout(() => {
+          fetchPendingApprovals()
+          fetchBookings()
+          // Clear processed ID after refresh to allow re-fetching
+          setProcessedBookingIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(bookingId)
+            return newSet
+          })
+        }, 1000)
+      } else {
+        // Revert optimistic update on error
+        setProcessedBookingIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(bookingId)
+          return newSet
+        })
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to reject booking",
+        })
+        fetchPendingApprovals()
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setProcessedBookingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(bookingId)
+        return newSet
+      })
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to reject booking",
+      })
+      fetchPendingApprovals()
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       "WaitingLecturerApproval": { variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
@@ -190,6 +458,124 @@ export default function BookingsPage() {
     const displayHour = hour % 12 || 12
     return `${displayHour}:${minutes} ${ampm}`
   }
+
+  const renderPendingApprovalCard = (booking: Booking) => (
+    <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-yellow-200">
+      <div className="flex flex-col sm:flex-row">
+        {/* Image Section */}
+        <div className="relative w-full sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-yellow-100 via-yellow-50 to-yellow-5 flex-shrink-0 overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-2" />
+              <p className="text-xs text-yellow-700 font-medium px-2 line-clamp-2">{booking.facilityName}</p>
+            </div>
+          </div>
+          <div className="absolute top-3 right-3">
+            <Badge variant="outline" className="border-yellow-500 text-yellow-700 bg-yellow-50">
+              Pending Approval
+            </Badge>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="flex-1 p-5">
+          <div className="flex items-start justify-between gap-6">
+            {/* Left Section - Main Info */}
+            <div className="flex-1 min-w-0">
+              <div className="mb-3">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-bold text-lg text-foreground">{booking.facilityName}</h3>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono mb-2">
+                  {booking.bookingCode}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Student:</span> {booking.userName}
+                </p>
+              </div>
+            
+              <div className="space-y-2.5 mb-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground min-w-[140px]">
+                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">{formatDate(booking.bookingDate)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">
+                      {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                    </span>
+                  </div>
+                </div>
+                {booking.purpose && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">Purpose:</span> {booking.purpose}
+                  </div>
+                )}
+                {booking.participants && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">Participants:</span> {booking.participants}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Right Section - Actions */}
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSelectedBooking({
+                  id: booking.id,
+                  bookingCode: booking.bookingCode,
+                  facilityId: booking.facilityId,
+                  facilityName: booking.facilityName,
+                  userId: booking.userId,
+                  userName: booking.userName,
+                  userRole: booking.userRole,
+                  bookingDate: booking.bookingDate,
+                  startTime: booking.startTime,
+                  endTime: booking.endTime,
+                  purpose: booking.purpose,
+                  participants: booking.participants,
+                  status: booking.status,
+                  lecturerEmail: booking.lecturerEmail || null,
+                  lecturerName: booking.lecturerName || null,
+                  rejectionReason: booking.rejectionReason || null,
+                  notes: booking.notes || null,
+                  checkedInAt: booking.checkedInAt || null,
+                  checkedOutAt: booking.checkedOutAt || null,
+                  createdAt: booking.createdAt,
+                })}
+                className="min-w-[100px] hover:bg-primary/5"
+              >
+                Details
+              </Button>
+              <Button 
+                size="sm" 
+                className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
+                onClick={() => handleApproveClick(booking)}
+                disabled={isMutating}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                Approve
+              </Button>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                className="min-w-[100px] bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
+                onClick={() => handleRejectClick(booking)}
+                disabled={isMutating}
+              >
+                <XCircle className="w-4 h-4 mr-1.5" />
+                Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
 
   const renderBookingCard = (booking: BookingListDto) => (
     <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
@@ -316,13 +702,18 @@ export default function BookingsPage() {
         <p className="text-muted-foreground">View and manage all your facility bookings</p>
       </div>
 
-      {bookings.length === 0 ? (
+      {bookings.length === 0 && (!isLecturer || filteredPendingApprovals.length === 0) ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">No bookings found</p>
         </Card>
       ) : (
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue={isLecturer ? "pending" : "all"} className="w-full">
           <TabsList>
+            {isLecturer && (
+              <TabsTrigger value="pending">
+                Pending Approvals ({filteredPendingApprovals.length})
+              </TabsTrigger>
+            )}
             <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
             <TabsTrigger value="approved">
               Approved ({bookings.filter((b) => b.status === "Approved").length})
@@ -338,6 +729,21 @@ export default function BookingsPage() {
             </TabsTrigger>
           </TabsList>
 
+          {isLecturer && (
+            <TabsContent value="pending" className="space-y-4 mt-4">
+              {isLoadingPending ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+              ) : filteredPendingApprovals.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No pending approvals</p>
+                </Card>
+              ) : (
+                filteredPendingApprovals.map(renderPendingApprovalCard)
+              )}
+            </TabsContent>
+          )}
           <TabsContent value="all" className="space-y-4 mt-4">
             {getBookingsByStatus("all").map(renderBookingCard)}
           </TabsContent>
@@ -357,7 +763,7 @@ export default function BookingsPage() {
       )}
 
       {/* Booking Details Modal */}
-      {selectedBooking && !checkInDialog && !checkOutDialog && (
+      {selectedBooking && !checkInDialog && !checkOutDialog && !approveDialog && !rejectDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedBooking(null)}>
           <Card className="w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -506,6 +912,99 @@ export default function BookingsPage() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check-out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog 
+        open={approveDialog && !rejectDialog} 
+        onOpenChange={(open) => {
+          setApproveDialog(open)
+          if (open) setRejectDialog(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this booking?
+              <br />
+              <strong className="text-foreground">{selectedBooking?.facilityName}</strong>
+              <br />
+              <span className="text-sm">
+                {selectedBooking && formatDate(selectedBooking.bookingDate)} • {selectedBooking && formatTime(selectedBooking.startTime)} - {selectedBooking && formatTime(selectedBooking.endTime)}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Comment (Optional)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20 resize-none"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMutating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleApprove} 
+              disabled={isMutating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isMutating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog 
+        open={rejectDialog && !approveDialog} 
+        onOpenChange={(open) => {
+          setRejectDialog(open)
+          if (open) setApproveDialog(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this booking?
+              <br />
+              <strong className="text-foreground">{selectedBooking?.facilityName}</strong>
+              <br />
+              <span className="text-sm">
+                {selectedBooking && formatDate(selectedBooking.bookingDate)} • {selectedBooking && formatTime(selectedBooking.startTime)} - {selectedBooking && formatTime(selectedBooking.endTime)}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rejection Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Please provide a reason for rejection..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20 resize-none"
+                required
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMutating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReject} 
+              disabled={isMutating || !rejectReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isMutating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
