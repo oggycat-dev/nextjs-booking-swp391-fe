@@ -460,32 +460,20 @@ export default function BookingsPage() {
 
   const renderPendingApprovalCard = (booking: Booking) => (
     <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-yellow-200">
-      <div className="flex flex-col sm:flex-row">
-        {/* Image Section */}
-        <div className="relative w-full sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-yellow-100 via-yellow-50 to-yellow-5 flex-shrink-0 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-2" />
-              <p className="text-xs text-yellow-700 font-medium px-2 line-clamp-2">{booking.facilityName}</p>
-            </div>
-          </div>
-          <div className="absolute top-3 right-3">
-            <Badge variant="outline" className="border-yellow-500 text-yellow-700 bg-yellow-50">
-              Pending Approval
-            </Badge>
-          </div>
-        </div>
-
+      <div className="flex flex-col">
         {/* Content Section */}
-        <div className="flex-1 p-5">
-          <div className="flex items-start justify-between gap-6">
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between gap-4">
             {/* Left Section - Main Info */}
             <div className="flex-1 min-w-0">
               <div className="mb-3">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <h3 className="font-bold text-lg text-foreground">{booking.facilityName}</h3>
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-700 bg-yellow-50">
+                    Pending Approval
+                  </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground font-mono mb-2">
+                <p className="text-xs text-muted-foreground font-mono mb-1">
                   {booking.bookingCode}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -493,9 +481,9 @@ export default function BookingsPage() {
                 </p>
               </div>
             
-              <div className="space-y-2.5 mb-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground min-w-[140px]">
+              <div className="space-y-2 mb-3">
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="w-4 h-4 flex-shrink-0" />
                     <span className="font-medium">{formatDate(booking.bookingDate)}</span>
                   </div>
@@ -505,22 +493,23 @@ export default function BookingsPage() {
                       {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                     </span>
                   </div>
+                  {booking.participants && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-medium">{booking.participants} people</span>
+                    </div>
+                  )}
                 </div>
                 {booking.purpose && (
                   <div className="text-sm text-muted-foreground">
                     <span className="font-medium">Purpose:</span> {booking.purpose}
                   </div>
                 )}
-                {booking.participants && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Participants:</span> {booking.participants}
-                  </div>
-                )}
               </div>
             </div>
             
             {/* Right Section - Actions */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0 min-w-[110px]">
               <Button 
                 variant="outline" 
                 size="sm" 

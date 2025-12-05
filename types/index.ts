@@ -391,6 +391,23 @@ export interface BookingListDto {
   createdAt: string;
 }
 
+export interface BookingCalendarDto {
+  id: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCode: string;
+  campusName: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string; // ISO date string
+  startTime: string; // TimeSpan "HH:mm:ss"
+  endTime: string; // TimeSpan "HH:mm:ss"
+  status: string;
+  purpose: string;
+  numParticipants: number;
+}
+
 export interface CreateBookingRequest {
   facilityId: string;
   bookingDate: string; // ISO date "YYYY-MM-DD" (date only; time handled by startTime/endTime)
