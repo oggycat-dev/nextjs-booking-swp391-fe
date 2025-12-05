@@ -246,7 +246,8 @@ export interface UpdateFacilityRequest {
   capacity: number;
   description?: string;
   equipment?: string;
-  imageUrl?: string;
+  imageUrl?: string;  // Keep existing images (JSON string)
+  images?: File[];     // New images to upload
   status: string; // "Available" | "UnderMaintenance" | "Unavailable"
   isActive: boolean;
 }
