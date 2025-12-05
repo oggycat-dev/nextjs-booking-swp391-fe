@@ -194,7 +194,8 @@ export function useBookingMutations() {
       if (response.success && response.data) {
         return response.data;
       } else {
-        setError(response.message || "Failed to create booking");
+        const errorMsg = response.message || response.errors?.join?.(", ") || "Failed to create booking";
+        setError(errorMsg);
         return null;
       }
     } catch (err) {
