@@ -1,35 +1,41 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useMyBookings, usePendingLecturerApprovals, useBookingMutations } from "@/hooks/use-booking"
+import { useFacility } from "@/hooks/use-facility"
 import type { Booking, BookingStatus } from "@/types"
 
 export default function BookingsPage() {
   const { toast } = useToast()
   const { getCurrentUser } = useAuth()
   const user = getCurrentUser()
-  const userRole = user?.role ? String(user.role).toLowerCase() : ""
-  const isLecturer = userRole === "lecturer"
+  const isLecturer = user?.role === "Lecturer"
+
+  // My bookings
+  const { bookings: myBookings, isLoading: isLoadingMyBookings, fetchMyBookings } = useMyBookings()
   
-  const { bookings: myBookings, fetchMyBookings, isLoading: isLoadingMyBookings } = useMyBookings()
-  const { bookings: pendingApprovals, fetchPendingApprovals, isLoading: isLoadingPending } = usePendingLecturerApprovals()
-  const { 
-    approveBookingAsLecturer, 
-    rejectBookingAsLecturer, 
-    cancelBooking, 
-    isLoading: isMutating 
-  } = useBookingMutations()
+  // Pending lecturer approvals (only for lecturers)
+  const { bookings: pendingApprovals, isLoading: isLoadingPending, fetchPendingApprovals } = usePendingLecturerApprovals()
   
+  // Mutations
+  const { cancelBooking, approveBookingAsLecturer, rejectBookingAsLecturer, isLoading: isMutating, error: mutationError } = useBookingMutations()
+
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
-  const [actionType, setActionType] = useState<"approve" | "reject" | "cancel" | null>(null)
-  const [rejectReason, setRejectReason] = useState("")
+  const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
+  const [activeTab, setActiveTab] = useState("all")
+  
+  // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
+  const { facility, isLoading: isLoadingFacility } = useFacility(
+    selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
+  )
 
   useEffect(() => {
     fetchMyBookings()
@@ -38,10 +44,19 @@ export default function BookingsPage() {
     }
   }, [fetchMyBookings, fetchPendingApprovals, isLecturer])
 
-  const getBookingsByStatus = (status: string) => {
-    if (status === "all") return myBookings
-    return myBookings.filter((b) => b.status.toLowerCase() === status.toLowerCase())
-  }
+  // Auto-refresh data when mutation completes
+  useEffect(() => {
+    if (!isMutating) {
+      // Small delay to ensure backend has processed the request
+      const timer = setTimeout(() => {
+        fetchMyBookings()
+        if (isLecturer) {
+          fetchPendingApprovals()
+        }
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isMutating, isLecturer, fetchMyBookings, fetchPendingApprovals])
 
   const getStatusColor = (status: BookingStatus) => {
     const colors: Record<string, string> = {
@@ -53,7 +68,7 @@ export default function BookingsPage() {
       Completed: "bg-purple-100 text-purple-700",
       CheckedIn: "bg-indigo-100 text-indigo-700",
       NoShow: "bg-orange-100 text-orange-700",
-      Pending: "bg-yellow-100 text-yellow-700",
+      Pending: "bg-blue-100 text-blue-700",
     }
     return colors[status] || "bg-gray-100 text-gray-700"
   }
@@ -63,29 +78,77 @@ export default function BookingsPage() {
   }
 
   const formatTime = (timeString: string) => {
-    // Time format is "HH:mm:ss" or "HH:mm"
     return timeString.substring(0, 5)
   }
 
+  const filteredPendingApprovals = useMemo(() => {
+    if (!isLecturer) return []
+    return pendingApprovals.filter(
+      (b) =>
+        b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [pendingApprovals, searchTerm, isLecturer])
+
+  const filteredMyBookings = useMemo(() => {
+    if (activeTab === "all") return myBookings
+    return myBookings.filter((b) => b.status.toLowerCase() === activeTab.toLowerCase())
+  }, [myBookings, activeTab])
+
+  const handleCancel = async (booking: Booking) => {
+    const confirmed = window.confirm(`Cancel booking "${booking.bookingCode}"?`)
+    if (!confirmed) return
+
+    const success = await cancelBooking(booking.id)
+    if (success) {
+      toast({
+        title: "Booking Cancelled",
+        description: "The booking has been cancelled successfully",
+      })
+      setSelectedBooking(null)
+      fetchMyBookings()
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleApprove = async (booking: Booking) => {
+    // Validate booking status before approving
     if (booking.status !== "WaitingLecturerApproval") {
       toast({
         title: "Cannot Approve",
-        description: "Only student bookings waiting for lecturer approval can be approved",
+        description: `This booking is not waiting for lecturer approval. Current status: ${booking.status}`,
         variant: "destructive",
       })
       return
     }
+
+    // Close modal immediately to provide better UX
+    setSelectedBooking(null)
+    setActionType(null)
+
     const result = await approveBookingAsLecturer(booking.id)
     if (result) {
       toast({
         title: "Booking Approved",
-        description: "The booking has been approved and sent to admin",
+        description: "The booking has been approved successfully",
       })
-      setSelectedBooking(null)
-      setActionType(null)
-      fetchPendingApprovals()
-      fetchMyBookings()
+      // Refresh data immediately
+      await Promise.all([
+        fetchPendingApprovals(),
+        fetchMyBookings()
+      ])
+    } else {
+      toast({
+        title: "Failed to Approve",
+        description: mutationError || "The booking could not be approved. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -98,50 +161,47 @@ export default function BookingsPage() {
       })
       return
     }
-    
-    const result = await rejectBookingAsLecturer(booking.id, rejectReason)
+
+    // Validate booking status before rejecting
+    if (booking.status !== "WaitingLecturerApproval") {
+      toast({
+        title: "Cannot Reject",
+        description: `This booking is not waiting for lecturer approval. Current status: ${booking.status}`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Close modal immediately to provide better UX
+    const reason = rejectReason
+    setSelectedBooking(null)
+    setActionType(null)
+    setRejectReason("")
+
+    const result = await rejectBookingAsLecturer(booking.id, reason)
     if (result) {
       toast({
         title: "Booking Rejected",
         description: "The booking has been rejected",
       })
-      setSelectedBooking(null)
-      setActionType(null)
-      setRejectReason("")
-      fetchPendingApprovals()
-      fetchMyBookings()
-    }
-  }
-
-  const handleCancel = async (booking: Booking) => {
-    if (!window.confirm(`Are you sure you want to cancel booking ${booking.bookingCode}?`)) {
-      return
-    }
-    
-    const result = await cancelBooking(booking.id)
-    if (result) {
+      // Refresh data immediately
+      await Promise.all([
+        fetchPendingApprovals(),
+        fetchMyBookings()
+      ])
+    } else {
       toast({
-        title: "Booking Cancelled",
-        description: "Your booking has been cancelled",
+        title: "Failed to Reject",
+        description: mutationError || "The booking could not be rejected. Please try again.",
+        variant: "destructive",
       })
-      fetchMyBookings()
     }
   }
 
-  const filteredPendingApprovals = pendingApprovals
-    .filter((b) => b.status === "WaitingLecturerApproval")
-    .filter(
-      (b) =>
-        b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-  const filteredMyBookings = myBookings.filter(
-    (b) =>
-      b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const getBookingsByStatus = (status: string) => {
+    if (status === "all") return myBookings
+    return myBookings.filter((b) => b.status.toLowerCase() === status.toLowerCase())
+  }
 
   return (
     <div className="space-y-6">
@@ -159,7 +219,7 @@ export default function BookingsPage() {
             <Input
               placeholder="Search by facility, student name, or booking code..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             />
           </div>
 
@@ -211,7 +271,7 @@ export default function BookingsPage() {
                         setSelectedBooking(booking)
                         setActionType("approve")
                       }}
-                      disabled={isMutating}
+                      disabled={isMutating || booking.status !== "WaitingLecturerApproval"}
                     >
                       Approve
                     </Button>
@@ -223,7 +283,7 @@ export default function BookingsPage() {
                         setSelectedBooking(booking)
                         setActionType("reject")
                       }}
-                      disabled={isMutating}
+                      disabled={isMutating || booking.status !== "WaitingLecturerApproval"}
                     >
                       Reject
                     </Button>
@@ -242,20 +302,20 @@ export default function BookingsPage() {
         </Card>
       )}
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="all">All ({filteredMyBookings.length})</TabsTrigger>
+          <TabsTrigger value="all">All ({myBookings.length})</TabsTrigger>
           <TabsTrigger value="waitinglecturerapproval">
-            Waiting Lecturer ({getBookingsByStatus("waitinglecturerapproval").length})
+            Waiting Lecturer ({myBookings.filter((b) => b.status === "WaitingLecturerApproval").length})
           </TabsTrigger>
           <TabsTrigger value="waitingadminapproval">
-            Waiting Admin ({getBookingsByStatus("waitingadminapproval").length})
+            Waiting Admin ({myBookings.filter((b) => b.status === "WaitingAdminApproval").length})
           </TabsTrigger>
           <TabsTrigger value="approved">
-            Approved ({getBookingsByStatus("approved").length})
+            Approved ({myBookings.filter((b) => b.status === "Approved").length})
           </TabsTrigger>
           <TabsTrigger value="rejected">
-            Rejected ({getBookingsByStatus("rejected").length})
+            Rejected ({myBookings.filter((b) => b.status === "Rejected").length})
           </TabsTrigger>
         </TabsList>
 
@@ -391,6 +451,38 @@ export default function BookingsPage() {
                   <p className="text-sm text-muted-foreground">Participants</p>
                   <p className="font-bold">{selectedBooking.participants}</p>
                 </div>
+                {isLoadingFacility ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Loading facility details...</p>
+                  </div>
+                ) : facility ? (
+                  <>
+                    {facility.building && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tòa nhà (Building)</p>
+                        <p className="font-bold">{facility.building}</p>
+                      </div>
+                    )}
+                    {facility.floor && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tầng (Floor)</p>
+                        <p className="font-bold">{facility.floor}</p>
+                      </div>
+                    )}
+                    {facility.roomNumber && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phòng (Room)</p>
+                        <p className="font-bold">{facility.roomNumber}</p>
+                      </div>
+                    )}
+                    {facility.campusName && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Campus</p>
+                        <p className="font-bold">{facility.campusName}</p>
+                      </div>
+                    )}
+                  </>
+                ) : null}
                 <div>
                   <p className="text-sm text-muted-foreground">Purpose</p>
                   <p className="font-bold">{selectedBooking.purpose}</p>
@@ -436,13 +528,24 @@ export default function BookingsPage() {
               <p><span className="font-medium">Date:</span> {formatDate(selectedBooking.bookingDate)}</p>
               <p><span className="font-medium">Time:</span> {formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}</p>
               <p><span className="font-medium">Student:</span> {selectedBooking.userName}</p>
+              <p><span className="font-medium">Status:</span> 
+                <span className={`ml-2 px-2 py-1 text-xs font-medium rounded ${getStatusColor(selectedBooking.status)}`}>
+                  {selectedBooking.status}
+                </span>
+              </p>
             </div>
+
+            {selectedBooking.status !== "WaitingLecturerApproval" && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-3 rounded-lg mb-4">
+                ⚠️ This booking is not in "WaitingLecturerApproval" status. It may have been updated.
+              </div>
+            )}
 
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => handleApprove(selectedBooking)}
-                disabled={isMutating}
+                disabled={isMutating || selectedBooking.status !== "WaitingLecturerApproval"}
               >
                 {isMutating ? "Approving..." : "Confirm Approve"}
               </Button>
@@ -467,11 +570,25 @@ export default function BookingsPage() {
           <Card className="w-full max-w-md p-6">
             <h2 className="text-2xl font-bold mb-4">Reject Booking</h2>
 
+            <div className="bg-muted p-4 rounded-lg mb-4 text-sm space-y-1">
+              <p><span className="font-medium">Status:</span> 
+                <span className={`ml-2 px-2 py-1 text-xs font-medium rounded ${getStatusColor(selectedBooking.status)}`}>
+                  {selectedBooking.status}
+                </span>
+              </p>
+            </div>
+
+            {selectedBooking.status !== "WaitingLecturerApproval" && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-3 rounded-lg mb-4">
+                ⚠️ This booking is not in "WaitingLecturerApproval" status. It may have been updated.
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-2">Rejection Reason <span className="text-destructive">*</span></label>
               <select
                 value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setRejectReason(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background mb-4"
               >
                 <option value="">Select a reason</option>
@@ -488,7 +605,7 @@ export default function BookingsPage() {
                 variant="outline"
                 className="flex-1 text-destructive hover:text-destructive bg-transparent"
                 onClick={() => handleReject(selectedBooking)}
-                disabled={!rejectReason || isMutating}
+                disabled={!rejectReason || isMutating || selectedBooking.status !== "WaitingLecturerApproval"}
               >
                 {isMutating ? "Rejecting..." : "Reject"}
               </Button>

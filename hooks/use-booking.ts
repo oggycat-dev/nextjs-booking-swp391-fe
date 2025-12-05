@@ -315,13 +315,113 @@ export function useBookingMutations() {
     }
   }, []);
 
+  /**
+   * Admin approve booking (Admin only) - uses admin-approve endpoint
+   */
+  const approveBookingAsAdmin = useCallback(
+    async (id: string, comment?: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.adminApproveBooking(id, { approved: true, comment });
+        if (response.success) {
+          return true;
+        } else {
+          setError(response.message || "Failed to approve booking");
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to approve booking";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * Admin reject booking (Admin only) - uses admin-approve endpoint with approved: false
+   */
+  const rejectBookingAsAdmin = useCallback(
+    async (id: string, reason: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await bookingApi.adminApproveBooking(id, { approved: false, comment: reason });
+        if (response.success) {
+          return true;
+        } else {
+          setError(response.message || "Failed to reject booking");
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to reject booking";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     createBooking,
     approveBooking,
     rejectBooking,
     approveBookingAsLecturer,
     rejectBookingAsLecturer,
+    approveBookingAsAdmin,
+    rejectBookingAsAdmin,
     cancelBooking,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook to get booking history (approved/completed bookings)
+ */
+export function useBookingHistory() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getMyHistory();
+      if (response.success && response.data) {
+        // Filter to only show approved/completed bookings
+        const historyBookings = response.data.filter(
+          (booking: Booking) => 
+            booking.status === "Approved" || 
+            booking.status === "Completed" || 
+            booking.status === "CheckedIn" ||
+            booking.status === "NoShow"
+        );
+        setBookings(historyBookings);
+      } else {
+        setError(response.message || "Failed to fetch booking history");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch booking history";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  return {
+    bookings,
+    fetchHistory,
     isLoading,
     error,
   };

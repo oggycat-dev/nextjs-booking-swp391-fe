@@ -11,6 +11,8 @@ import type {
   RegisterRequest,
   RefreshTokenRequest,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   PendingRegistration,
   ApproveRegistrationRequest,
 } from '@/types';
@@ -95,6 +97,30 @@ export const authApi = {
     const response = await fetch(`${API_URL}/Auth/approve-registration`, {
       method: "POST",
       headers: getAuthHeaders(),
+      body: JSON.stringify(request),
+    });
+    return response.json();
+  },
+
+  /**
+   * Request password reset - sends verification code to email
+   */
+  forgotPassword: async (request: ForgotPasswordRequest): Promise<ApiResponse<null>> => {
+    const response = await fetch(`${API_URL}/Auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    return response.json();
+  },
+
+  /**
+   * Reset password using verification code
+   */
+  resetPassword: async (request: ResetPasswordRequest): Promise<ApiResponse<null>> => {
+    const response = await fetch(`${API_URL}/Auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
     return response.json();

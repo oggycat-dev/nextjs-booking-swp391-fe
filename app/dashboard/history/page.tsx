@@ -1,98 +1,167 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useBookingHistory } from "@/hooks/use-booking"
+import type { Booking } from "@/types"
 
-const MOCK_HISTORY = [
-  {
-    id: "BK-20251201-001",
-    facilityName: "Meeting Room 301",
-    type: "Meeting Room",
-    date: "2025-12-01",
-    time: "09:00 - 10:30",
-    duration: "1.5 hours",
-    purpose: "Team meeting",
-    checkedIn: true,
-    checkedOut: true,
-    noShow: false,
-    rating: 4.5,
-    comment: "Great meeting room, good equipment",
-  },
-  {
-    id: "BK-20251128-002",
-    facilityName: "Study Room 105",
-    type: "Study Room",
-    date: "2025-11-28",
-    time: "14:00 - 16:00",
-    duration: "2 hours",
-    purpose: "Group study",
-    checkedIn: true,
-    checkedOut: true,
-    noShow: false,
-    rating: 4.0,
-    comment: "Quiet and comfortable",
-  },
-  {
-    id: "BK-20251120-003",
-    facilityName: "Computer Lab 201",
-    type: "Lab",
-    date: "2025-11-20",
-    time: "10:00 - 12:00",
-    duration: "2 hours",
-    purpose: "Project work",
-    checkedIn: true,
-    checkedOut: true,
-    noShow: false,
-    rating: 3.5,
-    comment: "Some computers had issues",
-  },
-  {
-    id: "BK-20251115-004",
-    facilityName: "Meeting Room 205",
-    type: "Meeting Room",
-    date: "2025-11-15",
-    time: "15:00 - 16:00",
-    duration: "1 hour",
-    purpose: "Project discussion",
-    checkedIn: false,
-    checkedOut: false,
-    noShow: true,
-    rating: 0,
-    comment: "No-show",
-  },
-]
+interface HistoryEntry {
+  id: string
+  facilityName: string
+  type: string
+  date: string
+  time: string
+  duration: string
+  purpose: string
+  checkedIn: boolean
+  checkedOut: boolean
+  noShow: boolean
+  rating: number
+  comment: string
+  booking: Booking
+}
+
+// Helper function to calculate duration in hours
+function calculateDuration(startTime: string, endTime: string): string {
+  const start = startTime.split(":").map(Number)
+  const end = endTime.split(":").map(Number)
+  const startMinutes = start[0] * 60 + start[1]
+  const endMinutes = end[0] * 60 + end[1]
+  const diffMinutes = endMinutes - startMinutes
+  const hours = Math.floor(diffMinutes / 60)
+  const minutes = diffMinutes % 60
+  
+  if (hours === 0) {
+    return `${minutes} minutes`
+  } else if (minutes === 0) {
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`
+  } else {
+    const decimalHours = (diffMinutes / 60).toFixed(1)
+    return `${decimalHours} hours`
+  }
+}
+
+// Helper function to format time from "HH:mm:ss" to "HH:mm"
+function formatTime(timeString: string): string {
+  return timeString.substring(0, 5)
+}
+
+// Helper function to format date from ISO string to "YYYY-MM-DD"
+function formatDate(dateString: string): string {
+  return dateString.split("T")[0]
+}
 
 export default function HistoryPage() {
-  const [filteredHistory, setFilteredHistory] = useState(MOCK_HISTORY)
+  const { bookings, isLoading, error, fetchHistory } = useBookingHistory()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEntry, setSelectedEntry] = useState<(typeof MOCK_HISTORY)[0] | null>(null)
+  const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
+  const [facilityTypeMap, setFacilityTypeMap] = useState<Record<string, string>>({})
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term)
-    if (term === "") {
-      setFilteredHistory(MOCK_HISTORY)
-    } else {
-      setFilteredHistory(
-        MOCK_HISTORY.filter(
-          (h) =>
-            h.facilityName.toLowerCase().includes(term.toLowerCase()) ||
-            h.purpose.toLowerCase().includes(term.toLowerCase()) ||
-            h.id.toLowerCase().includes(term.toLowerCase()),
-        ),
-      )
+  // Fetch facility types for all bookings
+  useEffect(() => {
+    const fetchFacilityTypes = async () => {
+      const typeMap: Record<string, string> = {}
+      
+      bookings.forEach((booking: Booking) => {
+        // Extract type from facilityName or facilityCode
+        const name = booking.facilityName || ""
+        if (name.includes("Lab") || name.includes("LAB")) {
+          typeMap[booking.facilityId] = "Lab"
+        } else if (name.includes("Room") || name.includes("Meeting")) {
+          typeMap[booking.facilityId] = "Meeting Room"
+        } else if (name.includes("Study")) {
+          typeMap[booking.facilityId] = "Study Room"
+        } else {
+          typeMap[booking.facilityId] = "Facility"
+        }
+      })
+      
+      setFacilityTypeMap(typeMap)
     }
-  }
+    
+    if (bookings.length > 0) {
+      fetchFacilityTypes()
+    }
+  }, [bookings])
 
-  const stats = {
-    totalBookings: MOCK_HISTORY.length,
-    completedBookings: MOCK_HISTORY.filter((h) => h.checkedOut).length,
-    noShows: MOCK_HISTORY.filter((h) => h.noShow).length,
-    averageRating: (
-      MOCK_HISTORY.filter((h) => h.rating > 0).reduce((acc, h) => acc + h.rating, 0) /
-      MOCK_HISTORY.filter((h) => h.rating > 0).length
-    ).toFixed(1),
+  // Map bookings to history entries
+  const historyEntries: HistoryEntry[] = useMemo(() => {
+    return bookings.map((booking: Booking) => {
+      const checkedIn = booking.status === "CheckedIn" || booking.status === "Completed" || booking.checkedInAt !== null
+      const checkedOut = booking.status === "Completed" || booking.checkedOutAt !== null
+      const noShow = booking.status === "NoShow"
+      
+      return {
+        id: booking.bookingCode,
+        facilityName: booking.facilityName,
+        type: facilityTypeMap[booking.facilityId] || "Facility",
+        date: formatDate(booking.bookingDate),
+        time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`,
+        duration: calculateDuration(booking.startTime, booking.endTime),
+        purpose: booking.purpose,
+        checkedIn,
+        checkedOut,
+        noShow,
+        rating: 0, // Rating not available in API yet
+        comment: booking.notes || "",
+        booking,
+      }
+    })
+  }, [bookings, facilityTypeMap])
+
+  // Filter history based on search term
+  const filteredHistory = useMemo(() => {
+    if (searchTerm === "") {
+      return historyEntries
+    }
+    const term = searchTerm.toLowerCase()
+    return historyEntries.filter(
+      (h) =>
+        h.facilityName.toLowerCase().includes(term) ||
+        h.purpose.toLowerCase().includes(term) ||
+        h.id.toLowerCase().includes(term),
+    )
+  }, [historyEntries, searchTerm])
+
+  const stats = useMemo(() => {
+    const totalBookings = historyEntries.length
+    const completedBookings = historyEntries.filter((h) => h.checkedOut).length
+    const noShows = historyEntries.filter((h) => h.noShow).length
+    const ratings = historyEntries.filter((h) => h.rating > 0)
+    const averageRating = ratings.length > 0
+      ? (ratings.reduce((acc, h) => acc + h.rating, 0) / ratings.length).toFixed(1)
+      : "0.0"
+    
+    return {
+      totalBookings,
+      completedBookings,
+      noShows,
+      averageRating,
+    }
+  }, [historyEntries])
+
+  // Refresh history when component mounts
+  useEffect(() => {
+    fetchHistory()
+  }, [fetchHistory])
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Booking History</h1>
+          <p className="text-muted-foreground">View your past bookings and facility usage</p>
+        </div>
+        <Card className="p-12 text-center">
+          <p className="text-destructive">Error loading booking history: {error}</p>
+          <Button onClick={() => fetchHistory()} className="mt-4">
+            Retry
+          </Button>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -126,13 +195,17 @@ export default function HistoryPage() {
           type="search"
           placeholder="Search by facility name, booking ID, or purpose..."
           value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-md"
         />
       </Card>
 
       <div className="space-y-3">
-        {filteredHistory.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground">Loading booking history...</p>
+          </Card>
+        ) : filteredHistory.length === 0 ? (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground">No bookings found</p>
           </Card>
@@ -155,6 +228,11 @@ export default function HistoryPage() {
                     {entry.checkedOut && !entry.noShow && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
                         Completed
+                      </span>
+                    )}
+                    {entry.booking.status === "Approved" && !entry.checkedOut && !entry.noShow && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                        Approved
                       </span>
                     )}
                   </div>
@@ -233,11 +311,16 @@ export default function HistoryPage() {
                 </div>
               </div>
 
+              {selectedEntry.comment && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-2">Notes</p>
+                  <p className="text-sm">{selectedEntry.comment}</p>
+                </div>
+              )}
               {selectedEntry.rating > 0 && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-2">Your Rating</p>
                   <p className="font-bold text-lg text-primary mb-2">★ {selectedEntry.rating}/5.0</p>
-                  <p className="text-sm">{selectedEntry.comment}</p>
                 </div>
               )}
             </div>

@@ -13,9 +13,10 @@ import { useAuth } from "@/hooks/use-auth"
 interface LoginFormProps {
   onLoginSuccess: () => void
   onSwitchToRegister?: () => void
+  onForgotPassword?: () => void
 }
 
-export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ onLoginSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -60,13 +61,9 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
       
       <Card className="w-full max-w-md p-8 relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur-md">
         <div className="text-center mb-8">
-          <div className="flex flex-col items-center justify-center gap-3 mb-6">
-            <div className="w-24 h-24 rounded-2xl flex items-center justify-center">
-              <img src="/logo.png" alt="FPT" className="w-16 h-16 object-contain" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-muted-foreground">FPT Education</h2>
-              <h1 className="text-2xl font-bold text-foreground mt-1">FPT UNIVERSITY</h1>
+          <div className="flex flex-col items-center justify-center gap-4 mb-6">
+            <div className="w-32 h-32 rounded-2xl flex items-center justify-center">
+              <img src="/logo.png" alt="FPT" className="w-28 h-28 object-contain" />
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -89,7 +86,18 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</Label>
+              {onForgotPassword && (
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-xs text-primary hover:text-primary/80 font-semibold transition-colors underline"
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
             <div className="relative">
             <Input
                 id="password"

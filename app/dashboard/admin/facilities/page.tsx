@@ -72,7 +72,6 @@ export default function AdminFacilitiesPage() {
       capacity: facility.capacity,
       description: facility.description ?? undefined,
       equipment: facility.equipment ?? undefined,
-      imageUrl: facility.imageUrl ?? undefined,
       status: newStatus,
       isActive: facility.isActive,
     })
@@ -270,7 +269,6 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
   const [capacity, setCapacity] = useState(facility?.capacity?.toString() ?? "")
   const [description, setDescription] = useState(facility?.description ?? "")
   const [equipment, setEquipment] = useState(facility?.equipment ?? "")
-  const [imageUrl, setImageUrl] = useState(facility?.imageUrl ?? "")
   const [images, setImages] = useState<File[]>([])
   const [status, setStatus] = useState<FacilityStatus>((facility?.status as FacilityStatus) ?? "Available")
   const [isActive, setIsActive] = useState(facility?.isActive ?? true)
@@ -307,7 +305,6 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         capacity: Number(capacity),
         description: description || undefined,
         equipment: equipment || undefined,
-        imageUrl: imageUrl || undefined,
         status,
         isActive,
       })
@@ -329,12 +326,38 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
       capacity: Number(capacity),
       description: description || undefined,
       equipment: equipment || undefined,
-      imageUrl: imageUrl || undefined,
       images: images.length > 0 ? images : undefined,
     })
     if (created) {
       toast({ title: "Facility created" })
       await onSaved()
+    }
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files)
+      // Validate file size and type
+      const validFiles = filesArray.filter(file => {
+        if (file.size > 5 * 1024 * 1024) {
+          toast({ 
+            title: "File too large", 
+            description: `${file.name} is larger than 5MB`,
+            variant: "destructive" 
+          })
+          return false
+        }
+        if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(file.type.toLowerCase())) {
+          toast({ 
+            title: "Invalid file type", 
+            description: `${file.name} must be JPEG, JPG, PNG, or GIF`,
+            variant: "destructive" 
+          })
+          return false
+        }
+        return true
+      })
+      setImages(validFiles)
     }
   }
 
@@ -482,41 +505,16 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Images</label>
-            <Input
+            <label className="block text-sm font-medium mb-2">Images (Multiple files allowed)</label>
+            <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/jpg,image/png,image/gif"
               multiple
-              onChange={(e) => {
-                const files = Array.from(e.target.files || [])
-                setImages(files)
-              }}
-              className="cursor-pointer"
+              onChange={handleImageChange}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Upload one or more images (JPG, PNG, etc.)
-            </p>
-            {images.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {images.map((image, index) => (
-                  <span key={index} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                    {image.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Image URL (Alternative)</label>
-            <Input
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              maxLength={500}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Or provide an image URL instead of uploading files
+              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && `${images.length} file(s) selected`}
             </p>
           </div>
 
