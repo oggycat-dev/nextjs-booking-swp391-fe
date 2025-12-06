@@ -391,6 +391,23 @@ export interface BookingListDto {
   createdAt: string;
 }
 
+export interface BookingCalendarDto {
+  id: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCode: string;
+  campusName: string;
+  userName: string;
+  userRole: string;
+  bookingDate: string; // ISO date string
+  startTime: string; // TimeSpan "HH:mm:ss"
+  endTime: string; // TimeSpan "HH:mm:ss"
+  status: string;
+  purpose: string;
+  numParticipants: number;
+}
+
 export interface CreateBookingRequest {
   facilityId: string;
   bookingDate: string; // ISO date "YYYY-MM-DD" (date only; time handled by startTime/endTime)
@@ -454,4 +471,58 @@ export interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+// ============================================
+// Facility Issue Types
+// ============================================
+
+export interface FacilityIssue {
+  id: string;
+  reportCode: string;
+  bookingId: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  reportedByName: string;
+  reportedByEmail: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  imageUrls: string[];
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ReportFacilityIssueRequest {
+  bookingId: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  images?: File[];
+}
+
+export interface ChangeRoomRequest {
+  newFacilityId: string;
+  adminResponse: string; // Required by backend
+}
+
+export interface ChangeRoomResponse {
+  id: string;
+  reportCode: string;
+  bookingId: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  reportedByName: string;
+  reportedByEmail: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  imageUrls: string[];
+  status: string;
 }

@@ -50,87 +50,130 @@ export function FacilityGrid({ facilities, viewMode, onBooking, onFacilityClick 
 
   if (viewMode === "list") {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {facilities.map((facility) => {
           const equipment = getEquipmentList(facility.equipment)
           const available = isAvailable(facility)
+          const imageUrl = getImageUrl(facility)
           
           return (
             <Card 
               key={facility.id} 
-              className="p-4 flex items-center justify-between hover:shadow-lg transition-shadow cursor-pointer"
+              className="overflow-hidden hover:shadow-xl transition-all duration-200 cursor-pointer group"
               onClick={() => onFacilityClick?.(facility)}
             >
-            <div className="flex-1">
-              <div className="flex items-center gap-4">
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                    {facility.imageUrl ? (
-                      <img
-                        src={facility.imageUrl}
-                        alt={facility.facilityName}
-                        className="w-full h-full object-cover"
-                        crossOrigin="anonymous"
-                        onError={(e) => {
-                          console.error('Image load error:', facility.imageUrl)
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                        No Image
+              <div className="flex flex-col sm:flex-row">
+                {/* Image Section */}
+                <div className="relative w-full sm:w-64 h-48 sm:h-auto flex-shrink-0 bg-muted overflow-hidden">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={facility.facilityName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.error('Image load error:', imageUrl)
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <svg className="w-12 h-12 mx-auto mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-xs">No Image</p>
                       </div>
-                    )}
-                </div>
-                <div className="flex-1">
-                    <h3 className="font-bold text-lg">{facility.facilityName}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                      {facility.typeName} • {getLocationText(facility)}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span>Capacity: {facility.capacity} people</span>
-                      {available && (
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                        Available
-                      </span>
-                    )}
-                      {!available && (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                          {facility.status || "Unavailable"}
-                        </span>
-                      )}
                     </div>
-                    {equipment.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {equipment.slice(0, 3).map((eq) => (
-                          <span 
-                            key={eq} 
-                            className="px-2 py-1 bg-primary/10 text-primary text-xs rounded"
-                          >
-                            {eq}
+                  )}
+                  {!available && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">
+                        {facility.status || "Unavailable"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Content Section */}
+                <div className="flex-1 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Left Info */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title and Type */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="font-bold text-xl text-foreground">{facility.facilityName}</h3>
+                        {available ? (
+                          <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
+                            Available
                           </span>
-                        ))}
-                        {equipment.length > 3 && (
-                          <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded">
-                            +{equipment.length - 3} more
+                        ) : (
+                          <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium">
+                            {facility.status || "Unavailable"}
                           </span>
                         )}
                       </div>
-                    )}
+                      
+                      {/* Type and Location */}
+                      <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <span className="font-medium">{facility.typeName}</span>
+                        <span>•</span>
+                        <span>{getLocationText(facility)}</span>
+                      </p>
+
+                      {/* Capacity */}
+                      <div className="flex items-center gap-2 text-sm mb-3">
+                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span className="font-medium text-foreground">Capacity: {facility.capacity} people</span>
+                      </div>
+
+                      {/* Description */}
+                      {facility.description && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          {facility.description}
+                        </p>
+                      )}
+
+                      {/* Equipment Tags */}
+                      {equipment.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {equipment.slice(0, 4).map((eq) => (
+                            <span 
+                              key={eq} 
+                              className="px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-md font-medium"
+                            >
+                              {eq}
+                            </span>
+                          ))}
+                          {equipment.length > 4 && (
+                            <span className="px-2.5 py-1 bg-muted text-muted-foreground text-xs rounded-md font-medium">
+                              +{equipment.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Button */}
+                    <div className="flex-shrink-0">
+                      <Button
+                        className="bg-red-600 hover:bg-red-700 text-white px-6 shadow-md hover:shadow-lg transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onBooking(facility)
+                        }}
+                        disabled={!available}
+                      >
+                        {available ? "Book Now" : "Unavailable"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              onClick={(e) => {
-                e.stopPropagation()
-                onBooking(facility)
-              }}
-                disabled={!available}
-            >
-                {available ? "Book Now" : "Unavailable"}
-            </Button>
-          </Card>
+            </Card>
           )
         })}
       </div>

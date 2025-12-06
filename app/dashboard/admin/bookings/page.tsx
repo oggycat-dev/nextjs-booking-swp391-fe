@@ -116,18 +116,10 @@ export default function AdminBookingsPage() {
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({pendingBookings.length})</h3>
         </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
           <p className="text-3xl font-bold text-primary">{pendingBookings.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Approved This Month</p>
-          <p className="text-3xl font-bold text-primary">-</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Avg. Approval Time</p>
-          <p className="text-3xl font-bold text-primary">-</p>
         </Card>
       </div>
 
