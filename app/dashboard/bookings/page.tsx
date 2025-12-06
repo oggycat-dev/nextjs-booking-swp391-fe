@@ -570,49 +570,53 @@ export default function BookingsPage() {
   )
 
   const renderBookingCard = (booking: BookingListDto) => (
-    <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-      <div className="flex flex-col sm:flex-row">
-        {/* Image Section */}
-        <div className="relative w-full sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex-shrink-0 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Calendar className="w-12 h-12 text-primary/40 mx-auto mb-2" />
-              <p className="text-xs text-primary/60 font-medium px-2 line-clamp-2">{booking.facilityName}</p>
-            </div>
-          </div>
-          {/* Status indicator on image */}
-          {getStatusBadge(booking.status) && (
-            <div className="absolute top-3 right-3">
-              {getStatusBadge(booking.status)}
-            </div>
-          )}
-        </div>
+    <Card 
+      key={booking.id} 
+      className="group hover:shadow-lg transition-all duration-200 overflow-hidden border-l-4 cursor-pointer" 
+      style={{
+        borderLeftColor: booking.status === "Approved" ? "#16a34a" : 
+                         booking.status === "Rejected" ? "#dc2626" : 
+                         booking.status === "Completed" ? "#2563eb" :
+                         booking.status === "WaitingLecturerApproval" ? "#f59e0b" :
+                         booking.status === "WaitingAdminApproval" ? "#3b82f6" : "#94a3b8"
+      }}
+      onClick={() => setSelectedBooking(booking)}
+    >
+      <div className="flex flex-row">
+        {/* Left Color Section */}
+        <div className="relative w-2 flex-shrink-0" style={{
+          backgroundColor: booking.status === "Approved" ? "#16a34a" : 
+                          booking.status === "Rejected" ? "#dc2626" : 
+                          booking.status === "Completed" ? "#2563eb" :
+                          booking.status === "WaitingLecturerApproval" ? "#f59e0b" :
+                          booking.status === "WaitingAdminApproval" ? "#3b82f6" : "#94a3b8"
+        }} />
 
         {/* Content Section */}
-        <div className="flex-1 p-5">
-          <div className="flex items-start justify-between gap-6">
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between gap-4">
             {/* Left Section - Main Info */}
             <div className="flex-1 min-w-0">
-              {/* Title and Code */}
-              <div className="mb-3">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="font-bold text-lg text-foreground">{booking.facilityName}</h3>
-                </div>
-                <p className="text-xs text-muted-foreground font-mono">
-                  {booking.bookingCode}
-                </p>
+              {/* Title and Status */}
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <h3 className="font-bold text-xl text-foreground">{booking.facilityName}</h3>
+                {getStatusBadge(booking.status)}
               </div>
+              
+              {/* Booking Code */}
+              <p className="text-sm text-muted-foreground font-mono mb-3">
+                {booking.bookingCode}
+              </p>
             
-            {/* Date & Time Info */}
-            <div className="space-y-2.5 mb-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground min-w-[140px]">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-medium">{formatDate(booking.bookingDate)}</span>
+              {/* Date & Time Info */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium text-foreground">{formatDate(booking.bookingDate)}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-medium">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium text-foreground">
                     {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                   </span>
                 </div>
@@ -620,18 +624,18 @@ export default function BookingsPage() {
               
               {/* Check-in/out Status */}
               {(booking.checkedInAt || booking.checkedOutAt) && (
-                <div className="flex flex-wrap gap-3 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   {booking.checkedInAt && (
-                    <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-950 px-3 py-1.5 rounded-md border border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs bg-green-50 dark:bg-green-950 px-2.5 py-1 rounded border border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                       <span className="text-green-700 dark:text-green-300 font-medium">
                         In: {formatTime(booking.checkedInAt)}
                       </span>
                     </div>
                   )}
                   {booking.checkedOutAt && (
-                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-950 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-950 px-2.5 py-1 rounded border border-blue-200 dark:border-blue-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span className="text-blue-700 dark:text-blue-300 font-medium">
                         Out: {formatTime(booking.checkedOutAt)}
                       </span>
@@ -640,39 +644,94 @@ export default function BookingsPage() {
                 </div>
               )}
             </div>
-          </div>
             
             {/* Right Section - Actions */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setSelectedBooking(booking)}
-                className="min-w-[100px] hover:bg-primary/5"
-              >
-                Details
-              </Button>
-              {canCheckIn(booking) && (
-                <Button 
-                  size="sm" 
-                  className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
-                  onClick={() => handleCheckInClick(booking)}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                  Check-in
-                </Button>
-              )}
-              {canCheckOut(booking) && (
-                <Button 
-                  size="sm" 
-                  className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-                  onClick={() => handleCheckOutClick(booking)}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                  Check-out
-                </Button>
-              )}
-            </div>
+            {(canCheckIn(booking) || canCheckOut(booking)) && (
+              <div className="flex items-center justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                {canCheckIn(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-green-600 hover:bg-green-700 text-white px-6"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const validation = validateCheckIn(booking)
+                      if (!validation.isValid) {
+                        toast({
+                          variant: "destructive",
+                          title: "Cannot Check-in",
+                          description: validation.error,
+                        })
+                        return
+                      }
+                      
+                      const success = await checkIn(booking.id)
+                      if (success) {
+                        toast({
+                          title: "Success",
+                          description: "Checked in successfully",
+                        })
+                        fetchBookings()
+                        if (isLecturer) {
+                          fetchPendingApprovals()
+                        }
+                        fetchMyPendingBookings()
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Check-in
+                      </>
+                    )}
+                  </Button>
+                )}
+                {canCheckOut(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const validation = validateCheckOut(booking)
+                      if (!validation.isValid) {
+                        toast({
+                          variant: "destructive",
+                          title: "Cannot Check-out",
+                          description: validation.error,
+                        })
+                        return
+                      }
+                      
+                      const success = await checkOut(booking.id)
+                      if (success) {
+                        toast({
+                          title: "Success",
+                          description: "Checked out successfully",
+                        })
+                        fetchBookings()
+                        if (isLecturer) {
+                          fetchPendingApprovals()
+                        }
+                        fetchMyPendingBookings()
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Check-out
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
