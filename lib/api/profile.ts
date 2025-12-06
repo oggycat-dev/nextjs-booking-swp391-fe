@@ -80,10 +80,19 @@ export const profileApi = {
   updateMyProfile: async (request: UpdateProfileRequest): Promise<ApiResponse<null>> => {
     try {
       const url = `${API_URL}/Profile`;
+      
+      // Transform to match backend UpdateMyProfileCommand format
+      const payload = {
+        fullName: request.fullName,
+        phoneNumber: request.phoneNumber || null,
+        department: request.department || null,
+        major: request.major || null,
+      };
+
       const response = await fetch(url, {
         method: "PUT",
         headers: getAuthHeaders(),
-        body: JSON.stringify(request),
+        body: JSON.stringify(payload),
       });
 
       const contentType = response.headers.get("content-type");

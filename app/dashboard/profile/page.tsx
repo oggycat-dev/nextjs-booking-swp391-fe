@@ -209,6 +209,14 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground mb-1">Phone</p>
                   <p className="font-bold">{getDisplayValue(profile.phoneNumber)}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Role</p>
+                  <p className="font-bold capitalize">{profile.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Campus</p>
+                  <p className="font-bold">{getCampusName()}</p>
+                </div>
                 {profile.department && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Department</p>
@@ -222,12 +230,42 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Campus</p>
-                  <p className="font-bold">{getCampusName()}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Account Status</p>
+                  <div className="flex items-center gap-2">
+                    {profile.isActive ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Role</p>
-                  <p className="font-bold">{profile.role}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Approval Status</p>
+                  <div className="flex items-center gap-2">
+                    {profile.isApproved ? (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                        Approved
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                        Pending Approval
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Member Since</p>
+                  <p className="font-bold">
+                    {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -260,14 +298,16 @@ export default function ProfilePage() {
                       placeholder="Enter phone number"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Department</label>
-                    <Input
-                      value={formData.department || ""}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      placeholder="Enter department"
-                    />
-                  </div>
+                  {profile.role === "Lecturer" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Department</label>
+                      <Input
+                        value={formData.department || ""}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        placeholder="Enter department"
+                      />
+                    </div>
+                  )}
                   {profile.role === "Student" && (
                     <div>
                       <label className="block text-sm font-medium mb-2">Major</label>
