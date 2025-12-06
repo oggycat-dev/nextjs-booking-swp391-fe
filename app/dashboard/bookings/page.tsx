@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
-import { usePendingLecturerApprovals, useBookingMutations } from "@/hooks/use-booking"
+import { usePendingLecturerApprovals, useBookingMutations, useMyPendingBookings } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingListDto, Booking } from "@/types"
@@ -35,12 +35,19 @@ export default function BookingsPage() {
   const userRole = user?.role ? String(user.role).toLowerCase() : ""
   const isLecturer = userRole === "lecturer"
   
+  // Fetch my pending bookings (for all users)
+  const {
+    bookings: myPendingBookings,
+    fetchMyPendingBookings,
+    isLoading: isLoadingMyPending
+  } = useMyPendingBookings()
+  
   // For Lecturer: fetch pending approvals
   const { 
     bookings: pendingApprovals, 
     fetchPendingApprovals, 
     isLoading: isLoadingPending 
-  } = usePendingLecturerApprovals()
+  } = usePendingLecturerApprovals(isLecturer)
   
   // Filter out processed bookings from pending approvals
   const filteredPendingApprovals = pendingApprovals.filter(
@@ -54,9 +61,6 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookings()
-  }, [])
-
-  useEffect(() => {
     if (isLecturer) {
       fetchPendingApprovals()
     }
@@ -695,30 +699,55 @@ export default function BookingsPage() {
           <p className="text-muted-foreground">No bookings found</p>
         </Card>
       ) : (
-        <Tabs defaultValue={isLecturer ? "pending" : "all"} className="w-full">
+        <Tabs defaultValue={isLecturer ? "pending" : "mypending"} className="w-full">
           <TabsList>
+            <TabsTrigger value="mypending">
+              My Pending ({myPendingBookings.length})
+            </TabsTrigger>
             {isLecturer && (
               <TabsTrigger value="pending">
                 Pending Approvals ({filteredPendingApprovals.length})
               </TabsTrigger>
             )}
-            <TabsTrigger value="all">
-              All ({bookings.length})
-            </TabsTrigger>
             <TabsTrigger value="approved">
               Approved ({bookings.filter((b) => b.status === "Approved").length})
             </TabsTrigger>
-            <TabsTrigger value="waitinglecturerapproval">
-              Waiting Lecturer ({bookings.filter((b) => b.status === "WaitingLecturerApproval").length})
-            </TabsTrigger>
-            <TabsTrigger value="waitingadminapproval">
-              Waiting Admin ({bookings.filter((b) => b.status === "WaitingAdminApproval").length})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed ({bookings.filter((b) => b.status === "Completed").length})
-            </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="mypending" className="space-y-4 mt-4">
+            {isLoadingMyPending ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : myPendingBookings.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No pending bookings</p>
+              </Card>
+            ) : (
+              myPendingBookings.map((booking) => renderBookingCard({
+                id: booking.id,
+                bookingCode: booking.bookingCode,
+                facilityId: booking.facilityId,
+                facilityName: booking.facilityName,
+                userId: booking.userId,
+                userName: booking.userName,
+                userRole: booking.userRole,
+                bookingDate: booking.bookingDate,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                purpose: booking.purpose,
+                participants: booking.participants,
+                status: booking.status,
+                lecturerEmail: booking.lecturerEmail || null,
+                lecturerName: booking.lecturerName || null,
+                rejectionReason: booking.rejectionReason || null,
+                notes: booking.notes || null,
+                checkedInAt: booking.checkedInAt || null,
+                checkedOutAt: booking.checkedOutAt || null,
+                createdAt: booking.createdAt,
+              }))
+            )}
+          </TabsContent>
           {isLecturer && (
             <TabsContent value="pending" className="space-y-4 mt-4">
               {isLoadingPending ? (
@@ -734,20 +763,8 @@ export default function BookingsPage() {
               )}
             </TabsContent>
           )}
-          <TabsContent value="all" className="space-y-4 mt-4">
-            {getBookingsByStatus("all").map(renderBookingCard)}
-          </TabsContent>
           <TabsContent value="approved" className="space-y-4 mt-4">
             {getBookingsByStatus("approved").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="waitinglecturerapproval" className="space-y-4 mt-4">
-            {getBookingsByStatus("waitinglecturerapproval").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="waitingadminapproval" className="space-y-4 mt-4">
-            {getBookingsByStatus("waitingadminapproval").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="completed" className="space-y-4 mt-4">
-            {getBookingsByStatus("completed").map(renderBookingCard)}
           </TabsContent>
         </Tabs>
       )}

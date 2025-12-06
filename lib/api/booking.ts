@@ -406,6 +406,52 @@ export const bookingApi = {
   },
 
   /**
+   * Get my pending bookings (Student/Lecturer)
+   * Maps to: GET /api/bookings/my-pending
+   */
+  getMyPendingBookings: async (): Promise<ApiResponse<Booking[]>> => {
+    try {
+      const url = `${API_URL}/bookings/my-pending`;
+      
+      console.log('Fetching my pending bookings from:', url);
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Handle empty response
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No pending bookings found",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching my pending bookings:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get bookings waiting for admin approval (Admin only) - Alternative method
    */
   getPendingAdminApprovals: async (): Promise<ApiResponse<BookingListDto[]>> => {

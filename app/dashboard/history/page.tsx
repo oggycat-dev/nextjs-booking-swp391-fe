@@ -129,6 +129,7 @@ export default function HistoryPage() {
     const totalBookings = historyEntries.length
     const completedBookings = historyEntries.filter((h) => h.checkedOut).length
     const noShows = historyEntries.filter((h) => h.noShow).length
+    const rejectedBookings = historyEntries.filter((h) => h.booking.status === "Rejected").length
     const ratings = historyEntries.filter((h) => h.rating > 0)
     const averageRating = ratings.length > 0
       ? (ratings.reduce((acc, h) => acc + h.rating, 0) / ratings.length).toFixed(1)
@@ -138,6 +139,7 @@ export default function HistoryPage() {
       totalBookings,
       completedBookings,
       noShows,
+      rejectedBookings,
       averageRating,
     }
   }, [historyEntries])
@@ -171,7 +173,7 @@ export default function HistoryPage() {
         <p className="text-muted-foreground">View your past bookings and facility usage</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Total Bookings</p>
           <p className="text-3xl font-bold text-primary">{stats.totalBookings}</p>
@@ -179,6 +181,10 @@ export default function HistoryPage() {
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Completed</p>
           <p className="text-3xl font-bold text-primary">{stats.completedBookings}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Rejected</p>
+          <p className="text-3xl font-bold text-destructive">{stats.rejectedBookings}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">No-shows</p>
@@ -220,12 +226,17 @@ export default function HistoryPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-bold text-lg">{entry.facilityName}</h3>
+                    {entry.booking.status === "Rejected" && (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">
+                        Rejected
+                      </span>
+                    )}
                     {entry.noShow && (
                       <span className="px-2 py-1 bg-destructive/10 text-destructive text-xs font-medium rounded">
                         No-show
                       </span>
                     )}
-                    {entry.checkedOut && !entry.noShow && (
+                    {entry.checkedOut && !entry.noShow && entry.booking.status !== "Rejected" && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
                         Completed
                       </span>
