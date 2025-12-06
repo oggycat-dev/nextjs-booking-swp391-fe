@@ -34,21 +34,8 @@ export default function Home() {
       
       // Redirect based on role (role from backend: "Admin", "Student", "Lecturer")
       // Use window.location for reliable redirect
-      if (finalRole) {
-        const roleLower = String(finalRole).toLowerCase().trim()
-        if (roleLower === "admin") {
-          window.location.href = "/dashboard/admin/users"
-        } else if (roleLower === "lecturer") {
-          // Lecturer goes to dashboard (can see pending approvals)
-          window.location.href = "/dashboard"
-        } else {
-          // Student goes to dashboard
-          window.location.href = "/dashboard"
-        }
-      } else {
-        // Default to dashboard if role not found
-        window.location.href = "/dashboard"
-      }
+      // All roles go to /dashboard after login
+      window.location.href = "/dashboard"
     }, 200)
   }
 

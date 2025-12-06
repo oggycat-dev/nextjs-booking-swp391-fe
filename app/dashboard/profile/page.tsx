@@ -4,14 +4,23 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { useProfile } from "@/hooks/use-profile"
 import { useAuth } from "@/hooks/use-auth"
+import { useMyCampusChangeRequests, useCampusChangeRequestMutations } from "@/hooks/use-campus-change-requests"
+import { useCampuses } from "@/hooks/use-campus"
+import { useToast } from "@/hooks/use-toast"
 import type { UpdateProfileRequest } from "@/types"
 
 export default function ProfilePage() {
+  const { toast } = useToast()
   const { profile, updateProfile, isLoading, error: profileError } = useProfile()
   const { changePassword, isLoading: isChangingPassword, getCurrentUser } = useAuth()
+  const { myRequests, fetchMyRequests, isLoading: isLoadingRequests } = useMyCampusChangeRequests()
+  const { requestCampusChange, isLoading: isSubmittingRequest } = useCampusChangeRequestMutations()
+  const { campuses, fetchCampuses } = useCampuses()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<UpdateProfileRequest>({
     fullName: "",
@@ -24,10 +33,20 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   })
+  const [campusChangeData, setCampusChangeData] = useState({
+    requestedCampusId: "",
+    reason: "",
+  })
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [updateSuccess, setUpdateSuccess] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+  // Fetch campus change requests and campuses on mount
+  useEffect(() => {
+    fetchMyRequests()
+    fetchCampuses()
+  }, [fetchMyRequests, fetchCampuses])
 
   // Initialize form data when profile is loaded
   useEffect(() => {
@@ -102,6 +121,51 @@ export default function ProfilePage() {
     }
   }
 
+  const handleCampusChangeRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!campusChangeData.requestedCampusId || !campusChangeData.reason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please select a campus and provide a reason",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (profile?.campusId === campusChangeData.requestedCampusId) {
+      toast({
+        title: "Error",
+        description: "You are already in this campus",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const success = await requestCampusChange({
+      requestedCampusId: campusChangeData.requestedCampusId,
+      reason: campusChangeData.reason.trim(),
+    })
+
+    if (success) {
+      toast({
+        title: "Success",
+        description: "Campus change request submitted successfully",
+      })
+      setCampusChangeData({
+        requestedCampusId: "",
+        reason: "",
+      })
+      fetchMyRequests()
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to submit campus change request",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getDisplayValue = (value: string | null | undefined): string => {
     return value || "N/A"
   }
@@ -160,7 +224,7 @@ export default function ProfilePage() {
         <TabsList>
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="password">Change Password</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="campus-change">Campus Change</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="mt-6">
@@ -409,37 +473,118 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preferences" className="mt-6">
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Notification Preferences</h2>
-            <div className="space-y-4 max-w-md">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-primary rounded" />
+        <TabsContent value="campus-change" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Request New Campus Change */}
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-6">Request Campus Change</h2>
+              <form onSubmit={handleCampusChangeRequest} className="space-y-4">
                 <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Booking confirmations and reminders</p>
+                  <label className="block text-sm font-medium mb-2">Current Campus</label>
+                  <Input
+                    value={getCampusName()}
+                    disabled
+                    className="bg-muted"
+                  />
                 </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-primary rounded" />
-                <div>
-                  <p className="font-medium">SMS Notifications</p>
-                  <p className="text-sm text-muted-foreground">Important alerts and reminders</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-primary rounded" />
-                <div>
-                  <p className="font-medium">In-app Notifications</p>
-                  <p className="text-sm text-muted-foreground">Real-time updates within the app</p>
-                </div>
-              </label>
-            </div>
 
-            <Button className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">
-              Save Preferences
-            </Button>
-          </Card>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Requested Campus *</label>
+                  <select
+                    value={campusChangeData.requestedCampusId}
+                    onChange={(e) => setCampusChangeData({ ...campusChangeData, requestedCampusId: e.target.value })}
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  >
+                    <option value="">Select campus</option>
+                    {campuses
+                      .filter(c => c.id !== profile?.campusId)
+                      .map((campus) => (
+                        <option key={campus.id} value={campus.id}>
+                          {campus.campusName}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Reason *</label>
+                  <Textarea
+                    value={campusChangeData.reason}
+                    onChange={(e) => setCampusChangeData({ ...campusChangeData, reason: e.target.value })}
+                    placeholder="Explain why you want to change campus..."
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmittingRequest}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {isSubmittingRequest ? "Submitting..." : "Submit Request"}
+                </Button>
+              </form>
+            </Card>
+
+            {/* My Campus Change Requests History */}
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-6">My Requests History</h2>
+              {isLoadingRequests ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Loading requests...</p>
+                </div>
+              ) : myRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No campus change requests yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                  {myRequests.map((request) => (
+                    <div key={request.id} className="border rounded-lg p-4 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">
+                            {request.currentCampusName || "No campus"} → {request.requestedCampusName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(request.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            request.status === "Approved" ? "default" :
+                            request.status === "Rejected" ? "destructive" : "secondary"
+                          }
+                          className={
+                            request.status === "Approved" ? "bg-green-600" :
+                            request.status === "Pending" ? "bg-orange-500" : ""
+                          }
+                        >
+                          {request.status}
+                        </Badge>
+                      </div>
+                      <div className="border-t pt-2">
+                        <p className="text-sm font-medium mb-1">Reason:</p>
+                        <p className="text-sm text-muted-foreground">{request.reason}</p>
+                      </div>
+                      {request.reviewComment && (
+                        <div className="border-t pt-2">
+                          <p className="text-sm font-medium mb-1">Admin Comment:</p>
+                          <p className="text-sm text-muted-foreground">{request.reviewComment}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
