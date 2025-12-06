@@ -234,7 +234,7 @@ export default function CalendarPage() {
         
         {/* Status Legend */}
         <div className="flex flex-col gap-2 bg-muted/30 p-4 rounded-lg border">
-          <p className="text-sm font-semibold mb-1">Status Legend</p>
+          <p className="text-sm font-semibold mb-1">Status</p>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-400 to-emerald-600 border border-emerald-700"></div>
             <span className="text-xs">Approved</span>
@@ -246,6 +246,10 @@ export default function CalendarPage() {
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gradient-to-br from-gray-400 to-gray-600 border border-gray-700"></div>
             <span className="text-xs">Waiting Lecture Approval</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-400 to-blue-600 border border-blue-700"></div>
+            <span className="text-xs">Checked In</span>
           </div>
         </div>
       </div>
