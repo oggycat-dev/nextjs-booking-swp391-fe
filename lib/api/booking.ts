@@ -13,6 +13,7 @@ import type {
   LecturerApproveBookingRequest,
   RejectBookingRequest,
   GetBookingsQuery,
+  BookingCalendarDto,
 } from '@/types';
 
 const API_URL = apiConfig.baseURL;
