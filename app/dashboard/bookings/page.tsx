@@ -12,9 +12,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
 import { usePendingLecturerApprovals, useBookingMutations, useMyPendingBookings } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
+import { ReportIssueModal } from "@/components/facilities/report-issue-modal"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingListDto, Booking } from "@/types"
-import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle, AlertTriangle } from "lucide-react"
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<BookingListDto[]>([])
@@ -22,6 +23,7 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingListDto | null>(null)
   const [checkInDialog, setCheckInDialog] = useState(false)
   const [checkOutDialog, setCheckOutDialog] = useState(false)
+  const [reportIssueModal, setReportIssueModal] = useState<BookingListDto | null>(null)
   const [validationWarning, setValidationWarning] = useState<string | null>(null)
   const [approveDialog, setApproveDialog] = useState(false)
   const [rejectDialog, setRejectDialog] = useState(false)
@@ -438,6 +440,11 @@ export default function BookingsPage() {
     return canShowCheckOutButton(booking)
   }
 
+  // Check if user can report issue (must be checked in and not checked out)
+  const canReportIssue = (booking: BookingListDto): boolean => {
+    return !!booking.checkedInAt && !booking.checkedOutAt
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -730,6 +737,19 @@ export default function BookingsPage() {
                     )}
                   </Button>
                 )}
+                {canReportIssue(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setReportIssueModal(booking)
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-1" />
+                    Report Issue
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -895,6 +915,18 @@ export default function BookingsPage() {
                   onClick={() => handleCheckOutClick(selectedBooking)}
                 >
                   Check-out
+                </Button>
+              )}
+              {canReportIssue(selectedBooking) && (
+                <Button 
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => {
+                    setReportIssueModal(selectedBooking)
+                    setSelectedBooking(null)
+                  }}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  Report Issue
                 </Button>
               )}
               <Button variant="outline" className="flex-1" onClick={() => setSelectedBooking(null)}>
@@ -1069,6 +1101,23 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report Issue Modal */}
+      {reportIssueModal && (
+        <ReportIssueModal
+          isOpen={!!reportIssueModal}
+          onClose={() => setReportIssueModal(null)}
+          booking={reportIssueModal}
+          onReported={() => {
+            setReportIssueModal(null)
+            fetchBookings()
+            if (isLecturer) {
+              fetchPendingApprovals()
+            }
+            fetchMyPendingBookings()
+          }}
+        />
+      )}
     </div>
   )
 }

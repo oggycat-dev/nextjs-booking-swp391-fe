@@ -102,6 +102,7 @@ export default function DashboardLayout({
     { href: "/dashboard/admin/facility-types", label: "Facility Types", roles: ["admin"] },
     { href: "/dashboard/admin/holidays", label: "Manage Holidays", roles: ["admin"] },
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
+    { href: "/dashboard/admin/issues", label: "Issue Reports", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
     { href: "/dashboard/admin/analytics", label: "Analytics", roles: ["admin"] },
   ]
