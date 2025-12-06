@@ -188,6 +188,8 @@ export default function CalendarPage() {
                         ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-700'
                         : booking.status === 'Pending'
                         ? 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white hover:from-amber-500 hover:to-amber-700'
+                        : booking.status === 'WaitingLecturerApproval' || booking.status === 'WaitingAdminApproval'
+                        ? 'bg-gradient-to-br from-gray-400 to-gray-600 border-gray-700 text-white hover:from-gray-500 hover:to-gray-700'
                         : 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-700 text-white hover:from-blue-500 hover:to-blue-700'
                     
                     // Adapt text size based on height
@@ -299,7 +301,16 @@ export default function CalendarPage() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
                   <div className="mt-1">
-                    <Badge variant={selectedBooking.status === 'Approved' ? 'default' : 'secondary'}>
+                    <Badge 
+                      variant={selectedBooking.status === 'Approved' || selectedBooking.status === 'Pending' ? 'default' : 'secondary'}
+                      className={
+                        selectedBooking.status === 'Approved' 
+                          ? 'bg-green-600 hover:bg-green-700' 
+                          : selectedBooking.status === 'Pending'
+                          ? 'bg-orange-500 hover:bg-orange-600'
+                          : ''
+                      }
+                    >
                       {selectedBooking.status}
                     </Badge>
                   </div>
