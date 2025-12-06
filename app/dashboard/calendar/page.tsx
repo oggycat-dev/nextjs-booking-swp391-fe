@@ -226,9 +226,28 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Calendar View</h1>
-        <p className="text-muted-foreground">View facility availability and your bookings</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Calendar View</h1>
+          <p className="text-muted-foreground">View facility availability and your bookings</p>
+        </div>
+        
+        {/* Status Legend */}
+        <div className="flex flex-col gap-2 bg-muted/30 p-4 rounded-lg border">
+          <p className="text-sm font-semibold mb-1">Status Legend</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-400 to-emerald-600 border border-emerald-700"></div>
+            <span className="text-xs">Approved</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-amber-400 to-amber-600 border border-amber-700"></div>
+            <span className="text-xs">Pending</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-gray-400 to-gray-600 border border-gray-700"></div>
+            <span className="text-xs">Waiting Lecture Approval</span>
+          </div>
+        </div>
       </div>
 
       {/* Week Navigation and Facility Selector */}
