@@ -268,18 +268,19 @@ export default function CalendarPage() {
             </div>
             
             <button
-              onClick={goToToday}
-              className="px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Today
-            </button>
-            
-            <button
               onClick={goToNextWeek}
               className="p-2 rounded-lg hover:bg-muted transition-colors"
               title="Next Week"
             >
               <ChevronRight className="w-5 h-5" />
+              
+            </button>
+
+                        <button
+              onClick={goToToday}
+              className="px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Today
             </button>
           </div>
 
