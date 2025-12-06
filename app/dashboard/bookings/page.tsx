@@ -768,9 +768,6 @@ export default function BookingsPage() {
                 Pending Approvals ({filteredPendingApprovals.length})
               </TabsTrigger>
             )}
-            <TabsTrigger value="approved">
-              Approved ({bookings.filter((b) => b.status === "Approved").length})
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="mypending" className="space-y-4 mt-4">
@@ -822,9 +819,6 @@ export default function BookingsPage() {
               )}
             </TabsContent>
           )}
-          <TabsContent value="approved" className="space-y-4 mt-4">
-            {getBookingsByStatus("approved").map(renderBookingCard)}
-          </TabsContent>
         </Tabs>
       )}
 
