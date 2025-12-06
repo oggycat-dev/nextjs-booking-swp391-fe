@@ -339,7 +339,7 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6 bg-gradient-to-br from-rose-50 to-pink-50 border-rose-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Total Users</p>
@@ -372,17 +372,6 @@ export default function AdminUsersPage() {
             </div>
           </div>
           <p className="text-4xl font-bold text-purple-600">{stats.lecturers}</p>
-        </Card>
-        <Card className="p-6 bg-gradient-to-br from-red-50 to-orange-50 border-red-200 hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gray-600">Inactive Users</p>
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center shadow-sm">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-4xl font-bold text-red-600">{stats.blocked}</p>
         </Card>
       </div>
 

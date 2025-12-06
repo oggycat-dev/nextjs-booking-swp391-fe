@@ -12,13 +12,20 @@ import type { FacilityType } from "@/types"
 export default function AdminFacilityTypesPage() {
   const { toast } = useToast()
   const { facilityTypes, fetchFacilityTypes, isLoading } = useFacilityTypes()
-  const { createFacilityType, isLoading: isCreating, error: createError } = useFacilityTypeMutations()
+  const { createFacilityType, updateFacilityType, isLoading: isCreating, error: createError } = useFacilityTypeMutations()
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createTypeCode, setCreateTypeCode] = useState("")
   const [createTypeName, setCreateTypeName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editType, setEditType] = useState<FacilityType | null>(null)
+  const [editTypeName, setEditTypeName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editIsActive, setEditIsActive] = useState(true)
 
   // View modal state
   const [selectedType, setSelectedType] = useState<FacilityType | null>(null)
@@ -66,6 +73,51 @@ export default function AdminFacilityTypesPage() {
   const handleViewDetails = (type: FacilityType) => {
     setSelectedType(type)
     setShowViewModal(true)
+  }
+
+  const handleEditClick = (type: FacilityType) => {
+    setEditType(type)
+    setEditTypeName(type.typeName)
+    setEditDescription(type.description || "")
+    setEditIsActive(type.isActive)
+    setShowViewModal(false)
+    setShowEditModal(true)
+  }
+
+  const handleUpdateFacilityType = async () => {
+    if (!editType || !editTypeName.trim()) {
+      toast({
+        title: "Error",
+        description: "Type Name is required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const result = await updateFacilityType(editType.id, {
+      typeName: editTypeName.trim(),
+      description: editDescription.trim() || undefined,
+      isActive: editIsActive,
+    })
+
+    if (result) {
+      toast({
+        title: "Success",
+        description: "Facility type updated successfully",
+      })
+      setShowEditModal(false)
+      setEditType(null)
+      setEditTypeName("")
+      setEditDescription("")
+      setEditIsActive(true)
+      fetchFacilityTypes()
+    } else {
+      toast({
+        title: "Error",
+        description: createError || "Failed to update facility type",
+        variant: "destructive",
+      })
+    }
   }
 
   const filteredTypes = facilityTypes.filter((type) => {
@@ -333,6 +385,132 @@ export default function AdminFacilityTypesPage() {
                   }}
                 >
                   Close
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => handleEditClick(selectedType)}
+                >
+                  Edit
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editType && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Edit Facility Type</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditType(null)
+                    setEditTypeName("")
+                    setEditDescription("")
+                    setEditIsActive(true)
+                  }}
+                >
+                  ✕
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-muted-foreground">
+                    Type Code
+                  </label>
+                  <Input
+                    value={editType.typeCode}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Type code cannot be changed
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Type Name <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={editTypeName}
+                    onChange={(e) => setEditTypeName(e.target.value)}
+                    placeholder="e.g., Laboratory, Meeting Room, Lecture Hall"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Description
+                  </label>
+                  <Textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Enter a description for this facility type..."
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Status
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        checked={editIsActive}
+                        onChange={() => setEditIsActive(true)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">Active</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        checked={!editIsActive}
+                        onChange={() => setEditIsActive(false)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">Inactive</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Inactive types cannot be used for new facilities
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditType(null)
+                    setEditTypeName("")
+                    setEditDescription("")
+                    setEditIsActive(true)
+                  }}
+                  disabled={isCreating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleUpdateFacilityType}
+                  disabled={isCreating}
+                >
+                  {isCreating ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>

@@ -64,8 +64,29 @@ export function useFacilityTypeMutations() {
     }
   }, []);
 
+  const updateFacilityType = useCallback(async (id: string, request: { typeName: string; description?: string; isActive: boolean }): Promise<FacilityType | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await facilityTypeApi.update(id, request);
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.message || "Failed to update facility type");
+        return null;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update facility type";
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     createFacilityType,
+    updateFacilityType,
     isLoading,
     error,
     clearError: () => setError(null),

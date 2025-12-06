@@ -152,28 +152,46 @@ export default function DashboardLayout({
               </Link>
             )}
             
-            <Link href="/dashboard/profile">
-              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+            {/* Profile button - Only for Student and Lecturer */}
+            {userRole !== "admin" ? (
+              <Link href="/dashboard/profile">
+                <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
+                    {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{userInfo?.fullName || "User"}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        <span className="capitalize">{userRole}</span>
+                      </span>
+                      {userInfo?.campusName && (
+                        <>
+                          <span className="text-primary-foreground/40">•</span>
+                          <span>{userInfo.campusName}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
                   {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{userInfo?.fullName || "User"}</span>
+                  <span className="text-sm font-semibold">{userInfo?.fullName || "System Administrator"}</span>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="flex items-center gap-1">
                       <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
                       <span className="capitalize">{userRole}</span>
                     </span>
-                    {userInfo?.campusName && (
-                      <>
-                        <span className="text-primary-foreground/40">•</span>
-                        <span>{userInfo.campusName}</span>
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
-            </Link>
+            )}
             <Button
               variant="ghost"
               size="sm"
