@@ -4,6 +4,7 @@
  */
 
 import { getAuthHeaders, apiConfig } from '../api-client';
+import { storage } from '../storage-manager';
 import type {
   ApiResponse,
   Booking,
@@ -455,17 +456,57 @@ export const bookingApi = {
    * Get bookings waiting for admin approval (Admin only) - Alternative method
    */
   getPendingAdminApprovals: async (): Promise<ApiResponse<BookingListDto[]>> => {
-    const headers = getAuthHeaders();
     const url = `${API_URL}/bookings/pending-admin-approval`;
     
-    const response = await fetch(url, {
+    // First attempt
+    let response = await fetch(url, {
       method: "GET",
-      headers,
+      headers: getAuthHeaders(),
     });
+
+    // If 401 or 403, try to refresh token and retry once
+    if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
+      console.log("Got 401/403, attempting token refresh and retry...");
+      
+      const refreshToken = storage.getItem("refreshToken");
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            if (refreshData.success && refreshData.data) {
+              storage.setItem("token", refreshData.data.token);
+              storage.setItem("refreshToken", refreshData.data.refreshToken);
+              
+              // Retry the original request with new token
+              response = await fetch(url, {
+                method: "GET",
+                headers: getAuthHeaders(),
+              });
+            }
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+        }
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      // If still 401/403 after retry, user needs to re-login
+      if (response.status === 401 || response.status === 403) {
+        console.error("Authentication failed after retry, redirecting to login...");
+        storage.clear();
+        window.location.href = "/";
+      }
+      
       throw new Error(errorMessage);
     }
 
@@ -479,18 +520,59 @@ export const bookingApi = {
     bookingId: string,
     request: LecturerApproveBookingRequest
   ): Promise<ApiResponse<null>> => {
-    const headers = getAuthHeaders();
     const url = `${API_URL}/bookings/${bookingId}/admin-approve`;
     
-    const response = await fetch(url, {
+    // First attempt
+    let response = await fetch(url, {
       method: "POST",
-      headers,
+      headers: getAuthHeaders(),
       body: JSON.stringify(request),
     });
+
+    // If 401 or 403, try to refresh token and retry once
+    if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
+      console.log("Got 401/403, attempting token refresh and retry...");
+      
+      const refreshToken = storage.getItem("refreshToken");
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            if (refreshData.success && refreshData.data) {
+              storage.setItem("token", refreshData.data.token);
+              storage.setItem("refreshToken", refreshData.data.refreshToken);
+              
+              // Retry the original request with new token
+              response = await fetch(url, {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify(request),
+              });
+            }
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+        }
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      // If still 401/403 after retry, user needs to re-login
+      if (response.status === 401 || response.status === 403) {
+        console.error("Authentication failed after retry, redirecting to login...");
+        storage.clear();
+        window.location.href = "/";
+      }
+      
       throw new Error(errorMessage);
     }
 

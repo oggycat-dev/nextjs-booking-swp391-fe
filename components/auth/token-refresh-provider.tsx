@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { authApi } from "@/lib/api/auth";
+import { storage } from "@/lib/storage-manager";
 import { useRouter } from "next/navigation";
 
 /**
@@ -15,12 +16,8 @@ export function TokenRefreshProvider({ children }: { children: React.ReactNode }
   const isRefreshingRef = useRef(false);
 
   const logout = useCallback(() => {
-    // Clear all auth data
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("role");
-    localStorage.removeItem("user");
-    localStorage.removeItem("tokenExpiry");
+    // Clear all auth data from storage
+    storage.clear();
     
     // Redirect to login
     window.location.href = "/";
@@ -60,7 +57,7 @@ export function TokenRefreshProvider({ children }: { children: React.ReactNode }
     isRefreshingRef.current = true;
 
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
+      const refreshToken = storage.getItem("refreshToken");
       
       if (!refreshToken) {
         console.log("No refresh token available, logging out");
@@ -72,19 +69,19 @@ export function TokenRefreshProvider({ children }: { children: React.ReactNode }
       const response = await authApi.refreshToken({ refreshToken });
 
       if (response.success && response.data) {
-        // Update tokens in localStorage
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("refreshToken", response.data.refreshToken);
+        // Update tokens in storage
+        storage.setItem("token", response.data.token);
+        storage.setItem("refreshToken", response.data.refreshToken);
         
         // Update user info if provided
         if (response.data.user) {
-          localStorage.setItem("user", JSON.stringify(response.data.user));
+          storage.setItem("user", JSON.stringify(response.data.user));
         }
         
         // Store expiry time
         const expiryTime = getTokenExpiry(response.data.token);
         if (expiryTime) {
-          localStorage.setItem("tokenExpiry", expiryTime.toString());
+          storage.setItem("tokenExpiry", expiryTime.toString());
         }
 
         console.log("Token refreshed successfully");
@@ -139,7 +136,7 @@ export function TokenRefreshProvider({ children }: { children: React.ReactNode }
   }, [refreshAccessToken]);
 
   const checkTokenExpiry = useCallback(() => {
-    const token = localStorage.getItem("token");
+    const token = storage.getItem("token");
     
     if (!token) {
       return;

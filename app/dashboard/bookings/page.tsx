@@ -211,8 +211,11 @@ export default function BookingsPage() {
       setCheckInDialog(false)
       setSelectedBooking(null)
       setValidationWarning(null)
-      fetchBookings()
-      fetchHistory()
+      // Wait a moment for backend to update, then refresh
+      setTimeout(() => {
+        fetchBookings()
+        fetchHistory()
+      }, 500)
     }
   }
 
@@ -228,8 +231,11 @@ export default function BookingsPage() {
       setCheckOutDialog(false)
       setSelectedBooking(null)
       setValidationWarning(null)
-      fetchBookings()
-      fetchHistory()
+      // Wait a moment for backend to update, then refresh
+      setTimeout(() => {
+        fetchBookings()
+        fetchHistory()
+      }, 500)
     }
   }
 
@@ -468,10 +474,17 @@ export default function BookingsPage() {
     return !!booking.checkedInAt && !booking.checkedOutAt
   }
 
-  // Check if booking should be hidden (already checked out OR past checkout time + 15 minutes without checkout)
-  const isBookingExpired = (booking: Booking): boolean => {
+  // Filter logic for Approved Bookings tab:
+  // - Only show Approved and InUse statuses
+  // - Hide if already checked out OR past checkout time + 15 minutes without checkout
+  const shouldShowInApprovedTab = (booking: Booking): boolean => {
+    // Only show Approved and InUse statuses
+    if (booking.status !== "Approved" && booking.status !== "InUse") {
+      return false
+    }
+    
     // Hide if already checked out
-    if (booking.checkedOutAt) return true
+    if (booking.checkedOutAt) return false
     
     const now = new Date()
     const bookingDate = new Date(booking.bookingDate)
@@ -482,7 +495,8 @@ export default function BookingsPage() {
     // Add 15 minutes grace period
     checkoutTime.setMinutes(checkoutTime.getMinutes() + 15)
     
-    return now > checkoutTime
+    // Hide if past grace period
+    return now <= checkoutTime
   }
 
   const formatDate = (dateString: string) => {
@@ -717,11 +731,15 @@ export default function BookingsPage() {
                           title: "Success",
                           description: "Checked in successfully",
                         })
-                        fetchBookings()
-                        if (isLecturer) {
-                          fetchPendingApprovals()
-                        }
-                        fetchMyPendingBookings()
+                        // Wait for backend to update, then refresh all data
+                        setTimeout(() => {
+                          fetchBookings()
+                          fetchHistory()
+                          fetchMyPendingBookings()
+                          if (isLecturer) {
+                            fetchPendingApprovals()
+                          }
+                        }, 500)
                       }
                     }}
                     disabled={isProcessing}
@@ -758,11 +776,15 @@ export default function BookingsPage() {
                           title: "Success",
                           description: "Checked out successfully",
                         })
-                        fetchBookings()
-                        if (isLecturer) {
-                          fetchPendingApprovals()
-                        }
-                        fetchMyPendingBookings()
+                        // Wait for backend to update, then refresh all data
+                        setTimeout(() => {
+                          fetchBookings()
+                          fetchHistory()
+                          fetchMyPendingBookings()
+                          if (isLecturer) {
+                            fetchPendingApprovals()
+                          }
+                        }, 500)
                       }
                     }}
                     disabled={isProcessing}
@@ -829,7 +851,7 @@ export default function BookingsPage() {
               </TabsTrigger>
             )}
             <TabsTrigger value="approved">
-              Approved Bookings ({historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length})
+              Approved Bookings ({historyBookings.filter(b => shouldShowInApprovedTab(b)).length})
             </TabsTrigger>
           </TabsList>
 
@@ -913,13 +935,13 @@ export default function BookingsPage() {
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
-            ) : historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length === 0 ? (
+            ) : historyBookings.filter(b => shouldShowInApprovedTab(b)).length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">No approved bookings</p>
               </Card>
             ) : (
               historyBookings
-                .filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b))
+                .filter(b => shouldShowInApprovedTab(b))
                   .map((booking) => renderBookingCard({
                     id: booking.id,
                     bookingCode: booking.bookingCode,
