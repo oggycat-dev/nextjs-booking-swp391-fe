@@ -463,15 +463,19 @@ export default function BookingsPage() {
     return !!booking.checkedInAt && !booking.checkedOutAt
   }
 
-  // Check if booking is expired (past checkout time without checkout)
+  // Check if booking should be hidden (already checked out OR past checkout time + 15 minutes without checkout)
   const isBookingExpired = (booking: Booking): boolean => {
-    if (booking.checkedOutAt) return false // Already checked out
+    // Hide if already checked out
+    if (booking.checkedOutAt) return true
     
     const now = new Date()
     const bookingDate = new Date(booking.bookingDate)
     const [hours, minutes] = booking.endTime.split(':').map(Number)
     const checkoutTime = new Date(bookingDate)
     checkoutTime.setHours(hours, minutes, 0, 0)
+    
+    // Add 15 minutes grace period
+    checkoutTime.setMinutes(checkoutTime.getMinutes() + 15)
     
     return now > checkoutTime
   }
