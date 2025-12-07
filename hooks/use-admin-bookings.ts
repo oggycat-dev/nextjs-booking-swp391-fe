@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { bookingApi } from '@/lib/api/booking';
-import type { BookingListDto, ApproveBookingRequest } from '@/types';
+import type { BookingListDto, LecturerApproveBookingRequest } from '@/types';
 
 export function useAdminBookings() {
   const [bookings, setBookings] = useState<BookingListDto[]>([]);
@@ -44,7 +44,7 @@ export function useAdminBookings() {
    */
   const approveBooking = useCallback(async (
     bookingId: string,
-    request: ApproveBookingRequest
+    request: LecturerApproveBookingRequest
   ): Promise<boolean> => {
     setIsLoading(true);
     setError(null);

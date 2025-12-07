@@ -472,3 +472,57 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+// ============================================
+// Facility Issue Types
+// ============================================
+
+export interface FacilityIssue {
+  id: string;
+  reportCode: string;
+  bookingId: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  reportedByName: string;
+  reportedByEmail: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  imageUrls: string[];
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ReportFacilityIssueRequest {
+  bookingId: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  images?: File[];
+}
+
+export interface ChangeRoomRequest {
+  newFacilityId: string;
+  adminResponse: string; // Required by backend
+}
+
+export interface ChangeRoomResponse {
+  id: string;
+  reportCode: string;
+  bookingId: string;
+  bookingCode: string;
+  facilityId: string;
+  facilityName: string;
+  reportedByName: string;
+  reportedByEmail: string;
+  issueTitle: string;
+  issueDescription: string;
+  severity: string;
+  category: string;
+  imageUrls: string[];
+  status: string;
+}

@@ -182,16 +182,26 @@ export function validateCheckOut(booking: BookingListDto): ValidationResult {
 
 /**
  * Check if check-in button should be visible
+ * Only show for Approved bookings that haven't been checked in yet
  */
 export function canShowCheckInButton(booking: BookingListDto): boolean {
-  return booking.status === "Approved" && !booking.checkedInAt
+  // Only show check-in if:
+  // 1. Status is Approved (not Completed, Rejected, etc.)
+  // 2. Not checked in yet
+  // 3. Not checked out yet (if already checked out, don't show check-in)
+  return booking.status === "Approved" && !booking.checkedInAt && !booking.checkedOutAt
 }
 
 /**
  * Check if check-out button should be visible
+ * Show for any booking that has been checked in but not checked out yet
  */
 export function canShowCheckOutButton(booking: BookingListDto): boolean {
-  return booking.status === "Approved" && !!booking.checkedInAt && !booking.checkedOutAt
+  // Show check-out if:
+  // 1. Has been checked in
+  // 2. Not checked out yet
+  // Status can be Approved, CheckedIn, or even Completed (if backend marks as Completed before check-out)
+  return !!booking.checkedInAt && !booking.checkedOutAt
 }
 
 /**
