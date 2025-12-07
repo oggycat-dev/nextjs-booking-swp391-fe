@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { authApi } from "@/lib/api/auth";
+import { storage } from "@/lib/storage-manager";
 import type {
   LoginRequest,
   LoginResponse,
@@ -24,11 +25,11 @@ export function useAuth() {
     try {
       const response = await authApi.login(request);
       if (response.success && response.data) {
-        // Store tokens and user info
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("refreshToken", response.data.refreshToken);
-        localStorage.setItem("role", response.data.role);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        // Store tokens and user info using storage manager (sessionStorage by default)
+        storage.setItem("token", response.data.token);
+        storage.setItem("refreshToken", response.data.refreshToken);
+        storage.setItem("role", response.data.role);
+        storage.setItem("user", JSON.stringify(response.data.user));
         return response.data;
       } else {
         setError(response.message || "Login failed");
@@ -69,11 +70,12 @@ export function useAuth() {
     } catch {
       // Ignore errors on logout
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("role");
-      localStorage.removeItem("user");
-      localStorage.removeItem("userEmail");
+      storage.removeItem("token");
+      storage.removeItem("refreshToken");
+      storage.removeItem("role");
+      storage.removeItem("user");
+      storage.removeItem("userEmail");
+      storage.removeItem("tokenExpiry");
     }
   }, []);
 
@@ -139,7 +141,7 @@ export function useAuth() {
 
   const getCurrentUser = useCallback((): UserInfo | null => {
     if (typeof window === "undefined") return null;
-    const userStr = localStorage.getItem("user");
+    const userStr = storage.getItem("user");
     if (!userStr) return null;
     try {
       return JSON.parse(userStr);
@@ -150,7 +152,7 @@ export function useAuth() {
 
   const getToken = useCallback((): string | null => {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("token");
+    return storage.getItem("token");
   }, []);
 
   const isAuthenticated = useCallback((): boolean => {
