@@ -20,6 +20,7 @@ export default function AdminBookingsPage() {
   const [comment, setComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [rejectReason, setRejectReason] = useState("")
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   
   // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
   const { facility, isLoading: isLoadingFacility } = useFacility(
@@ -30,12 +31,18 @@ export default function AdminBookingsPage() {
     fetchPendingApprovals()
   }, [fetchPendingApprovals])
 
-  const filteredBookings = pendingBookings.filter(
-    (b) =>
-      b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredBookings = pendingBookings
+    .filter(
+      (b) =>
+        b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime()
+      const timeB = new Date(b.createdAt).getTime()
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB
+    })
 
   const getStatusColor = (status: BookingStatus) => {
     const colors: Record<string, string> = {
@@ -129,13 +136,39 @@ export default function AdminBookingsPage() {
         </TabsList>
 
         <TabsContent value="pending" className="mt-4 space-y-4">
-          <Card className="p-4">
-            <Input
-              placeholder="Search by facility, requester, or booking code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Card>
+          <div className="flex items-center gap-4">
+            <Card className="p-4 flex-1">
+              <Input
+                placeholder="Search by facility, requester, or booking code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+              className="flex items-center gap-2 whitespace-nowrap"
+            >
+              {sortOrder === 'newest' ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14"/>
+                    <path d="m19 12-7 7-7-7"/>
+                  </svg>
+                  Newest First
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5"/>
+                    <path d="m5 12 7-7 7 7"/>
+                  </svg>
+                  Oldest First
+                </>
+              )}
+            </Button>
+          </div>
 
           {isLoadingPending ? (
             <Card className="p-12 text-center">
