@@ -10,6 +10,7 @@ import type {
   ReportFacilityIssueRequest,
   ChangeRoomRequest,
   ChangeRoomResponse,
+  RejectIssueRequest,
 } from '@/types';
 
 const API_URL = apiConfig.baseURL;
@@ -235,6 +236,64 @@ export const facilityIssueApi = {
       return response.json();
     } catch (error) {
       console.error('Error changing room for facility issue:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject a facility issue report (Admin only)
+   * POST /api/FacilityIssue/{reportId}/reject
+   */
+  rejectIssue: async (
+    reportId: string,
+    request: RejectIssueRequest
+  ): Promise<ApiResponse<FacilityIssue>> => {
+    try {
+      const url = `${API_URL}/FacilityIssue/${reportId}/reject`;
+      console.log('Rejecting issue:', reportId);
+      console.log('Request body:', request);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = errorText ? JSON.parse(errorText) : null;
+          if (errorData) {
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            // Include validation errors if available
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+              errorMessage += `: ${errorData.errors.join(', ')}`;
+            }
+          }
+        } catch {
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        console.error('Reject issue error:', errorMessage);
+        console.error('Response status:', response.status);
+        console.error('Response text:', errorText);
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Empty response from server');
+        }
+        return JSON.parse(text);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error rejecting facility issue:', error);
       throw error;
     }
   },
