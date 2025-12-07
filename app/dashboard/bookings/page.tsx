@@ -30,6 +30,7 @@ export default function BookingsPage() {
   const [comment, setComment] = useState("")
   const [rejectReason, setRejectReason] = useState("")
   const [processedBookingIds, setProcessedBookingIds] = useState<Set<string>>(new Set())
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const { checkIn, checkOut, isProcessing, error } = useBookingActions()
   const { toast } = useToast()
   const { getCurrentUser } = useAuth()
@@ -64,10 +65,14 @@ export default function BookingsPage() {
     rejectBookingAsLecturer
   } = useBookingMutations()
 
-  // Filter out processed bookings from pending approvals
-  const filteredPendingApprovals = pendingApprovals.filter(
-    booking => !processedBookingIds.has(booking.id)
-  )
+  // Filter out processed bookings from pending approvals and sort by createdAt
+  const filteredPendingApprovals = pendingApprovals
+    .filter(booking => !processedBookingIds.has(booking.id))
+    .sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime()
+      const timeB = new Date(b.createdAt).getTime()
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB
+    })
 
   useEffect(() => {
     fetchBookings()
@@ -864,6 +869,32 @@ export default function BookingsPage() {
           </TabsContent>
           {isLecturer && (
             <TabsContent value="pending" className="space-y-4 mt-4">
+              <div className="flex justify-end mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                  className="flex items-center gap-2"
+                >
+                  {sortOrder === 'newest' ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14"/>
+                        <path d="m19 12-7 7-7-7"/>
+                      </svg>
+                      Newest First
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 19V5"/>
+                        <path d="m5 12 7-7 7 7"/>
+                      </svg>
+                      Oldest First
+                    </>
+                  )}
+                </Button>
+              </div>
               {isLoadingPending ? (
                 <div className="flex items-center justify-center h-64">
                   <Loader2 className="w-8 h-8 animate-spin" />
