@@ -14,13 +14,15 @@ import type { FacilityIssue } from "@/types"
 export default function AdminIssuesPage() {
   const { toast } = useToast()
   const { issues, fetchPendingIssues, isLoading } = usePendingFacilityIssues()
-  const { changeRoom, isLoading: isChangingRoom } = useFacilityIssueMutations()
+  const { changeRoom, rejectIssue, isLoading: isChangingRoom } = useFacilityIssueMutations()
   const { facilities, fetchFacilities } = useFacilities()
   
   const [selectedIssue, setSelectedIssue] = useState<FacilityIssue | null>(null)
   const [showChangeRoomDialog, setShowChangeRoomDialog] = useState(false)
+  const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [newFacilityId, setNewFacilityId] = useState("")
   const [adminResponse, setAdminResponse] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
 
   useEffect(() => {
     fetchPendingIssues()
@@ -81,6 +83,47 @@ export default function AdminIssuesPage() {
     setNewFacilityId("")
     setAdminResponse("")
     setShowChangeRoomDialog(true)
+  }
+
+  const openRejectDialog = (issue: FacilityIssue) => {
+    setSelectedIssue(issue)
+    setRejectReason("")
+    setShowRejectDialog(true)
+  }
+
+  const handleReject = async () => {
+    if (!selectedIssue || !rejectReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please provide a reason for rejection",
+      })
+      return
+    }
+
+    try {
+      const success = await rejectIssue(selectedIssue.id, {
+        rejectionReason: rejectReason.trim(),
+      })
+
+      if (success) {
+        toast({
+          title: "Issue Rejected",
+          description: "The issue has been rejected and user has been notified.",
+        })
+        setShowRejectDialog(false)
+        setSelectedIssue(null)
+        setRejectReason("")
+        fetchPendingIssues()
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to reject issue";
+      toast({
+        variant: "destructive",
+        title: "Failed to Reject Issue",
+        description: errorMessage,
+      })
+    }
   }
 
   const getSeverityColor = (severity: string) => {
@@ -213,6 +256,13 @@ export default function AdminIssuesPage() {
                 >
                   Change Room
                 </Button>
+                <Button
+                  onClick={() => openRejectDialog(issue)}
+                  variant="destructive"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Reject
+                </Button>
               </div>
             </Card>
           ))}
@@ -294,6 +344,61 @@ export default function AdminIssuesPage() {
                 </>
               ) : (
                 "Approve & Change Room"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Issue Dialog */}
+      <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Issue Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this issue report?
+              <br />
+              <strong>{selectedIssue?.issueTitle}</strong>
+              <br />
+              <span className="text-sm">Facility: {selectedIssue?.facilityName}</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {selectedIssue && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejecting this issue..."
+                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background min-h-24 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  maxLength={500}
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  {rejectReason.length}/500 characters
+                </p>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isChangingRoom}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReject}
+              disabled={isChangingRoom || !rejectReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isChangingRoom ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Reject Issue"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

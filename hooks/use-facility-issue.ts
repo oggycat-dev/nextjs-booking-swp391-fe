@@ -9,6 +9,7 @@ import type {
   FacilityIssue,
   ReportFacilityIssueRequest,
   ChangeRoomRequest,
+  RejectIssueRequest,
 } from '@/types';
 
 /**
@@ -153,6 +154,32 @@ export function useFacilityIssueMutations() {
   );
 
   /**
+   * Reject a facility issue report (Admin only)
+   */
+  const rejectIssue = useCallback(
+    async (reportId: string, request: RejectIssueRequest): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await facilityIssueApi.rejectIssue(reportId, request);
+        if (response.success) {
+          return true;
+        } else {
+          setError(response.message || 'Failed to reject issue');
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to reject issue';
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  /**
    * Reset error state
    */
   const resetError = useCallback(() => {
@@ -162,6 +189,7 @@ export function useFacilityIssueMutations() {
   return {
     reportIssue,
     changeRoom,
+    rejectIssue,
     isLoading,
     error,
     resetError,
