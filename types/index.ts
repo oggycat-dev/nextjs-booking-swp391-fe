@@ -448,3 +448,57 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+// ============================================
+// Notification Types (Firebase Cloud Messaging)
+// ============================================
+
+export interface NotificationType {
+  NEW_REGISTRATION: 'new_registration';
+  CAMPUS_CHANGE_REQUEST: 'campus_change_request';
+  NEW_BOOKING: 'new_booking';
+  BOOKING_APPROVED: 'booking_approved';
+  BOOKING_REJECTED: 'booking_rejected';
+}
+
+export interface NotificationData {
+  type?: string;
+  bookingId?: string;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  userRole?: string;
+  campusId?: string;
+  campusName?: string;
+  currentCampusId?: string; // For campus change requests
+  currentCampusName?: string; // For campus change requests
+  facilityName?: string;
+  bookingDate?: string;
+  startTime?: string;
+  endTime?: string;
+  requestId?: string; // For campus change requests
+  requestedCampusId?: string;
+  requestedCampusName?: string;
+  [key: string]: string | undefined;
+}
+
+export interface PushNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data?: NotificationData;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface RegisterFcmTokenRequest {
+  fcmToken: string;
+}
+
+export interface FirebaseNotificationState {
+  fcmToken: string | null;
+  isSupported: boolean;
+  isLoading: boolean;
+  error: string | null;
+}

@@ -65,6 +65,20 @@ export function useAuth() {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      // Unregister FCM token before logout (for admins)
+      const role = localStorage.getItem("role");
+      if (role?.toLowerCase() === "admin") {
+        try {
+          const { API_URL, getAuthHeaders } = await import("@/lib/api-client");
+          await fetch(`${API_URL}/notifications/unregister-token`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+          });
+        } catch {
+          // Ignore FCM unregister errors
+        }
+      }
+      
       await authApi.logout();
     } catch {
       // Ignore errors on logout

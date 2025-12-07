@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
 import { SessionManager } from "@/components/auth/session-manager"
+import { FirebaseNotificationProvider } from "@/components/notifications/firebase-notification-provider"
 import { Bell } from "lucide-react"
 
 export default function DashboardLayout({
@@ -23,6 +24,63 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState("student") // default to student
   const [userInfo, setUserInfo] = useState<{ fullName?: string; campusName?: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Update unread count from localStorage
+  useEffect(() => {
+    const updateUnreadCount = () => {
+      if (typeof window === 'undefined' || userRole !== 'admin') return;
+      try {
+        const stored = localStorage.getItem('admin_notifications');
+        if (stored) {
+          const notifications = JSON.parse(stored);
+          const unread = notifications.filter((n: { read: boolean }) => !n.read).length;
+          setUnreadCount(unread);
+        }
+      } catch (error) {
+        console.error('Error reading notifications:', error);
+      }
+    };
+
+    // Initial load
+    updateUnreadCount();
+
+    // Listen for storage changes (from other tabs)
+    window.addEventListener('storage', updateUnreadCount);
+
+    // Listen for BroadcastChannel (same tab)
+    let broadcastChannel: BroadcastChannel | null = null;
+    if (window.BroadcastChannel) {
+      broadcastChannel = new BroadcastChannel('notifications');
+      broadcastChannel.onmessage = () => {
+        updateUnreadCount();
+      };
+    }
+
+    // Listen for service worker messages
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NOTIFICATION_CLICK' && event.data.url) {
+        router.push(event.data.url);
+      }
+      if (event.data && event.data.type === 'NEW_NOTIFICATION') {
+        updateUnreadCount();
+      }
+    };
+    
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+
+    // Poll for changes (fallback)
+    const interval = setInterval(updateUnreadCount, 2000);
+
+    return () => {
+      window.removeEventListener('storage', updateUnreadCount);
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
+      clearInterval(interval);
+    };
+  }, [router, userRole]);
 
   useEffect(() => {
     // Check for user with a small delay to ensure localStorage is ready
@@ -146,10 +204,12 @@ export default function DashboardLayout({
                   title="Notifications"
                 >
                   <Bell className="w-5 h-5" />
-                  {/* Badge for unread count - TODO: Fetch real count from API */}
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    3
-                  </span>
+                  {/* Badge for unread count */}
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             )}
@@ -218,7 +278,9 @@ export default function DashboardLayout({
         <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
           <TokenRefreshProvider>
             <SessionManager />
-            {children}
+            <FirebaseNotificationProvider userRole={userRole}>
+              {children}
+            </FirebaseNotificationProvider>
           </TokenRefreshProvider>
         </main>
       </div>
