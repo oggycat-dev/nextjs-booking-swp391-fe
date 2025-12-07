@@ -9,9 +9,15 @@ import { Switch } from "@/components/ui/switch"
 import { useFirebaseNotification } from "@/hooks/use-firebase-notification"
 import { Bell, BellOff, Settings, Trash2, Check, ExternalLink, RefreshCw } from "lucide-react"
 import type { PushNotification, NotificationData } from "@/types"
-
-// Local storage key for notifications
-const NOTIFICATIONS_STORAGE_KEY = "admin_notifications"
+import {
+  getStoredNotifications,
+  saveNotificationsToStorage,
+  addNotificationToStorage,
+  markNotificationAsRead as markReadInStorage,
+  markAllNotificationsAsRead as markAllReadInStorage,
+  deleteNotificationFromStorage,
+  clearAllNotificationsFromStorage,
+} from "@/lib/notifications-storage"
 
 // Get icon based on notification type
 const getNotificationIcon = (type: string) => {
@@ -84,19 +90,15 @@ export default function NotificationsPage() {
 
   // Load notifications from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY)
-    if (stored) {
-      try {
-        setNotifications(JSON.parse(stored))
-      } catch {
-        console.error("Failed to parse stored notifications")
-      }
-    }
+    const stored = getStoredNotifications()
+    setNotifications(stored)
   }, [])
 
   // Save notifications to localStorage when they change
   useEffect(() => {
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications))
+    if (notifications.length > 0 || typeof window !== 'undefined') {
+      saveNotificationsToStorage(notifications)
+    }
   }, [notifications])
 
   // Listen for new notifications from service worker and BroadcastChannel
@@ -118,13 +120,8 @@ export default function NotificationsPage() {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data?.type === 'NEW_NOTIFICATION' && event.data.notification) {
         addNotification(event.data.notification)
-        
-        // Also save to localStorage
-        const storageKey = NOTIFICATIONS_STORAGE_KEY
-        const existing = localStorage.getItem(storageKey)
-        const notifications = existing ? JSON.parse(existing) : []
-        notifications.unshift(event.data.notification)
-        localStorage.setItem(storageKey, JSON.stringify(notifications.slice(0, 100)))
+        // Save to localStorage using utility function
+        addNotificationToStorage(event.data.notification)
       }
     }
 
@@ -135,9 +132,27 @@ export default function NotificationsPage() {
       broadcastChannel.onmessage = (event) => {
         if (event.data?.type === 'NEW_NOTIFICATION' && event.data.notification) {
           addNotification(event.data.notification)
+          addNotificationToStorage(event.data.notification)
+        } else if (event.data?.type === 'NOTIFICATIONS_UPDATED') {
+          // Reload from storage when updated from another tab
+          const stored = getStoredNotifications()
+          setNotifications(stored)
         }
       }
     }
+
+    // Listen for storage events (from other tabs/windows)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'admin_notifications' && e.newValue) {
+        try {
+          const stored = JSON.parse(e.newValue)
+          setNotifications(stored)
+        } catch (error) {
+          console.error('Error parsing storage update:', error)
+        }
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
 
     // Listen for service worker messages
     if ("serviceWorker" in navigator) {
@@ -151,25 +166,43 @@ export default function NotificationsPage() {
       if (broadcastChannel) {
         broadcastChannel.close()
       }
+      window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
   const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+    setNotifications(prev => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      // Save to localStorage immediately
+      markReadInStorage(id)
+      return updated
+    })
   }, [])
 
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map((n) => ({ ...n, read: true })))
+    setNotifications(prev => {
+      const updated = prev.map((n) => ({ ...n, read: true }))
+      // Save to localStorage immediately
+      markAllReadInStorage()
+      return updated
+    })
   }, [])
 
   const deleteNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter((n) => n.id !== id))
+    setNotifications(prev => {
+      const updated = prev.filter((n) => n.id !== id)
+      // Save to localStorage immediately
+      deleteNotificationFromStorage(id)
+      return updated
+    })
   }, [])
 
   const clearAllNotifications = useCallback(() => {
     setNotifications([])
+    // Save to localStorage immediately
+    clearAllNotificationsFromStorage()
   }, [])
 
   const handleEnableNotifications = async () => {

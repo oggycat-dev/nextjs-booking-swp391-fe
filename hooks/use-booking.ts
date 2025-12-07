@@ -104,14 +104,54 @@ export function useMyBookings(query?: GetBookingsQuery) {
 }
 
 /**
+ * Hook to get my pending bookings (Student/Lecturer)
+ */
+export function useMyPendingBookings() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMyPendingBookings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getMyPendingBookings();
+      if (response.success && response.data) {
+        setBookings(response.data);
+      } else {
+        setError(response.message || "Failed to fetch my pending bookings");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch my pending bookings";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMyPendingBookings();
+  }, [fetchMyPendingBookings]);
+
+  return {
+    bookings,
+    fetchMyPendingBookings,
+    isLoading,
+    error,
+  };
+}
+
+/**
  * Hook to get pending bookings for lecturer approval
  */
-export function usePendingLecturerApprovals() {
+export function usePendingLecturerApprovals(shouldFetch: boolean = true) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPendingApprovals = useCallback(async () => {
+    if (!shouldFetch) return;
+    
     setIsLoading(true);
     setError(null);
     try {
@@ -127,11 +167,13 @@ export function usePendingLecturerApprovals() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [shouldFetch]);
 
   useEffect(() => {
-    fetchPendingApprovals();
-  }, [fetchPendingApprovals]);
+    if (shouldFetch) {
+      fetchPendingApprovals();
+    }
+  }, [fetchPendingApprovals, shouldFetch]);
 
   return {
     bookings,
@@ -194,7 +236,8 @@ export function useBookingMutations() {
       if (response.success && response.data) {
         return response.data;
       } else {
-        setError(response.message || "Failed to create booking");
+        const errorMsg = response.message || response.errors?.join?.(", ") || "Failed to create booking";
+        setError(errorMsg);
         return null;
       }
     } catch (err) {
@@ -253,20 +296,38 @@ export function useBookingMutations() {
     async (id: string, comment?: string): Promise<Booking | null> => {
       setIsLoading(true);
       setError(null);
+      console.log('=== approveBookingAsLecturer START ===');
+      console.log('Booking ID:', id);
+      console.log('Comment:', comment);
       try {
         const response = await bookingApi.lecturerApprove(id, { approved: true, comment });
-        if (response.success && response.data) {
-          return response.data;
+        console.log('API Response:', response);
+        console.log('Response success:', response.success);
+        console.log('Response data:', response.data);
+        console.log('Response message:', response.message);
+        
+        // Backend returns success with null data, just check success flag
+        if (response.success) {
+          console.log('✅ Approval successful');
+          // Return a dummy booking object since backend doesn't return the updated booking
+          return { id } as Booking;
         } else {
-          setError(response.message || "Failed to approve booking");
+          const errorMsg = response.message || "Failed to approve booking";
+          console.error('❌ Approval failed - success check failed');
+          console.error('Error message:', errorMsg);
+          setError(errorMsg);
           return null;
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to approve booking";
+        console.error('❌ Approval failed - exception caught');
+        console.error('Error:', err);
+        console.error('Error message:', message);
         setError(message);
         return null;
       } finally {
         setIsLoading(false);
+        console.log('=== approveBookingAsLecturer END ===');
       }
     },
     []
@@ -276,20 +337,32 @@ export function useBookingMutations() {
     async (id: string, comment: string): Promise<Booking | null> => {
       setIsLoading(true);
       setError(null);
+      console.log('=== rejectBookingAsLecturer START ===');
+      console.log('Booking ID:', id);
+      console.log('Comment:', comment);
       try {
         const response = await bookingApi.lecturerApprove(id, { approved: false, comment });
-        if (response.success && response.data) {
-          return response.data;
+        console.log('API Response:', response);
+        
+        // Backend returns success with null data, just check success flag
+        if (response.success) {
+          console.log('✅ Rejection successful');
+          // Return a dummy booking object since backend doesn't return the updated booking
+          return { id } as Booking;
         } else {
-          setError(response.message || "Failed to reject booking");
+          const errorMsg = response.message || "Failed to reject booking";
+          console.error('❌ Rejection failed');
+          setError(errorMsg);
           return null;
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to reject booking";
+        console.error('❌ Rejection failed - exception caught:', err);
         setError(message);
         return null;
       } finally {
         setIsLoading(false);
+        console.log('=== rejectBookingAsLecturer END ===');
       }
     },
     []
@@ -395,13 +468,14 @@ export function useBookingHistory() {
     try {
       const response = await bookingApi.getMyHistory();
       if (response.success && response.data) {
-        // Filter to only show approved/completed bookings
+        // Filter to show approved/completed/rejected bookings
         const historyBookings = response.data.filter(
           (booking: Booking) => 
             booking.status === "Approved" || 
             booking.status === "Completed" || 
-            booking.status === "CheckedIn" ||
-            booking.status === "NoShow"
+            booking.status === "InUse" ||
+            booking.status === "NoShow" ||
+            booking.status === "Rejected"
         );
         setBookings(historyBookings);
       } else {

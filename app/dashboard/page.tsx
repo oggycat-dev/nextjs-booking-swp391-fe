@@ -13,6 +13,7 @@ import Link from "next/link"
 import { HeroSection } from "@/components/dashboard/hero-section"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { useAuth } from "@/hooks/use-auth"
+import { useDashboardStats } from "@/hooks/use-dashboard"
 import { 
   Calendar, 
   Clock, 
@@ -420,15 +421,37 @@ function StudentLecturerDashboard() {
 
 // Admin Dashboard Component
 function AdminDashboard() {
-  // TODO: Fetch real data from API
-  const adminStats = {
-    pendingBookings: 12,
-    pendingRegistrations: 5,
-    totalUsers: 1247,
-    totalFacilities: 48,
-    activeBookings: 89,
-    systemHealth: 98.5,
+  const { stats, isLoading, error } = useDashboardStats()
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading dashboard statistics...</p>
+        </div>
+      </div>
+    )
   }
+
+  if (error || !stats) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground">System overview and management</p>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load dashboard statistics. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  const totalPendingApprovals = (stats.pendingLecturerApprovals || 0) + (stats.pendingAdminApprovals || 0)
 
   return (
     <div className="space-y-6">
@@ -437,143 +460,337 @@ function AdminDashboard() {
         <p className="text-muted-foreground">System overview and management</p>
       </div>
 
-      {/* Admin Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Pending Bookings"
-          value={adminStats.pendingBookings}
-          icon={FileCheck}
-          description="Awaiting approval"
-          className={adminStats.pendingBookings > 0 ? "border-orange-200 bg-orange-50/50" : ""}
-        />
-        <StatCard
-          title="Pending Registrations"
-          value={adminStats.pendingRegistrations}
-          icon={Users}
-          description="New user requests"
-          className={adminStats.pendingRegistrations > 0 ? "border-blue-200 bg-blue-50/50" : ""}
-        />
-        <StatCard
-          title="Total Users"
-          value={adminStats.totalUsers}
-          icon={Users}
-          description="All registered users"
-        />
-        <StatCard
-          title="Total Facilities"
-          value={adminStats.totalFacilities}
-          icon={Building2}
-          description="Available facilities"
-        />
+      {/* User Statistics */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">User Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard
+            title="Total Users"
+            value={stats.totalUsers}
+            icon={Users}
+            description="All registered users"
+          />
+          <StatCard
+            title="Students"
+            value={stats.totalStudents}
+            icon={Users}
+            description="Student accounts"
+            className="border-blue-200 bg-blue-50/50"
+          />
+          <StatCard
+            title="Lecturers"
+            value={stats.totalLecturers}
+            icon={Users}
+            description="Lecturer accounts"
+            className="border-purple-200 bg-purple-50/50"
+          />
+          <StatCard
+            title="Pending Registrations"
+            value={stats.pendingRegistrations}
+            icon={AlertCircle}
+            description="New user requests"
+            className={stats.pendingRegistrations > 0 ? "border-orange-200 bg-orange-50/50" : ""}
+          />
+          <StatCard
+            title="Campus Changes"
+            value={stats.pendingCampusChangeRequests}
+            icon={Building2}
+            description="Pending requests"
+            className={stats.pendingCampusChangeRequests > 0 ? "border-orange-200 bg-orange-50/50" : ""}
+          />
+        </div>
+      </div>
+
+      {/* Booking Statistics */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Booking Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Pending Approvals"
+            value={totalPendingApprovals}
+            icon={FileCheck}
+            description={`Lecturer: ${stats.pendingLecturerApprovals}, Admin: ${stats.pendingAdminApprovals}`}
+            className={totalPendingApprovals > 0 ? "border-orange-200 bg-orange-50/50" : ""}
+          />
+          <StatCard
+            title="Approved Today"
+            value={stats.approvedBookingsToday}
+            icon={CheckCircle2}
+            description="Bookings approved"
+            className="border-green-200 bg-green-50/50"
+          />
+          <StatCard
+            title="Rejected Today"
+            value={stats.rejectedBookingsToday}
+            icon={AlertCircle}
+            description="Bookings rejected"
+            className={stats.rejectedBookingsToday > 0 ? "border-red-200 bg-red-50/50" : ""}
+          />
+          <StatCard
+            title="In Use Now"
+            value={stats.inUseBookingsNow}
+            icon={Clock}
+            description="Active bookings"
+            className="border-blue-200 bg-blue-50/50"
+          />
+        </div>
+      </div>
+
+      {/* Booking Activity */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Booking Activity</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard
+            title="Today"
+            value={stats.totalBookingsToday}
+            icon={Calendar}
+            description="Bookings today"
+          />
+          <StatCard
+            title="This Week"
+            value={stats.totalBookingsThisWeek}
+            icon={TrendingUp}
+            description="Bookings this week"
+          />
+          <StatCard
+            title="This Month"
+            value={stats.totalBookingsThisMonth}
+            icon={BarChart3}
+            description="Bookings this month"
+          />
+        </div>
+      </div>
+
+      {/* Facility Statistics */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Facility Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard
+            title="Total Facilities"
+            value={stats.totalFacilities}
+            icon={Building2}
+            description="All facilities"
+          />
+          <StatCard
+            title="Available"
+            value={stats.availableFacilities}
+            icon={CheckCircle2}
+            description="Ready to book"
+            className="border-green-200 bg-green-50/50"
+          />
+          <StatCard
+            title="In Use"
+            value={stats.inUseFacilities}
+            icon={Clock}
+            description="Currently occupied"
+            className="border-blue-200 bg-blue-50/50"
+          />
+          <StatCard
+            title="Maintenance"
+            value={stats.maintenanceFacilities}
+            icon={AlertCircle}
+            description="Under maintenance"
+            className={stats.maintenanceFacilities > 0 ? "border-yellow-200 bg-yellow-50/50" : ""}
+          />
+          <StatCard
+            title="Total Campuses"
+            value={stats.totalCampuses}
+            icon={Building2}
+            description="Campus locations"
+          />
+        </div>
+      </div>
+
+      {/* Utilization Rate */}
+      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-primary/20 rounded-lg">
+            <BarChart3 className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">Facility Utilization Rate</h3>
+            <p className="text-sm text-muted-foreground">Overall facility usage</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Current Rate</span>
+            <span className="text-sm font-bold text-primary">{stats.facilityUtilizationRate.toFixed(1)}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-3">
+            <div 
+              className="bg-primary h-3 rounded-full transition-all"
+              style={{ width: `${Math.min(stats.facilityUtilizationRate, 100)}%` }}
+            ></div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Bookings */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Recent Bookings</h2>
+          <div className="space-y-3">
+            {stats.recentBookings && stats.recentBookings.length > 0 ? (
+              stats.recentBookings.slice(0, 5).map((booking) => (
+                <div key={booking.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{booking.facilityName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {booking.bookedByName} • {new Date(booking.bookingDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge 
+                    variant={
+                      booking.status === "Approved" ? "default" :
+                      booking.status === "Pending" ? "secondary" :
+                      booking.status === "Rejected" ? "destructive" : "outline"
+                    }
+                    className={
+                      booking.status === "Approved" ? "bg-green-600" :
+                      booking.status === "Pending" ? "bg-orange-500" :
+                      booking.status === "Rejected" ? "bg-red-600" : ""
+                    }
+                  >
+                    {booking.status}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No recent bookings</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Recent Registrations */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Recent Registrations</h2>
+          <div className="space-y-3">
+            {stats.recentRegistrations && stats.recentRegistrations.length > 0 ? (
+              stats.recentRegistrations.slice(0, 5).map((registration) => (
+                <div key={registration.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{registration.fullName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {registration.email} • {registration.role}
+                    </p>
+                  </div>
+                  <Badge 
+                    variant={registration.isApproved ? "default" : "secondary"}
+                    className={registration.isApproved ? "bg-green-600" : "bg-orange-500"}
+                  >
+                    {registration.isApproved ? "Approved" : "Pending"}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No recent registrations</p>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/dashboard/admin/bookings">
-          <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <FileCheck className="w-6 h-6 text-primary" />
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link href="/dashboard/admin/bookings">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <FileCheck className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Booking Approvals</h3>
+                  <p className="text-sm text-muted-foreground">Review and approve bookings</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Booking Approvals</h3>
-                <p className="text-sm text-muted-foreground">Review and approve bookings</p>
-              </div>
-            </div>
-            {adminStats.pendingBookings > 0 && (
-              <div className="flex items-center gap-2 text-sm text-orange-600">
-                <AlertCircle className="w-4 h-4" />
-                <span>{adminStats.pendingBookings} pending</span>
-              </div>
-            )}
-          </Card>
-        </Link>
+              {totalPendingApprovals > 0 && (
+                <div className="flex items-center gap-2 text-sm text-orange-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{totalPendingApprovals} pending</span>
+                </div>
+              )}
+            </Card>
+          </Link>
 
-        <Link href="/dashboard/admin/users">
-          <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Users className="w-6 h-6 text-primary" />
+          <Link href="/dashboard/admin/users">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">User Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage users and approvals</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">User Management</h3>
-                <p className="text-sm text-muted-foreground">Manage users and approvals</p>
-              </div>
-            </div>
-            {adminStats.pendingRegistrations > 0 && (
-              <div className="flex items-center gap-2 text-sm text-blue-600">
-                <AlertCircle className="w-4 h-4" />
-                <span>{adminStats.pendingRegistrations} new registrations</span>
-              </div>
-            )}
-          </Card>
-        </Link>
+              {stats.pendingRegistrations > 0 && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{stats.pendingRegistrations} new registrations</span>
+                </div>
+              )}
+            </Card>
+          </Link>
 
-        <Link href="/dashboard/admin/facilities">
-          <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Building2 className="w-6 h-6 text-primary" />
+          <Link href="/dashboard/admin/facilities">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Building2 className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Facility Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage facilities and types</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Facility Management</h3>
-                <p className="text-sm text-muted-foreground">Manage facilities and types</p>
-              </div>
-            </div>
-          </Card>
-        </Link>
+            </Card>
+          </Link>
 
-        <Link href="/dashboard/admin/analytics">
-          <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-primary" />
+          <Link href="/dashboard/admin/analytics">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Analytics</h3>
+                  <p className="text-sm text-muted-foreground">View system statistics</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Analytics</h3>
-                <p className="text-sm text-muted-foreground">View system statistics</p>
-              </div>
-            </div>
-          </Card>
-        </Link>
+            </Card>
+          </Link>
 
-        <Link href="/dashboard/admin/campuses">
-          <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Building2 className="w-6 h-6 text-primary" />
+          <Link href="/dashboard/admin/campuses">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Building2 className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Campus Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage campuses</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Campus Management</h3>
-                <p className="text-sm text-muted-foreground">Manage campuses</p>
-              </div>
-            </div>
-          </Card>
-        </Link>
+            </Card>
+          </Link>
 
-        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-primary/20 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">System Health</h3>
-              <p className="text-sm text-muted-foreground">Overall system status</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Uptime</span>
-              <span className="text-sm font-bold text-primary">{adminStats.systemHealth}%</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${adminStats.systemHealth}%` }}
-              ></div>
-            </div>
-          </div>
-        </Card>
+          <Link href="/dashboard/holidays">
+            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Calendar className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Holiday Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage holidays</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
       </div>
     </div>
   )

@@ -10,6 +10,12 @@ import type {
   CreateFacilityTypeRequest,
 } from '@/types';
 
+export interface UpdateFacilityTypeRequest {
+  typeName: string;
+  description?: string;
+  isActive: boolean;
+}
+
 const API_URL = apiConfig.baseURL;
 
 export const facilityTypeApi = {
@@ -31,6 +37,18 @@ export const facilityTypeApi = {
   create: async (request: CreateFacilityTypeRequest): Promise<ApiResponse<FacilityType>> => {
     const response = await fetch(`${API_URL}/FacilityType`, {
       method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(request),
+    });
+    return response.json();
+  },
+
+  /**
+   * Update a facility type (Admin only)
+   */
+  update: async (id: string, request: UpdateFacilityTypeRequest): Promise<ApiResponse<FacilityType>> => {
+    const response = await fetch(`${API_URL}/FacilityType/${id}`, {
+      method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify(request),
     });

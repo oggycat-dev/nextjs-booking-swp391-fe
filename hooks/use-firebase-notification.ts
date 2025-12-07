@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { notificationsApi } from '@/lib/api/notifications';
 import type { NotificationData, FirebaseNotificationState } from '@/types';
+import { addNotificationToStorage } from '@/lib/notifications-storage';
 
 export function useFirebaseNotification() {
   const [state, setState] = useState<FirebaseNotificationState>({
@@ -150,19 +151,8 @@ export function useFirebaseNotification() {
         createdAt: new Date().toISOString(),
       };
 
-      // Get existing notifications
-      const storageKey = 'admin_notifications';
-      const existing = localStorage.getItem(storageKey);
-      const notifications = existing ? JSON.parse(existing) : [];
-      
-      // Add new notification at the beginning
-      notifications.unshift(notification);
-      
-      // Keep only last 100 notifications
-      const trimmed = notifications.slice(0, 100);
-      
-      // Save back to localStorage
-      localStorage.setItem(storageKey, JSON.stringify(trimmed));
+      // Save to localStorage using utility function
+      addNotificationToStorage(notification);
 
       // Broadcast to other tabs/pages
       if (typeof window !== 'undefined' && window.BroadcastChannel) {

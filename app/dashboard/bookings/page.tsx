@@ -8,11 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
+import { usePendingLecturerApprovals, useBookingMutations, useMyPendingBookings, useBookingHistory } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
+import { ReportIssueModal } from "@/components/facilities/report-issue-modal"
 import { bookingApi } from "@/lib/api/booking"
-import type { BookingListDto } from "@/types"
-import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
+import type { BookingListDto, Booking } from "@/types"
+import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle, AlertTriangle } from "lucide-react"
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<BookingListDto[]>([])
@@ -20,13 +23,71 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingListDto | null>(null)
   const [checkInDialog, setCheckInDialog] = useState(false)
   const [checkOutDialog, setCheckOutDialog] = useState(false)
+  const [reportIssueModal, setReportIssueModal] = useState<BookingListDto | null>(null)
   const [validationWarning, setValidationWarning] = useState<string | null>(null)
+  const [approveDialog, setApproveDialog] = useState(false)
+  const [rejectDialog, setRejectDialog] = useState(false)
+  const [comment, setComment] = useState("")
+  const [rejectReason, setRejectReason] = useState("")
+  const [processedBookingIds, setProcessedBookingIds] = useState<Set<string>>(new Set())
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const { checkIn, checkOut, isProcessing, error } = useBookingActions()
   const { toast } = useToast()
+  const { getCurrentUser } = useAuth()
+  const user = getCurrentUser()
+  const userRole = user?.role ? String(user.role).toLowerCase() : ""
+  const isLecturer = userRole === "lecturer"
+  
+  // Fetch my pending bookings (for all users)
+  const {
+    bookings: myPendingBookings,
+    fetchMyPendingBookings,
+    isLoading: isLoadingMyPending
+  } = useMyPendingBookings()
+  
+  // For Lecturer: fetch pending approvals
+  const { 
+    bookings: pendingApprovals, 
+    fetchPendingApprovals, 
+    isLoading: isLoadingPending 
+  } = usePendingLecturerApprovals(isLecturer)
+  
+  // Fetch approved booking history
+  const {
+    bookings: historyBookings,
+    fetchHistory,
+    isLoading: isLoadingHistory
+  } = useBookingHistory()
+  
+  // Booking mutations for lecturer
+  const {
+    approveBookingAsLecturer,
+    rejectBookingAsLecturer
+  } = useBookingMutations()
+
+  // Filter out processed bookings from pending approvals and sort by createdAt
+  const filteredPendingApprovals = pendingApprovals
+    .filter(booking => !processedBookingIds.has(booking.id))
+    .sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime()
+      const timeB = new Date(b.createdAt).getTime()
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB
+    })
 
   useEffect(() => {
     fetchBookings()
-  }, [])
+    fetchHistory()
+    if (isLecturer) {
+      fetchPendingApprovals()
+    }
+  }, [isLecturer, fetchPendingApprovals, fetchHistory])
+
+  useEffect(() => {
+    fetchBookings()
+    if (isLecturer) {
+      fetchPendingApprovals()
+    }
+  }, [isLecturer, fetchPendingApprovals])
 
   useEffect(() => {
     if (error) {
@@ -41,70 +102,73 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     setIsLoading(true)
     try {
-      const response = await bookingApi.getMyBookingHistory()
+      // Use getMyBookings to get all bookings (including pending ones)
+      // This will show bookings for both Student and Lecturer
+      const response = await bookingApi.getMyBookings()
+      
       if (response.success && response.data) {
-        setBookings(response.data)
+        // Convert Booking[] to BookingListDto[] format if needed
+        const bookingsData = response.data.map((booking: Booking): BookingListDto => ({
+          id: booking.id,
+          bookingCode: booking.bookingCode,
+          facilityId: booking.facilityId,
+          facilityName: booking.facilityName,
+          userId: booking.userId,
+          userName: booking.userName,
+          userRole: booking.userRole,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          purpose: booking.purpose,
+          participants: booking.participants,
+          status: booking.status,
+          lecturerEmail: booking.lecturerEmail || null,
+          lecturerName: booking.lecturerName || null,
+          rejectionReason: booking.rejectionReason || null,
+          notes: booking.notes || null,
+          checkedInAt: booking.checkedInAt || null,
+          checkedOutAt: booking.checkedOutAt || null,
+          createdAt: booking.createdAt,
+        }))
+        setBookings(bookingsData)
       } else {
+        setBookings([])
+        if (response.message && !response.message.includes("not available")) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: response.message || "Failed to fetch bookings",
+          })
+        }
+      }
+    } catch (err) {
+      setBookings([])
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      // Don't show toast for 404 errors (endpoint not available)
+      if (!errorMessage.includes("404") && !errorMessage.includes("Not Found")) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: response.message || "Failed to fetch bookings",
+          description: errorMessage,
         })
       }
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err instanceof Error ? err.message : "An error occurred",
-      })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Handler for check-in from popup (with toast validation)
-  const handleCheckInClickFromPopup = (booking: BookingListDto) => {
-    setValidationWarning(null)
-    
-    // Debug logging
-    console.log('=== Check-in Validation Debug ===')
-    console.log('Current time:', new Date())
-    console.log('Booking date:', booking.bookingDate)
-    console.log('Start time:', booking.startTime)
-    console.log('Booking status:', booking.status)
-    console.log('Already checked in:', booking.checkedInAt)
-    
-    const validation = validateCheckIn(booking)
-    console.log('Validation result:', validation)
-    
-    if (!validation.isValid) {
-      const bookingDate = formatDate(booking.bookingDate)
-      const startTime = formatTime(booking.startTime)
-      toast({
-        variant: "destructive",
-        title: "Check-in Not Available",
-        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nStart Time: ${startTime}`,
-        duration: 3000,
-      })
-      return
-    }
-    
-    if (validation.warningMessage) {
-      setValidationWarning(validation.warningMessage)
-    }
-    
-    console.log('Opening check-in dialog')
-    setCheckInDialog(true)
-  }
-
-  // Handler for check-in from card (no toast, just open dialog)
   const handleCheckInClick = (booking: BookingListDto) => {
     setValidationWarning(null)
     setSelectedBooking(booking)
     
     const validation = validateCheckIn(booking)
     if (!validation.isValid) {
-      return // Silent fail for card click
+      toast({
+        variant: "destructive",
+        title: "Cannot Check-in",
+        description: validation.error,
+      })
+      return
     }
     
     if (validation.warningMessage) {
@@ -114,50 +178,18 @@ export default function BookingsPage() {
     setCheckInDialog(true)
   }
 
-  // Handler for check-out from popup (with toast validation)
-  const handleCheckOutClickFromPopup = (booking: BookingListDto) => {
-    setValidationWarning(null)
-    
-    // Debug logging
-    console.log('=== Check-out Validation Debug ===')
-    console.log('Current time:', new Date())
-    console.log('Booking date:', booking.bookingDate)
-    console.log('End time:', booking.endTime)
-    console.log('Booking status:', booking.status)
-    console.log('Checked in at:', booking.checkedInAt)
-    console.log('Already checked out:', booking.checkedOutAt)
-    
-    const validation = validateCheckOut(booking)
-    console.log('Validation result:', validation)
-    
-    if (!validation.isValid) {
-      const bookingDate = formatDate(booking.bookingDate)
-      const endTime = formatTime(booking.endTime)
-      toast({
-        variant: "destructive",
-        title: "Check-out Not Available",
-        description: `${validation.error}\n\nBooking Date: ${bookingDate}\nEnd Time: ${endTime}`,
-        duration: 3000,
-      })
-      return
-    }
-    
-    if (validation.warningMessage) {
-      setValidationWarning(validation.warningMessage)
-    }
-    
-    console.log('Opening check-out dialog')
-    setCheckOutDialog(true)
-  }
-
-  // Handler for check-out from card (no toast, just open dialog)
   const handleCheckOutClick = (booking: BookingListDto) => {
     setValidationWarning(null)
     setSelectedBooking(booking)
     
     const validation = validateCheckOut(booking)
     if (!validation.isValid) {
-      return // Silent fail for card click
+      toast({
+        variant: "destructive",
+        title: "Cannot Check-out",
+        description: validation.error,
+      })
+      return
     }
     
     if (validation.warningMessage) {
@@ -180,6 +212,7 @@ export default function BookingsPage() {
       setSelectedBooking(null)
       setValidationWarning(null)
       fetchBookings()
+      fetchHistory()
     }
   }
 
@@ -196,14 +229,214 @@ export default function BookingsPage() {
       setSelectedBooking(null)
       setValidationWarning(null)
       fetchBookings()
+      fetchHistory()
     }
   }
 
+  const handleApproveClick = (booking: Booking) => {
+    setSelectedBooking({
+      id: booking.id,
+      bookingCode: booking.bookingCode,
+      facilityId: booking.facilityId,
+      facilityName: booking.facilityName,
+      userId: booking.userId,
+      userName: booking.userName,
+      userRole: booking.userRole,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      participants: booking.participants,
+      status: booking.status,
+      lecturerEmail: booking.lecturerEmail || null,
+      lecturerName: booking.lecturerName || null,
+      rejectionReason: booking.rejectionReason || null,
+      notes: booking.notes || null,
+      checkedInAt: booking.checkedInAt || null,
+      checkedOutAt: booking.checkedOutAt || null,
+      createdAt: booking.createdAt,
+    })
+    setComment("")
+    setRejectDialog(false) // Close reject dialog if open
+    // Don't close selectedBooking here - we need it for the approve dialog
+    setApproveDialog(true)
+  }
+
+  const handleRejectClick = (booking: Booking) => {
+    setSelectedBooking({
+      id: booking.id,
+      bookingCode: booking.bookingCode,
+      facilityId: booking.facilityId,
+      facilityName: booking.facilityName,
+      userId: booking.userId,
+      userName: booking.userName,
+      userRole: booking.userRole,
+      bookingDate: booking.bookingDate,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      participants: booking.participants,
+      status: booking.status,
+      lecturerEmail: booking.lecturerEmail || null,
+      lecturerName: booking.lecturerName || null,
+      rejectionReason: booking.rejectionReason || null,
+      notes: booking.notes || null,
+      checkedInAt: booking.checkedInAt || null,
+      checkedOutAt: booking.checkedOutAt || null,
+      createdAt: booking.createdAt,
+    })
+    setRejectReason("")
+    setApproveDialog(false) // Close approve dialog if open
+    // Don't close selectedBooking here - we need it for the reject dialog
+    setRejectDialog(true)
+  }
+
+  const handleApprove = async () => {
+    if (!selectedBooking) return
+    
+    const bookingId = selectedBooking.id
+    
+    // Close dialog immediately
+    setApproveDialog(false)
+    setRejectDialog(false)
+    
+    // Optimistic update: mark as processed immediately
+    setProcessedBookingIds(prev => new Set(prev).add(bookingId))
+    
+    try {
+      const result = await approveBookingAsLecturer(bookingId, comment || undefined)
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Booking approved successfully",
+        })
+        setSelectedBooking(null)
+        setComment("")
+        
+        // Refresh immediately
+        await fetchBookings()
+        await fetchPendingApprovals()
+        
+        // Backup refresh after a short delay to ensure backend is updated
+        setTimeout(() => {
+          fetchPendingApprovals()
+          fetchBookings()
+          // Clear processed ID after refresh to allow re-fetching
+          setProcessedBookingIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(bookingId)
+            return newSet
+          })
+        }, 1000)
+      } else {
+        // Revert optimistic update on error
+        setProcessedBookingIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(bookingId)
+          return newSet
+        })
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to approve booking",
+        })
+        fetchPendingApprovals()
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setProcessedBookingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(bookingId)
+        return newSet
+      })
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to approve booking",
+      })
+      fetchPendingApprovals()
+    }
+  }
+
+  const handleReject = async () => {
+    if (!selectedBooking || !rejectReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please provide a rejection reason",
+      })
+      return
+    }
+    
+    const bookingId = selectedBooking.id
+    
+    // Close dialog immediately
+    setRejectDialog(false)
+    setApproveDialog(false)
+    
+    // Optimistic update: mark as processed immediately
+    setProcessedBookingIds(prev => new Set(prev).add(bookingId))
+    
+    try {
+      const result = await rejectBookingAsLecturer(bookingId, rejectReason)
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Booking rejected successfully",
+        })
+        setSelectedBooking(null)
+        setRejectReason("")
+        
+        // Refresh immediately
+        await fetchBookings()
+        await fetchPendingApprovals()
+        
+        // Backup refresh after a short delay to ensure backend is updated
+        setTimeout(() => {
+          fetchPendingApprovals()
+          fetchBookings()
+          // Clear processed ID after refresh to allow re-fetching
+          setProcessedBookingIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(bookingId)
+            return newSet
+          })
+        }, 1000)
+      } else {
+        // Revert optimistic update on error
+        setProcessedBookingIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(bookingId)
+          return newSet
+        })
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to reject booking",
+        })
+        fetchPendingApprovals()
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setProcessedBookingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(bookingId)
+        return newSet
+      })
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to reject booking",
+      })
+      fetchPendingApprovals()
+    }
+  }
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       "WaitingLecturerApproval": { variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
       "WaitingAdminApproval": { variant: "outline", className: "border-blue-500 text-blue-700 bg-blue-50" },
       "Approved": { variant: "default", className: "bg-green-600 text-white hover:bg-green-700 border-green-600" },
+      "InUse": { variant: "default", className: "bg-blue-600 text-white hover:bg-blue-700 border-blue-600" },
       "Completed": { variant: "secondary", className: "bg-gray-500 text-white" },
       "Rejected": { variant: "destructive", className: "bg-red-600 text-white" },
       "Cancelled": { variant: "destructive", className: "bg-red-600 text-white" },
@@ -230,6 +463,28 @@ export default function BookingsPage() {
     return canShowCheckOutButton(booking)
   }
 
+  // Check if user can report issue (must be checked in and not checked out)
+  const canReportIssue = (booking: BookingListDto): boolean => {
+    return !!booking.checkedInAt && !booking.checkedOutAt
+  }
+
+  // Check if booking should be hidden (already checked out OR past checkout time + 15 minutes without checkout)
+  const isBookingExpired = (booking: Booking): boolean => {
+    // Hide if already checked out
+    if (booking.checkedOutAt) return true
+    
+    const now = new Date()
+    const bookingDate = new Date(booking.bookingDate)
+    const [hours, minutes] = booking.endTime.split(':').map(Number)
+    const checkoutTime = new Date(bookingDate)
+    checkoutTime.setHours(hours, minutes, 0, 0)
+    
+    // Add 15 minutes grace period
+    checkoutTime.setMinutes(checkoutTime.getMinutes() + 15)
+    
+    return now > checkoutTime
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -254,50 +509,161 @@ export default function BookingsPage() {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  const renderBookingCard = (booking: BookingListDto) => (
-    <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-      <div className="flex flex-col sm:flex-row">
-        {/* Image Section */}
-        <div className="relative w-full sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex-shrink-0 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Calendar className="w-12 h-12 text-primary/40 mx-auto mb-2" />
-              <p className="text-xs text-primary/60 font-medium px-2 line-clamp-2">{booking.facilityName}</p>
-            </div>
-          </div>
-          {/* Status indicator on image */}
-          {getStatusBadge(booking.status) && (
-            <div className="absolute top-3 right-3">
-              {getStatusBadge(booking.status)}
-            </div>
-          )}
-        </div>
-
+  const renderPendingApprovalCard = (booking: Booking) => (
+    <Card key={booking.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-yellow-200">
+      <div className="flex flex-col">
         {/* Content Section */}
-        <div className="flex-1 p-5">
-          <div className="flex items-start justify-between gap-6">
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between gap-4">
             {/* Left Section - Main Info */}
             <div className="flex-1 min-w-0">
-              {/* Title and Code */}
               <div className="mb-3">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <h3 className="font-bold text-lg text-foreground">{booking.facilityName}</h3>
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-700 bg-yellow-50">
+                    Pending Approval
+                  </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground font-mono">
+                <p className="text-xs text-muted-foreground font-mono mb-1">
                   {booking.bookingCode}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Student:</span> {booking.userName}
                 </p>
               </div>
             
-            {/* Date & Time Info */}
-            <div className="space-y-2.5 mb-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground min-w-[140px]">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-medium">{formatDate(booking.bookingDate)}</span>
+              <div className="space-y-2 mb-3">
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">{formatDate(booking.bookingDate)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">
+                      {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                    </span>
+                  </div>
+                  {booking.participants && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-medium">{booking.participants} people</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-medium">
+                {booking.purpose && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">Purpose:</span> {booking.purpose}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Right Section - Actions */}
+            <div className="flex flex-col gap-2 flex-shrink-0 min-w-[110px]">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSelectedBooking({
+                  id: booking.id,
+                  bookingCode: booking.bookingCode,
+                  facilityId: booking.facilityId,
+                  facilityName: booking.facilityName,
+                  userId: booking.userId,
+                  userName: booking.userName,
+                  userRole: booking.userRole,
+                  bookingDate: booking.bookingDate,
+                  startTime: booking.startTime,
+                  endTime: booking.endTime,
+                  purpose: booking.purpose,
+                  participants: booking.participants,
+                  status: booking.status,
+                  lecturerEmail: booking.lecturerEmail || null,
+                  lecturerName: booking.lecturerName || null,
+                  rejectionReason: booking.rejectionReason || null,
+                  notes: booking.notes || null,
+                  checkedInAt: booking.checkedInAt || null,
+                  checkedOutAt: booking.checkedOutAt || null,
+                  createdAt: booking.createdAt,
+                })}
+                className="min-w-[100px] hover:bg-primary/5"
+              >
+                Details
+              </Button>
+              <Button 
+                size="sm" 
+                className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
+                onClick={() => handleApproveClick(booking)}
+                disabled={isProcessing}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                Approve
+              </Button>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                className="min-w-[100px] bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
+                onClick={() => handleRejectClick(booking)}
+                disabled={isProcessing}
+              >
+                <XCircle className="w-4 h-4 mr-1.5" />
+                Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+
+  const renderBookingCard = (booking: BookingListDto) => (
+    <Card 
+      key={booking.id} 
+      className="group hover:shadow-lg transition-all duration-200 overflow-hidden border-l-4 cursor-pointer" 
+      style={{
+        borderLeftColor: booking.status === "Approved" ? "#16a34a" : 
+                         booking.status === "Rejected" ? "#dc2626" : 
+                         booking.status === "Completed" ? "#2563eb" :
+                         booking.status === "WaitingLecturerApproval" ? "#f59e0b" :
+                         booking.status === "WaitingAdminApproval" ? "#3b82f6" : "#94a3b8"
+      }}
+      onClick={() => setSelectedBooking(booking)}
+    >
+      <div className="flex flex-row">
+        {/* Left Color Section */}
+        <div className="relative w-2 flex-shrink-0" style={{
+          backgroundColor: booking.status === "Approved" ? "#16a34a" : 
+                          booking.status === "Rejected" ? "#dc2626" : 
+                          booking.status === "Completed" ? "#2563eb" :
+                          booking.status === "WaitingLecturerApproval" ? "#f59e0b" :
+                          booking.status === "WaitingAdminApproval" ? "#3b82f6" : "#94a3b8"
+        }} />
+
+        {/* Content Section */}
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between gap-4">
+            {/* Left Section - Main Info */}
+            <div className="flex-1 min-w-0">
+              {/* Title and Status */}
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <h3 className="font-bold text-xl text-foreground">{booking.facilityName}</h3>
+                {getStatusBadge(booking.status)}
+              </div>
+              
+              {/* Booking Code */}
+              <p className="text-sm text-muted-foreground font-mono mb-3">
+                {booking.bookingCode}
+              </p>
+            
+              {/* Date & Time Info */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium text-foreground">{formatDate(booking.bookingDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium text-foreground">
                     {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                   </span>
                 </div>
@@ -305,18 +671,18 @@ export default function BookingsPage() {
               
               {/* Check-in/out Status */}
               {(booking.checkedInAt || booking.checkedOutAt) && (
-                <div className="flex flex-wrap gap-3 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   {booking.checkedInAt && (
-                    <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-950 px-3 py-1.5 rounded-md border border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs bg-green-50 dark:bg-green-950 px-2.5 py-1 rounded border border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                       <span className="text-green-700 dark:text-green-300 font-medium">
                         In: {formatTime(booking.checkedInAt)}
                       </span>
                     </div>
                   )}
                   {booking.checkedOutAt && (
-                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-950 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-950 px-2.5 py-1 rounded border border-blue-200 dark:border-blue-800">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span className="text-blue-700 dark:text-blue-300 font-medium">
                         Out: {formatTime(booking.checkedOutAt)}
                       </span>
@@ -325,46 +691,107 @@ export default function BookingsPage() {
                 </div>
               )}
             </div>
-          </div>
             
-            {/* Right Section - Status & Actions */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
-              {/* Check-in/Check-out Status Badges */}
-              <div className="flex flex-col gap-1.5 mb-2">
-                {booking.checkedInAt ? (
-                  <div className="flex items-center gap-1.5 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-md font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Checked In</span>
-                  </div>
-                ) : canCheckIn(booking) ? (
-                  <div className="flex items-center gap-1.5 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-md font-medium">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Pending Check-in</span>
-                  </div>
-                ) : null}
-                
-                {booking.checkedOutAt ? (
-                  <div className="flex items-center gap-1.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-md font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Checked Out</span>
-                  </div>
-                ) : booking.checkedInAt && canCheckOut(booking) ? (
-                  <div className="flex items-center gap-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-md font-medium">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Pending Check-out</span>
-                  </div>
-                ) : null}
+            {/* Right Section - Actions */}
+            {(canCheckIn(booking) || canCheckOut(booking)) && (
+              <div className="flex items-center justify-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                {canCheckIn(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-green-600 hover:bg-green-700 text-white px-6"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const validation = validateCheckIn(booking)
+                      if (!validation.isValid) {
+                        toast({
+                          variant: "destructive",
+                          title: "Cannot Check-in",
+                          description: validation.error,
+                        })
+                        return
+                      }
+                      
+                      const success = await checkIn(booking.id)
+                      if (success) {
+                        toast({
+                          title: "Success",
+                          description: "Checked in successfully",
+                        })
+                        fetchBookings()
+                        if (isLecturer) {
+                          fetchPendingApprovals()
+                        }
+                        fetchMyPendingBookings()
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Check-in
+                      </>
+                    )}
+                  </Button>
+                )}
+                {canCheckOut(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const validation = validateCheckOut(booking)
+                      if (!validation.isValid) {
+                        toast({
+                          variant: "destructive",
+                          title: "Cannot Check-out",
+                          description: validation.error,
+                        })
+                        return
+                      }
+                      
+                      const success = await checkOut(booking.id)
+                      if (success) {
+                        toast({
+                          title: "Success",
+                          description: "Checked out successfully",
+                        })
+                        fetchBookings()
+                        if (isLecturer) {
+                          fetchPendingApprovals()
+                        }
+                        fetchMyPendingBookings()
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Check-out
+                      </>
+                    )}
+                  </Button>
+                )}
+                {canReportIssue(booking) && (
+                  <Button 
+                    size="sm" 
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setReportIssueModal(booking)
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-1" />
+                    Report Issue
+                  </Button>
+                )}
               </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setSelectedBooking(booking)}
-                className="min-w-[100px] hover:bg-primary/5"
-              >
-                Details
-              </Button>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -386,48 +813,142 @@ export default function BookingsPage() {
         <p className="text-muted-foreground">View and manage all your facility bookings</p>
       </div>
 
-      {bookings.length === 0 ? (
+      {bookings.length === 0 && (!isLecturer || filteredPendingApprovals.length === 0) ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">No bookings found</p>
         </Card>
       ) : (
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue={isLecturer ? "pending" : "mypending"} className="w-full">
           <TabsList>
-            <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
+            <TabsTrigger value="mypending">
+              My Pending ({myPendingBookings.length})
+            </TabsTrigger>
+            {isLecturer && (
+              <TabsTrigger value="pending">
+                Pending Approvals ({filteredPendingApprovals.length})
+              </TabsTrigger>
+            )}
             <TabsTrigger value="approved">
-              Approved ({bookings.filter((b) => b.status === "Approved").length})
-            </TabsTrigger>
-            <TabsTrigger value="waitinglecturerapproval">
-              Waiting Lecturer ({bookings.filter((b) => b.status === "WaitingLecturerApproval").length})
-            </TabsTrigger>
-            <TabsTrigger value="waitingadminapproval">
-              Waiting Admin ({bookings.filter((b) => b.status === "WaitingAdminApproval").length})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed ({bookings.filter((b) => b.status === "Completed").length})
+              Approved Bookings ({historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length})
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4 mt-4">
-            {getBookingsByStatus("all").map(renderBookingCard)}
+          <TabsContent value="mypending" className="space-y-4 mt-4">
+            {isLoadingMyPending ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : myPendingBookings.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No pending bookings</p>
+              </Card>
+            ) : (
+              myPendingBookings.map((booking) => renderBookingCard({
+                id: booking.id,
+                bookingCode: booking.bookingCode,
+                facilityId: booking.facilityId,
+                facilityName: booking.facilityName,
+                userId: booking.userId,
+                userName: booking.userName,
+                userRole: booking.userRole,
+                bookingDate: booking.bookingDate,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                purpose: booking.purpose,
+                participants: booking.participants,
+                status: booking.status,
+                lecturerEmail: booking.lecturerEmail || null,
+                lecturerName: booking.lecturerName || null,
+                rejectionReason: booking.rejectionReason || null,
+                notes: booking.notes || null,
+                checkedInAt: booking.checkedInAt || null,
+                checkedOutAt: booking.checkedOutAt || null,
+                createdAt: booking.createdAt,
+              }))
+            )}
           </TabsContent>
+          {isLecturer && (
+            <TabsContent value="pending" className="space-y-4 mt-4">
+              <div className="flex justify-end mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                  className="flex items-center gap-2"
+                >
+                  {sortOrder === 'newest' ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14"/>
+                        <path d="m19 12-7 7-7-7"/>
+                      </svg>
+                      Newest First
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 19V5"/>
+                        <path d="m5 12 7-7 7 7"/>
+                      </svg>
+                      Oldest First
+                    </>
+                  )}
+                </Button>
+              </div>
+              {isLoadingPending ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+              ) : filteredPendingApprovals.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No pending approvals</p>
+                </Card>
+              ) : (
+                filteredPendingApprovals.map(renderPendingApprovalCard)
+              )}
+            </TabsContent>
+          )}
           <TabsContent value="approved" className="space-y-4 mt-4">
-            {getBookingsByStatus("approved").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="waitinglecturerapproval" className="space-y-4 mt-4">
-            {getBookingsByStatus("waitinglecturerapproval").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="waitingadminapproval" className="space-y-4 mt-4">
-            {getBookingsByStatus("waitingadminapproval").map(renderBookingCard)}
-          </TabsContent>
-          <TabsContent value="completed" className="space-y-4 mt-4">
-            {getBookingsByStatus("completed").map(renderBookingCard)}
-          </TabsContent>
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No approved bookings</p>
+              </Card>
+            ) : (
+              historyBookings
+                .filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b))
+                  .map((booking) => renderBookingCard({
+                    id: booking.id,
+                    bookingCode: booking.bookingCode,
+                    facilityId: booking.facilityId,
+                    facilityName: booking.facilityName,
+                    userId: booking.userId,
+                    userName: booking.userName,
+                    userRole: booking.userRole,
+                    bookingDate: booking.bookingDate,
+                    startTime: booking.startTime,
+                    endTime: booking.endTime,
+                    purpose: booking.purpose,
+                    participants: booking.participants,
+                    status: booking.status,
+                    lecturerEmail: booking.lecturerEmail || null,
+                    lecturerName: booking.lecturerName || null,
+                    rejectionReason: booking.rejectionReason || null,
+                    notes: booking.notes || null,
+                    checkedInAt: booking.checkedInAt || null,
+                    checkedOutAt: booking.checkedOutAt || null,
+                    createdAt: booking.createdAt,
+                  }))
+              )}
+            </TabsContent>
         </Tabs>
       )}
 
       {/* Booking Details Modal */}
-      {selectedBooking && !checkInDialog && !checkOutDialog && (
+      {selectedBooking && !checkInDialog && !checkOutDialog && !approveDialog && !rejectDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedBooking(null)}>
           <Card className="w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -488,7 +1009,7 @@ export default function BookingsPage() {
               {canCheckIn(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handleCheckInClickFromPopup(selectedBooking)}
+                  onClick={() => handleCheckInClick(selectedBooking)}
                 >
                   Check-in
                 </Button>
@@ -496,9 +1017,21 @@ export default function BookingsPage() {
               {canCheckOut(selectedBooking) && (
                 <Button 
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => handleCheckOutClickFromPopup(selectedBooking)}
+                  onClick={() => handleCheckOutClick(selectedBooking)}
                 >
                   Check-out
+                </Button>
+              )}
+              {canReportIssue(selectedBooking) && (
+                <Button 
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => {
+                    setReportIssueModal(selectedBooking)
+                    setSelectedBooking(null)
+                  }}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  Report Issue
                 </Button>
               )}
               <Button variant="outline" className="flex-1" onClick={() => setSelectedBooking(null)}>
@@ -580,6 +1113,117 @@ export default function BookingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog 
+        open={approveDialog && !rejectDialog} 
+        onOpenChange={(open) => {
+          setApproveDialog(open)
+          if (open) setRejectDialog(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this booking?
+              <br />
+              <strong className="text-foreground">{selectedBooking?.facilityName}</strong>
+              <br />
+              <span className="text-sm">
+                {selectedBooking && formatDate(selectedBooking.bookingDate)} • {selectedBooking && formatTime(selectedBooking.startTime)} - {selectedBooking && formatTime(selectedBooking.endTime)}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Comment (Optional)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20 resize-none"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleApprove} 
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog 
+        open={rejectDialog && !approveDialog} 
+        onOpenChange={(open) => {
+          setRejectDialog(open)
+          if (open) setApproveDialog(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this booking?
+              <br />
+              <strong className="text-foreground">{selectedBooking?.facilityName}</strong>
+              <br />
+              <span className="text-sm">
+                {selectedBooking && formatDate(selectedBooking.bookingDate)} • {selectedBooking && formatTime(selectedBooking.startTime)} - {selectedBooking && formatTime(selectedBooking.endTime)}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rejection Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Please provide a reason for rejection..."
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background min-h-20 resize-none"
+                required
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReject} 
+              disabled={isProcessing || !rejectReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report Issue Modal */}
+      {reportIssueModal && (
+        <ReportIssueModal
+          isOpen={!!reportIssueModal}
+          onClose={() => setReportIssueModal(null)}
+          booking={reportIssueModal}
+          onReported={() => {
+            setReportIssueModal(null)
+            fetchBookings()
+            fetchHistory()
+            if (isLecturer) {
+              fetchPendingApprovals()
+            }
+            fetchMyPendingBookings()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -593,9 +593,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     }
   }
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-50" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold">{isEdit ? "Edit Facility" : "Create Facility"}</h2>
@@ -604,7 +606,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           </button>
         </div>
 
-        <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+        <form className="p-6 space-y-6" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
           {/* Basic Information */}
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Basic Information</h3>
@@ -790,60 +792,23 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Images {isEdit ? "(Add more images)" : "(Multiple files allowed)"}
-            </label>
-            
-            {/* Show existing images in edit mode */}
-            {isEdit && facility?.imageUrl && (
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-2">Current images:</p>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                  {(() => {
-                    try {
-                      const urls = JSON.parse(facility.imageUrl);
-                      return (Array.isArray(urls) ? urls : [facility.imageUrl]).map((url: string, idx: number) => (
-                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border">
-                          <img
-                            src={url}
-                            alt={`Current ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </div>
-                      ));
-                    } catch {
-                      return (
-                        <div className="relative aspect-square rounded-lg overflow-hidden border">
-                          <img
-                            src={facility.imageUrl}
-                            alt="Current"
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
+          {!isEdit && (
+            <div>
+              <label className="block text-sm font-semibold mb-2">Images (Multiple files allowed)</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  multiple
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                />
               </div>
-            )}
-            
-            <div className="relative">
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif"
-                multiple
-                onChange={handleImageChange}
-                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} file(s) selected</span>}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} new file(s) selected</span>}
-              {isEdit && " New images will be added to existing ones."}
-            </p>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold mb-2">Description</label>

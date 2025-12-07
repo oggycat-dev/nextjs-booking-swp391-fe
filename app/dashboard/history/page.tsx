@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useBookingHistory } from "@/hooks/use-booking"
+import { useMyBookings } from "@/hooks/use-booking"
 import type { Booking } from "@/types"
 
 interface HistoryEntry {
@@ -15,8 +15,6 @@ interface HistoryEntry {
   time: string
   duration: string
   purpose: string
-  checkedIn: boolean
-  checkedOut: boolean
   noShow: boolean
   rating: number
   comment: string
@@ -54,7 +52,7 @@ function formatDate(dateString: string): string {
 }
 
 export default function HistoryPage() {
-  const { bookings, isLoading, error, fetchHistory } = useBookingHistory()
+  const { bookings, isLoading, error, fetchMyBookings } = useMyBookings()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
   const [facilityTypeMap, setFacilityTypeMap] = useState<Record<string, string>>({})
@@ -89,8 +87,6 @@ export default function HistoryPage() {
   // Map bookings to history entries
   const historyEntries: HistoryEntry[] = useMemo(() => {
     return bookings.map((booking: Booking) => {
-      const checkedIn = booking.status === "CheckedIn" || booking.status === "Completed" || booking.checkedInAt !== null
-      const checkedOut = booking.status === "Completed" || booking.checkedOutAt !== null
       const noShow = booking.status === "NoShow"
       
       return {
@@ -101,8 +97,6 @@ export default function HistoryPage() {
         time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`,
         duration: calculateDuration(booking.startTime, booking.endTime),
         purpose: booking.purpose,
-        checkedIn,
-        checkedOut,
         noShow,
         rating: 0, // Rating not available in API yet
         comment: booking.notes || "",
@@ -127,8 +121,9 @@ export default function HistoryPage() {
 
   const stats = useMemo(() => {
     const totalBookings = historyEntries.length
-    const completedBookings = historyEntries.filter((h) => h.checkedOut).length
+    const completedBookings = historyEntries.filter((h) => h.booking.status === "Completed").length
     const noShows = historyEntries.filter((h) => h.noShow).length
+    const rejectedBookings = historyEntries.filter((h) => h.booking.status === "Rejected").length
     const ratings = historyEntries.filter((h) => h.rating > 0)
     const averageRating = ratings.length > 0
       ? (ratings.reduce((acc, h) => acc + h.rating, 0) / ratings.length).toFixed(1)
@@ -138,14 +133,15 @@ export default function HistoryPage() {
       totalBookings,
       completedBookings,
       noShows,
+      rejectedBookings,
       averageRating,
     }
   }, [historyEntries])
 
-  // Refresh history when component mounts
+  // Refresh bookings when component mounts
   useEffect(() => {
-    fetchHistory()
-  }, [fetchHistory])
+    fetchMyBookings()
+  }, [fetchMyBookings])
 
   if (error) {
     return (
@@ -156,7 +152,7 @@ export default function HistoryPage() {
         </div>
         <Card className="p-12 text-center">
           <p className="text-destructive">Error loading booking history: {error}</p>
-          <Button onClick={() => fetchHistory()} className="mt-4">
+          <Button onClick={() => fetchMyBookings()} className="mt-4">
             Retry
           </Button>
         </Card>
@@ -181,12 +177,12 @@ export default function HistoryPage() {
           <p className="text-3xl font-bold text-primary">{stats.completedBookings}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">No-shows</p>
-          <p className="text-3xl font-bold text-destructive">{stats.noShows}</p>
+          <p className="text-sm text-muted-foreground mb-1">Rejected</p>
+          <p className="text-3xl font-bold text-destructive">{stats.rejectedBookings}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Avg. Rating</p>
-          <p className="text-3xl font-bold text-primary">{stats.averageRating}</p>
+          <p className="text-sm text-muted-foreground mb-1">No-shows</p>
+          <p className="text-3xl font-bold text-destructive">{stats.noShows}</p>
         </Card>
       </div>
 
@@ -220,19 +216,24 @@ export default function HistoryPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-bold text-lg">{entry.facilityName}</h3>
+                    {entry.booking.status === "Rejected" && (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">
+                        Rejected
+                      </span>
+                    )}
                     {entry.noShow && (
                       <span className="px-2 py-1 bg-destructive/10 text-destructive text-xs font-medium rounded">
                         No-show
                       </span>
                     )}
-                    {entry.checkedOut && !entry.noShow && (
+                    {entry.booking.status === "Completed" && !entry.noShow && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
                         Completed
                       </span>
                     )}
-                    {entry.booking.status === "Approved" && !entry.checkedOut && !entry.noShow && (
+                    {(entry.booking.status === "Approved" || entry.booking.status === "InUse") && !entry.noShow && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                        Approved
+                        {entry.booking.status === "InUse" ? "In Use" : "Approved"}
                       </span>
                     )}
                   </div>
@@ -244,9 +245,14 @@ export default function HistoryPage() {
                     {entry.rating > 0 && <span className="text-primary font-medium">★ {entry.rating}/5.0</span>}
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  Details
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedEntry(entry)
+                  }}>
+                    Details
+                  </Button>
+                </div>
               </div>
             </Card>
           ))
@@ -288,26 +294,6 @@ export default function HistoryPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Purpose</p>
                   <p className="font-bold">{selectedEntry.purpose}</p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Status</p>
-                <div className="flex gap-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedEntry.checkedIn ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {selectedEntry.checkedIn ? "Checked In" : "Not Checked In"}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedEntry.checkedOut ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {selectedEntry.checkedOut ? "Checked Out" : "Not Checked Out"}
-                  </span>
                 </div>
               </div>
 

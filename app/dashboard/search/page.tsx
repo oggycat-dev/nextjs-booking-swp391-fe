@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { FacilitySearchFilters } from "@/components/facilities/search-filters"
 import { FacilityGrid } from "@/components/facilities/facility-grid"
 import { BookingModal } from "@/components/facilities/booking-modal"
+import { FacilityDetailModal } from "@/components/facilities/facility-detail-modal"
 import { useFacilities } from "@/hooks/use-facility"
 import { useFacilityTypes } from "@/hooks/use-facility-type"
 import { facilityApi } from "@/lib/api/facility"
@@ -24,6 +25,7 @@ export default function SearchPage() {
   })
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
 
@@ -96,6 +98,34 @@ export default function SearchPage() {
       
       if (response.success && response.data) {
         setSelectedFacility(response.data)
+        setShowDetailModal(true)
+      } else {
+        console.error('Failed to fetch facility details:', response.message)
+        // Fallback to using the facility from list
+        setSelectedFacility(facility)
+        setShowDetailModal(true)
+      }
+    } catch (error) {
+      console.error('Error fetching facility details:', error)
+      // Fallback to using the facility from list
+      setSelectedFacility(facility)
+      setShowDetailModal(true)
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
+  const handleBooking = async (facility: Facility) => {
+    // Fetch facility details first, then open booking modal
+    try {
+      setIsLoadingDetail(true)
+      console.log(`Fetching facility details for booking: ${facility.id}`)
+      
+      const response = await facilityApi.getById(facility.id)
+      console.log('Facility detail response:', response)
+      
+      if (response.success && response.data) {
+        setSelectedFacility(response.data)
         setShowBookingModal(true)
       } else {
         console.error('Failed to fetch facility details:', response.message)
@@ -111,11 +141,6 @@ export default function SearchPage() {
     } finally {
       setIsLoadingDetail(false)
     }
-  }
-
-  const handleBooking = (facility: Facility) => {
-    // When clicking "Book Now" button, also fetch details
-    handleFacilityClick(facility)
   }
 
   const handleBookingSubmit = (data: any) => {
@@ -210,6 +235,18 @@ export default function SearchPage() {
           )}
         </div>
       </div>
+
+      {showDetailModal && selectedFacility && (
+        <FacilityDetailModal
+          facility={selectedFacility}
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false)
+            setSelectedFacility(null)
+          }}
+          onBookNow={handleBooking}
+        />
+      )}
 
       {showBookingModal && selectedFacility && (
         <BookingModal
