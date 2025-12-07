@@ -340,7 +340,7 @@ export type BookingStatus =
   | "Rejected" 
   | "Cancelled" 
   | "Completed" 
-  | "CheckedIn" 
+  | "InUse" 
   | "NoShow"
   | "Pending";
 

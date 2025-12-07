@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useBookingActions } from "@/hooks/use-booking-actions"
-import { usePendingLecturerApprovals, useBookingMutations, useMyPendingBookings } from "@/hooks/use-booking"
+import { usePendingLecturerApprovals, useBookingMutations, useMyPendingBookings, useBookingHistory } from "@/hooks/use-booking"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
 import { ReportIssueModal } from "@/components/facilities/report-issue-modal"
 import { bookingApi } from "@/lib/api/booking"
@@ -51,15 +51,31 @@ export default function BookingsPage() {
     isLoading: isLoadingPending 
   } = usePendingLecturerApprovals(isLecturer)
   
+  // Fetch approved booking history
+  const {
+    bookings: historyBookings,
+    fetchHistory,
+    isLoading: isLoadingHistory
+  } = useBookingHistory()
+  
+  // Booking mutations for lecturer
+  const {
+    approveBookingAsLecturer,
+    rejectBookingAsLecturer
+  } = useBookingMutations()
+
   // Filter out processed bookings from pending approvals
   const filteredPendingApprovals = pendingApprovals.filter(
     booking => !processedBookingIds.has(booking.id)
   )
-  const { 
-    approveBookingAsLecturer, 
-    rejectBookingAsLecturer, 
-    isLoading: isMutating 
-  } = useBookingMutations()
+
+  useEffect(() => {
+    fetchBookings()
+    fetchHistory()
+    if (isLecturer) {
+      fetchPendingApprovals()
+    }
+  }, [isLecturer, fetchPendingApprovals, fetchHistory])
 
   useEffect(() => {
     fetchBookings()
@@ -191,6 +207,7 @@ export default function BookingsPage() {
       setSelectedBooking(null)
       setValidationWarning(null)
       fetchBookings()
+      fetchHistory()
     }
   }
 
@@ -207,6 +224,7 @@ export default function BookingsPage() {
       setSelectedBooking(null)
       setValidationWarning(null)
       fetchBookings()
+      fetchHistory()
     }
   }
 
@@ -408,12 +426,12 @@ export default function BookingsPage() {
       fetchPendingApprovals()
     }
   }
-
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       "WaitingLecturerApproval": { variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
       "WaitingAdminApproval": { variant: "outline", className: "border-blue-500 text-blue-700 bg-blue-50" },
       "Approved": { variant: "default", className: "bg-green-600 text-white hover:bg-green-700 border-green-600" },
+      "InUse": { variant: "default", className: "bg-blue-600 text-white hover:bg-blue-700 border-blue-600" },
       "Completed": { variant: "secondary", className: "bg-gray-500 text-white" },
       "Rejected": { variant: "destructive", className: "bg-red-600 text-white" },
       "Cancelled": { variant: "destructive", className: "bg-red-600 text-white" },
@@ -443,6 +461,19 @@ export default function BookingsPage() {
   // Check if user can report issue (must be checked in and not checked out)
   const canReportIssue = (booking: BookingListDto): boolean => {
     return !!booking.checkedInAt && !booking.checkedOutAt
+  }
+
+  // Check if booking is expired (past checkout time without checkout)
+  const isBookingExpired = (booking: Booking): boolean => {
+    if (booking.checkedOutAt) return false // Already checked out
+    
+    const now = new Date()
+    const bookingDate = new Date(booking.bookingDate)
+    const [hours, minutes] = booking.endTime.split(':').map(Number)
+    const checkoutTime = new Date(bookingDate)
+    checkoutTime.setHours(hours, minutes, 0, 0)
+    
+    return now > checkoutTime
   }
 
   const formatDate = (dateString: string) => {
@@ -554,7 +585,7 @@ export default function BookingsPage() {
                 size="sm" 
                 className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
                 onClick={() => handleApproveClick(booking)}
-                disabled={isMutating}
+                disabled={isProcessing}
               >
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
                 Approve
@@ -564,7 +595,7 @@ export default function BookingsPage() {
                 variant="destructive"
                 className="min-w-[100px] bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
                 onClick={() => handleRejectClick(booking)}
-                disabled={isMutating}
+                disabled={isProcessing}
               >
                 <XCircle className="w-4 h-4 mr-1.5" />
                 Reject
@@ -788,6 +819,9 @@ export default function BookingsPage() {
                 Pending Approvals ({filteredPendingApprovals.length})
               </TabsTrigger>
             )}
+            <TabsTrigger value="approved">
+              Approved Bookings ({historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="mypending" className="space-y-4 mt-4">
@@ -839,6 +873,42 @@ export default function BookingsPage() {
               )}
             </TabsContent>
           )}
+          <TabsContent value="approved" className="space-y-4 mt-4">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : historyBookings.filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b)).length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No approved bookings</p>
+              </Card>
+            ) : (
+              historyBookings
+                .filter(b => (b.status === "Approved" || b.status === "InUse") && !isBookingExpired(b))
+                  .map((booking) => renderBookingCard({
+                    id: booking.id,
+                    bookingCode: booking.bookingCode,
+                    facilityId: booking.facilityId,
+                    facilityName: booking.facilityName,
+                    userId: booking.userId,
+                    userName: booking.userName,
+                    userRole: booking.userRole,
+                    bookingDate: booking.bookingDate,
+                    startTime: booking.startTime,
+                    endTime: booking.endTime,
+                    purpose: booking.purpose,
+                    participants: booking.participants,
+                    status: booking.status,
+                    lecturerEmail: booking.lecturerEmail || null,
+                    lecturerName: booking.lecturerName || null,
+                    rejectionReason: booking.rejectionReason || null,
+                    notes: booking.notes || null,
+                    checkedInAt: booking.checkedInAt || null,
+                    checkedOutAt: booking.checkedOutAt || null,
+                    createdAt: booking.createdAt,
+                  }))
+              )}
+            </TabsContent>
         </Tabs>
       )}
 
@@ -1042,13 +1112,13 @@ export default function BookingsPage() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isMutating}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleApprove} 
-              disabled={isMutating}
+              disabled={isProcessing}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isMutating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve"}
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1090,13 +1160,13 @@ export default function BookingsPage() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isMutating}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleReject} 
-              disabled={isMutating || !rejectReason.trim()}
+              disabled={isProcessing || !rejectReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isMutating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject"}
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1111,6 +1181,7 @@ export default function BookingsPage() {
           onReported={() => {
             setReportIssueModal(null)
             fetchBookings()
+            fetchHistory()
             if (isLecturer) {
               fetchPendingApprovals()
             }

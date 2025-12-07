@@ -19,14 +19,16 @@ const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 AM to 10 PM
 // Helper function to get week dates
 function getWeekDates(date: Date) {
   const current = new Date(date)
-  const first = current.getDate() - current.getDay() + 1 // Monday
-  const monday = new Date(current.setDate(first))
+  const day = current.getDay()
+  // Adjust for Sunday (0) to be treated as day 7 (last day of week)
+  const diff = current.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(current.setDate(diff))
   
   const weekDates = []
   for (let i = 0; i < 7; i++) {
-    const day = new Date(monday)
-    day.setDate(monday.getDate() + i)
-    weekDates.push(day)
+    const dayDate = new Date(monday)
+    dayDate.setDate(monday.getDate() + i)
+    weekDates.push(dayDate)
   }
   return weekDates
 }
@@ -88,7 +90,9 @@ export default function CalendarPage() {
   }
   
   const goToToday = () => {
-    setCurrentWeek(new Date())
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to midnight
+    setCurrentWeek(today)
   }
   
   const formatWeekRange = () => {
@@ -249,7 +253,7 @@ export default function CalendarPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-400 to-blue-600 border border-blue-700"></div>
-            <span className="text-xs">Checked In</span>
+            <span className="text-xs">In Use</span>
           </div>
         </div>
       </div>
