@@ -9,15 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { useFirebaseNotification } from "@/hooks/use-firebase-notification"
 import { Bell, BellOff, Settings, Trash2, Check, ExternalLink, RefreshCw } from "lucide-react"
 import type { PushNotification, NotificationData } from "@/types"
-import {
-  getStoredNotifications,
-  saveNotificationsToStorage,
-  addNotificationToStorage,
-  markNotificationAsRead as markReadInStorage,
-  markAllNotificationsAsRead as markAllReadInStorage,
-  deleteNotificationFromStorage,
-  clearAllNotificationsFromStorage,
-} from "@/lib/notifications-storage"
+import { useNotifications } from "@/hooks/use-notifications"
 
 // Get icon based on notification type
 const getNotificationIcon = (type: string) => {
@@ -74,144 +66,31 @@ const getTypeLabel = (type: string) => {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<PushNotification[]>([])
   const [selectedNotification, setSelectedNotification] = useState<PushNotification | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   
+  // Use notifications hook for all business logic
+  const {
+    notifications,
+    isLoading: isLoadingNotifications,
+    unreadCount,
+    loadNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAll: clearAllNotifications,
+  } = useNotifications()
+  
+  // Use Firebase notification hook for push notification settings
   const { 
     fcmToken, 
     isSupported, 
-    isLoading, 
+    isLoading: isLoadingFirebase, 
     error,
     setupNotifications,
     unregisterToken,
     handleNotificationClick 
   } = useFirebaseNotification()
-
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    const stored = getStoredNotifications()
-    setNotifications(stored)
-  }, [])
-
-  // Save notifications to localStorage when they change
-  useEffect(() => {
-    if (notifications.length > 0 || typeof window !== 'undefined') {
-      saveNotificationsToStorage(notifications)
-    }
-  }, [notifications])
-
-  // Listen for new notifications from service worker and BroadcastChannel
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    // Create a function to add notification
-    const addNotification = (newNotification: PushNotification) => {
-      setNotifications(prev => {
-        // Check if notification already exists (avoid duplicates)
-        const exists = prev.some(n => n.id === newNotification.id)
-        if (exists) return prev
-        // Add new notification at the beginning, keep max 100
-        return [newNotification, ...prev].slice(0, 100)
-      })
-    }
-
-    // Listen for messages from service worker
-    const handleServiceWorkerMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'NEW_NOTIFICATION' && event.data.notification) {
-        addNotification(event.data.notification)
-        // Save to localStorage using utility function
-        addNotificationToStorage(event.data.notification)
-      }
-    }
-
-    // Listen for BroadcastChannel messages (from other tabs)
-    let broadcastChannel: BroadcastChannel | null = null
-    if (window.BroadcastChannel) {
-      broadcastChannel = new BroadcastChannel('notifications')
-      broadcastChannel.onmessage = (event) => {
-        if (event.data?.type === 'NEW_NOTIFICATION' && event.data.notification) {
-          addNotification(event.data.notification)
-          addNotificationToStorage(event.data.notification)
-        } else if (event.data?.type === 'NOTIFICATIONS_UPDATED') {
-          // Reload from storage when updated from another tab
-          const stored = getStoredNotifications()
-          setNotifications(stored)
-        }
-      }
-    }
-
-    // Listen for storage events (from other tabs/windows)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'admin_notifications' && e.newValue) {
-        try {
-          const stored = JSON.parse(e.newValue)
-          setNotifications(stored)
-        } catch (error) {
-          console.error('Error parsing storage update:', error)
-        }
-      }
-    }
-    window.addEventListener('storage', handleStorageChange)
-
-    // Listen for service worker messages
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
-    }
-
-    return () => {
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage)
-      }
-      if (broadcastChannel) {
-        broadcastChannel.close()
-      }
-      window.removeEventListener('storage', handleStorageChange)
-    }
-  }, [])
-
-  const unreadCount = notifications.filter((n) => !n.read).length
-
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => {
-      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      // Save to localStorage immediately
-      markReadInStorage(id)
-      return updated
-    })
-  }, [])
-
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => {
-      const updated = prev.map((n) => ({ ...n, read: true }))
-      // Save to localStorage immediately
-      markAllReadInStorage()
-      return updated
-    })
-  }, [])
-
-  const deleteNotification = useCallback((id: string) => {
-    setNotifications(prev => {
-      const updated = prev.filter((n) => n.id !== id)
-      // Save to localStorage immediately
-      deleteNotificationFromStorage(id)
-      return updated
-    })
-  }, [])
-
-  const clearAllNotifications = useCallback(() => {
-    setNotifications([])
-    // Save to localStorage immediately
-    clearAllNotificationsFromStorage()
-  }, [])
-
-  const handleEnableNotifications = async () => {
-    await setupNotifications()
-  }
-
-  const handleDisableNotifications = async () => {
-    await unregisterToken()
-  }
 
   const handleViewDetails = (notification: PushNotification) => {
     markAsRead(notification.id)
@@ -308,9 +187,13 @@ export default function NotificationsPage() {
             Notifications
           </h1>
           <p className="text-muted-foreground">
-            {unreadCount > 0 
-              ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
-              : "All caught up!"}
+            {isLoadingNotifications ? (
+              "Loading notifications..."
+            ) : unreadCount > 0 ? (
+              `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
+            ) : (
+              "All caught up!"
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -321,6 +204,15 @@ export default function NotificationsPage() {
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={loadNotifications}
+            disabled={isLoadingNotifications}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingNotifications ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={markAllAsRead}>
@@ -354,12 +246,12 @@ export default function NotificationsPage() {
               </div>
               <Switch 
                 checked={!!fcmToken}
-                disabled={!isSupported || isLoading}
+                 disabled={!isSupported || isLoadingFirebase}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    handleEnableNotifications()
+                     setupNotifications()
                   } else {
-                    handleDisableNotifications()
+                     unregisterToken()
                   }
                 }}
               />
@@ -383,7 +275,7 @@ export default function NotificationsPage() {
               </div>
             )}
 
-            {isLoading && (
+             {isLoadingFirebase && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 Setting up notifications...
@@ -394,6 +286,12 @@ export default function NotificationsPage() {
       )}
 
       {/* Notifications List */}
+      {isLoadingNotifications ? (
+        <Card className="p-12 text-center">
+          <RefreshCw className="w-12 h-12 mx-auto text-muted-foreground mb-4 animate-spin" />
+          <p className="text-muted-foreground">Loading notifications from server...</p>
+        </Card>
+      ) : (
       <Tabs defaultValue="all" className="w-full">
         <TabsList>
           <TabsTrigger value="all">All ({notifications.length})</TabsTrigger>
@@ -435,6 +333,7 @@ export default function NotificationsPage() {
             : notifications.filter((n) => n.type === "campus_change_request").map(renderNotification)}
         </TabsContent>
       </Tabs>
+      )}
 
       {/* Notification Detail Modal */}
       {selectedNotification && (

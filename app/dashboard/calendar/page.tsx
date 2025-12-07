@@ -190,10 +190,12 @@ export default function CalendarPage() {
                     const statusColor = 
                       booking.status === 'Approved' 
                         ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-700'
+                        : booking.status === 'InUse'
+                        ? 'bg-gradient-to-br from-pink-400 to-pink-600 border-pink-700 text-white hover:from-pink-500 hover:to-pink-700'
                         : booking.status === 'Pending'
-                        ? 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white hover:from-amber-500 hover:to-amber-700'
-                        : booking.status === 'WaitingLecturerApproval' || booking.status === 'WaitingAdminApproval'
                         ? 'bg-gradient-to-br from-gray-400 to-gray-600 border-gray-700 text-white hover:from-gray-500 hover:to-gray-700'
+                        : booking.status === 'WaitingLecturerApproval' || booking.status === 'WaitingAdminApproval'
+                        ? 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white hover:from-amber-500 hover:to-amber-700'
                         : 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-700 text-white hover:from-blue-500 hover:to-blue-700'
                     
                     // Adapt text size based on height
@@ -244,15 +246,15 @@ export default function CalendarPage() {
             <span className="text-xs">Approved</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-br from-amber-400 to-amber-600 border border-amber-700"></div>
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-gray-400 to-gray-600 border border-gray-700"></div>
             <span className="text-xs">Pending</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-br from-gray-400 to-gray-600 border border-gray-700"></div>
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-amber-400 to-amber-600 border border-amber-700"></div>
             <span className="text-xs">Waiting Lecture Approval</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-400 to-blue-600 border border-blue-700"></div>
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-pink-400 to-pink-600 border border-pink-700"></div>
             <span className="text-xs">In Use</span>
           </div>
         </div>
@@ -330,13 +332,17 @@ export default function CalendarPage() {
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
                   <div className="mt-1">
                     <Badge 
-                      variant={selectedBooking.status === 'Approved' || selectedBooking.status === 'Pending' ? 'default' : 'secondary'}
+                      variant="secondary"
                       className={
                         selectedBooking.status === 'Approved' 
-                          ? 'bg-green-600 hover:bg-green-700' 
+                          ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white hover:from-emerald-500 hover:to-emerald-700' 
+                          : selectedBooking.status === 'InUse'
+                          ? 'bg-gradient-to-br from-pink-400 to-pink-600 text-white hover:from-pink-500 hover:to-pink-700'
                           : selectedBooking.status === 'Pending'
-                          ? 'bg-orange-500 hover:bg-orange-600'
-                          : ''
+                          ? 'bg-gradient-to-br from-gray-400 to-gray-600 text-white hover:from-gray-500 hover:to-gray-700'
+                          : selectedBooking.status === 'WaitingLecturerApproval' || selectedBooking.status === 'WaitingAdminApproval'
+                          ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white hover:from-amber-500 hover:to-amber-700'
+                          : 'bg-gradient-to-br from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700'
                       }
                     >
                       {selectedBooking.status}

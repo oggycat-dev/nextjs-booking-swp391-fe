@@ -12,6 +12,7 @@ import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
 import { SessionManager } from "@/components/auth/session-manager"
 import { FirebaseNotificationProvider } from "@/components/notifications/firebase-notification-provider"
 import { Bell } from "lucide-react"
+import { storage } from "@/lib/storage-manager"
 
 export default function DashboardLayout({
   children,
@@ -83,9 +84,10 @@ export default function DashboardLayout({
   }, [router, userRole]);
 
   useEffect(() => {
-    // Check for user with a small delay to ensure localStorage is ready
+    // Check for user with a small delay to ensure storage is ready
     const checkUser = () => {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+      // Use storage manager instead of localStorage directly (supports sessionStorage)
+      const token = storage.getItem("token")
       
       if (!token) {
         // If no token, redirect to login
@@ -113,8 +115,8 @@ export default function DashboardLayout({
         })
         setIsLoading(false)
       } else {
-        // If token exists but no user, try to get role from localStorage directly
-        const roleFromStorage = typeof window !== "undefined" ? localStorage.getItem("role") : null
+        // If token exists but no user, try to get role from storage directly
+        const roleFromStorage = storage.getItem("role")
         if (roleFromStorage) {
           setUserRole(roleFromStorage.toLowerCase())
           setIsLoading(false)
@@ -136,7 +138,7 @@ export default function DashboardLayout({
               })
             } else {
               // Still no user, but we have token, so allow access
-              const roleFromStorage2 = typeof window !== "undefined" ? localStorage.getItem("role") : null
+              const roleFromStorage2 = storage.getItem("role")
               setUserRole(roleFromStorage2?.toLowerCase() || "student")
             }
             setIsLoading(false)

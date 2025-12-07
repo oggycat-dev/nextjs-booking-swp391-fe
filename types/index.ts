@@ -527,6 +527,25 @@ export interface FirebaseNotificationState {
   error: string | null;
 }
 
+// Backend Notification DTOs
+export interface NotificationDto {
+  id: string;
+  title: string;
+  body: string;
+  type: string;
+  relatedEntityId: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  data: string | null; // JSON string
+}
+
+export interface NotificationSummaryDto {
+  totalCount: number;
+  unreadCount: number;
+  notifications: NotificationDto[];
+}
+
 // ============================================
 // Facility Issue Types
 // ============================================
@@ -583,4 +602,57 @@ export interface ChangeRoomResponse {
   category: string;
   imageUrls: string[];
   status: string;
+}
+
+// ============================================
+// Dashboard Types
+// ============================================
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalStudents: number;
+  totalLecturers: number;
+  pendingRegistrations: number;
+  pendingCampusChangeRequests: number;
+  totalBookingsToday: number;
+  totalBookingsThisWeek: number;
+  totalBookingsThisMonth: number;
+  pendingLecturerApprovals: number;
+  pendingAdminApprovals: number;
+  approvedBookingsToday: number;
+  rejectedBookingsToday: number;
+  inUseBookingsNow: number;
+  totalFacilities: number;
+  availableFacilities: number;
+  inUseFacilities: number;
+  maintenanceFacilities: number;
+  totalCampuses: number;
+  recentBookings: RecentBooking[];
+  recentRegistrations: RecentRegistration[];
+  facilityUtilizationRate: number;
+}
+
+export interface RecentBooking {
+  id: string;
+  bookingCode: string;
+  facilityName: string;
+  bookedByName: string;  // Mapped from userName
+  userName: string;
+  userRole: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface RecentRegistration {
+  id: string;
+  userCode: string;
+  fullName: string;
+  email: string;
+  role: string;
+  status: string;
+  isApproved: boolean;  // Mapped from status === "Approved"
+  createdAt: string;
 }

@@ -3,6 +3,8 @@
  * Provides common utilities for making API requests
  */
 
+import { storage } from './storage-manager';
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000');
 
@@ -20,10 +22,112 @@ export const getApiUrl = (endpoint: string): string => {
 };
 
 /**
+ * Check if token is expired or about to expire (within 1 minute)
+ */
+function isTokenExpiringSoon(token: string): boolean {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    
+    if (payload.exp) {
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const now = Date.now();
+      const timeUntilExpiry = expiryTime - now;
+      
+      // Return true if token expires in less than 1 minute
+      return timeUntilExpiry < 60 * 1000;
+    }
+  } catch (error) {
+    console.error("Failed to check token expiry:", error);
+  }
+  return false;
+}
+
+/**
+ * Refresh token if needed
+ */
+async function refreshTokenIfNeeded(): Promise<boolean> {
+  const token = typeof window !== "undefined" ? storage.getItem("token") : null;
+  
+  if (!token || !isTokenExpiringSoon(token)) {
+    return true; // Token is fine
+  }
+
+  const refreshToken = typeof window !== "undefined" ? storage.getItem("refreshToken") : null;
+  
+  if (!refreshToken) {
+    console.error("No refresh token available");
+    return false;
+  }
+
+  try {
+    console.log("Token expiring soon, refreshing...");
+    const response = await fetch(`${API_URL}/auth/refresh-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.data) {
+        storage.setItem("token", data.data.token);
+        storage.setItem("refreshToken", data.data.refreshToken);
+        
+        if (data.data.user) {
+          storage.setItem("user", JSON.stringify(data.data.user));
+        }
+        
+        console.log("Token refreshed successfully");
+        return true;
+      }
+    }
+    
+    console.error("Failed to refresh token");
+    return false;
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return false;
+  }
+}
+
+/**
  * Get authentication headers with token
+ * Automatically refreshes token if it's about to expire
+ */
+export async function getAuthHeadersAsync(contentType: string = "application/json"): Promise<HeadersInit> {
+  // Try to refresh token if needed
+  await refreshTokenIfNeeded();
+  
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const headers: HeadersInit = {};
+  
+  // Only set Content-Type if not multipart/form-data (browser will set it with boundary)
+  if (contentType !== "multipart/form-data") {
+    headers["Content-Type"] = contentType;
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
+/**
+ * Get authentication headers with token (synchronous version for backward compatibility)
  */
 export function getAuthHeaders(contentType: string = "application/json"): HeadersInit {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = typeof window !== "undefined" ? storage.getItem("token") : null;
   const headers: HeadersInit = {};
   
   // Only set Content-Type if not multipart/form-data (browser will set it with boundary)
