@@ -4,15 +4,8 @@ import { useState, useMemo, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
 import { useMyBookings } from "@/hooks/use-booking"
-import { useBookingActions } from "@/hooks/use-booking-actions"
-import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
-import { ReportIssueModal } from "@/components/facilities/report-issue-modal"
-import type { Booking, BookingListDto } from "@/types"
-import { AlertCircle, Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
+import type { Booking } from "@/types"
 
 interface HistoryEntry {
   id: string
@@ -22,8 +15,6 @@ interface HistoryEntry {
   time: string
   duration: string
   purpose: string
-  checkedIn: boolean
-  checkedOut: boolean
   noShow: boolean
   rating: number
   comment: string
@@ -65,12 +56,6 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
   const [facilityTypeMap, setFacilityTypeMap] = useState<Record<string, string>>({})
-  const [checkInDialog, setCheckInDialog] = useState<string | null>(null)
-  const [checkOutDialog, setCheckOutDialog] = useState<string | null>(null)
-  const [reportIssueModal, setReportIssueModal] = useState<string | null>(null)
-  const [validationWarning, setValidationWarning] = useState<string | null>(null)
-  const { checkIn, checkOut, isProcessing } = useBookingActions()
-  const { toast } = useToast()
 
   // Fetch facility types for all bookings
   useEffect(() => {
@@ -102,8 +87,6 @@ export default function HistoryPage() {
   // Map bookings to history entries
   const historyEntries: HistoryEntry[] = useMemo(() => {
     return bookings.map((booking: Booking) => {
-      const checkedIn = booking.status === "CheckedIn" || booking.status === "Completed" || booking.checkedInAt !== null
-      const checkedOut = booking.status === "Completed" || booking.checkedOutAt !== null
       const noShow = booking.status === "NoShow"
       
       return {
@@ -114,8 +97,6 @@ export default function HistoryPage() {
         time: `${formatTime(booking.startTime)} - ${formatTime(booking.endTime)}`,
         duration: calculateDuration(booking.startTime, booking.endTime),
         purpose: booking.purpose,
-        checkedIn,
-        checkedOut,
         noShow,
         rating: 0, // Rating not available in API yet
         comment: booking.notes || "",
@@ -123,105 +104,6 @@ export default function HistoryPage() {
       }
     })
   }, [bookings, facilityTypeMap])
-
-  // Check if user can report issue (must be checked in and not checked out)
-  const canReportIssue = (booking: Booking): boolean => {
-    return !!booking.checkedInAt && !booking.checkedOutAt
-  }
-
-  // Convert Booking to BookingListDto for validation
-  const bookingToDto = (booking: Booking): BookingListDto => {
-    return {
-      id: booking.id,
-      bookingCode: booking.bookingCode,
-      facilityId: booking.facilityId,
-      facilityName: booking.facilityName,
-      userId: booking.userId,
-      userName: booking.userName || "",
-      userRole: booking.userRole || "",
-      bookingDate: booking.bookingDate,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      purpose: booking.purpose,
-      participants: booking.participants || 0,
-      status: String(booking.status), // Convert BookingStatus to string
-      lecturerEmail: booking.lecturerEmail || null,
-      lecturerName: booking.lecturerName || null,
-      rejectionReason: booking.rejectionReason || null,
-      notes: booking.notes || null,
-      checkedInAt: booking.checkedInAt || null,
-      checkedOutAt: booking.checkedOutAt || null,
-      createdAt: booking.createdAt,
-    }
-  }
-
-  const handleCheckInClick = (booking: Booking) => {
-    setValidationWarning(null)
-    const bookingDto = bookingToDto(booking)
-    const validation = validateCheckIn(bookingDto)
-    if (!validation.isValid) {
-      toast({
-        variant: "destructive",
-        title: "❌ Check-in Not Available",
-        description: validation.error,
-        duration: 5000,
-      })
-      return
-    }
-    
-    if (validation.warningMessage) {
-      setValidationWarning(validation.warningMessage)
-    }
-    
-    setCheckInDialog(booking.id)
-  }
-
-  const handleCheckOutClick = (booking: Booking) => {
-    setValidationWarning(null)
-    const bookingDto = bookingToDto(booking)
-    const validation = validateCheckOut(bookingDto)
-    if (!validation.isValid) {
-      toast({
-        variant: "destructive",
-        title: "❌ Check-out Not Available",
-        description: validation.error,
-        duration: 5000,
-      })
-      return
-    }
-    
-    if (validation.warningMessage) {
-      setValidationWarning(validation.warningMessage)
-    }
-    
-    setCheckOutDialog(booking.id)
-  }
-
-  const handleCheckIn = async (bookingId: string) => {
-    const success = await checkIn(bookingId)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Checked in successfully",
-      })
-      setCheckInDialog(null)
-      setValidationWarning(null)
-      fetchMyBookings()
-    }
-  }
-
-  const handleCheckOut = async (bookingId: string) => {
-    const success = await checkOut(bookingId)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Checked out successfully",
-      })
-      setCheckOutDialog(null)
-      setValidationWarning(null)
-      fetchMyBookings()
-    }
-  }
 
   // Filter history based on search term
   const filteredHistory = useMemo(() => {
@@ -239,7 +121,7 @@ export default function HistoryPage() {
 
   const stats = useMemo(() => {
     const totalBookings = historyEntries.length
-    const completedBookings = historyEntries.filter((h) => h.checkedOut).length
+    const completedBookings = historyEntries.filter((h) => h.booking.status === "Completed").length
     const noShows = historyEntries.filter((h) => h.noShow).length
     const rejectedBookings = historyEntries.filter((h) => h.booking.status === "Rejected").length
     const ratings = historyEntries.filter((h) => h.rating > 0)
@@ -285,7 +167,7 @@ export default function HistoryPage() {
         <p className="text-muted-foreground">View your past bookings and facility usage</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Total Bookings</p>
           <p className="text-3xl font-bold text-primary">{stats.totalBookings}</p>
@@ -301,10 +183,6 @@ export default function HistoryPage() {
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">No-shows</p>
           <p className="text-3xl font-bold text-destructive">{stats.noShows}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground mb-1">Avg. Rating</p>
-          <p className="text-3xl font-bold text-primary">{stats.averageRating}</p>
         </Card>
       </div>
 
@@ -348,14 +226,14 @@ export default function HistoryPage() {
                         No-show
                       </span>
                     )}
-                    {entry.checkedOut && !entry.noShow && entry.booking.status !== "Rejected" && (
+                    {entry.booking.status === "Completed" && !entry.noShow && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
                         Completed
                       </span>
                     )}
-                    {entry.booking.status === "Approved" && !entry.checkedOut && !entry.noShow && (
+                    {(entry.booking.status === "Approved" || entry.booking.status === "InUse") && !entry.noShow && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                        Approved
+                        {entry.booking.status === "InUse" ? "In Use" : "Approved"}
                       </span>
                     )}
                   </div>
@@ -368,43 +246,6 @@ export default function HistoryPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {canShowCheckInButton(bookingToDto(entry.booking)) && (
-                    <Button 
-                      size="sm" 
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleCheckInClick(entry.booking)
-                      }}
-                    >
-                      Check-in
-                    </Button>
-                  )}
-                  {canShowCheckOutButton(bookingToDto(entry.booking)) && (
-                    <Button 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleCheckOutClick(entry.booking)
-                      }}
-                    >
-                      Check-out
-                    </Button>
-                  )}
-                  {canReportIssue(entry.booking) && (
-                    <Button 
-                      size="sm" 
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setReportIssueModal(entry.booking.id)
-                      }}
-                    >
-                      <AlertTriangle className="w-4 h-4 mr-1" />
-                      Report Issue
-                    </Button>
-                  )}
                   <Button variant="outline" size="sm" onClick={(e) => {
                     e.stopPropagation()
                     setSelectedEntry(entry)
@@ -417,82 +258,6 @@ export default function HistoryPage() {
           ))
         )}
       </div>
-
-      {/* Check-in Dialog */}
-      {checkInDialog && (() => {
-        const booking = bookings.find(b => b.id === checkInDialog)
-        if (!booking) return null
-        return (
-          <AlertDialog open={!!checkInDialog} onOpenChange={(open) => !open && setCheckInDialog(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Check-in Confirmation</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to check-in to this booking?
-                  <br />
-                  <strong className="text-foreground">{booking.facilityName}</strong>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              {validationWarning && (
-                <Alert variant="default" className="bg-yellow-50 border-yellow-200">
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <AlertDescription className="text-yellow-800">
-                    {validationWarning}
-                  </AlertDescription>
-                </Alert>
-              )}
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={() => handleCheckIn(checkInDialog)} 
-                  disabled={isProcessing}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check-in"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )
-      })()}
-
-      {/* Check-out Dialog */}
-      {checkOutDialog && (() => {
-        const booking = bookings.find(b => b.id === checkOutDialog)
-        if (!booking) return null
-        return (
-          <AlertDialog open={!!checkOutDialog} onOpenChange={(open) => !open && setCheckOutDialog(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Check-out Confirmation</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to check-out from this booking?
-                  <br />
-                  <strong className="text-foreground">{booking.facilityName}</strong>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              {validationWarning && (
-                <Alert variant="default" className="bg-yellow-50 border-yellow-200">
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <AlertDescription className="text-yellow-800">
-                    {validationWarning}
-                  </AlertDescription>
-                </Alert>
-              )}
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={() => handleCheckOut(checkOutDialog)} 
-                  disabled={isProcessing}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check-out"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )
-      })()}
 
       {selectedEntry && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -532,26 +297,6 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Status</p>
-                <div className="flex gap-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedEntry.checkedIn ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {selectedEntry.checkedIn ? "Checked In" : "Not Checked In"}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedEntry.checkedOut ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {selectedEntry.checkedOut ? "Checked Out" : "Not Checked Out"}
-                  </span>
-                </div>
-              </div>
-
               {selectedEntry.comment && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-2">Notes</p>
@@ -572,24 +317,6 @@ export default function HistoryPage() {
           </Card>
         </div>
       )}
-
-      {/* Report Issue Modal */}
-      {reportIssueModal && (() => {
-        const booking = bookings.find(b => b.id === reportIssueModal)
-        if (!booking) return null
-        const bookingDto = bookingToDto(booking)
-        return (
-          <ReportIssueModal
-            isOpen={!!reportIssueModal}
-            onClose={() => setReportIssueModal(null)}
-            booking={bookingDto}
-            onReported={() => {
-              setReportIssueModal(null)
-              fetchMyBookings()
-            }}
-          />
-        )
-      })()}
     </div>
   )
 }

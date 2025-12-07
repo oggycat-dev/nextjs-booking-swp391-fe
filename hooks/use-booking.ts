@@ -473,7 +473,7 @@ export function useBookingHistory() {
           (booking: Booking) => 
             booking.status === "Approved" || 
             booking.status === "Completed" || 
-            booking.status === "CheckedIn" ||
+            booking.status === "InUse" ||
             booking.status === "NoShow" ||
             booking.status === "Rejected"
         );
