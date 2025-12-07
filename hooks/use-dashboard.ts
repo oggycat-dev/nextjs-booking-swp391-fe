@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { dashboardApi, DashboardStats } from "@/lib/api/dashboard"
+import { dashboardApi } from "@/lib/api/dashboard"
+import type { DashboardStats } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
 export function useDashboardStats() {

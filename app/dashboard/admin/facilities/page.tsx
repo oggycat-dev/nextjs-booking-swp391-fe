@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function AdminFacilitiesPage() {
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { facilities, fetchFacilities, isLoading } = useFacilities()
   const { facilityTypes } = useFacilityTypes(true)
@@ -33,6 +35,14 @@ export default function AdminFacilitiesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTypeId, setFilterTypeId] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<string>("")
+
+  // Read query params on mount
+  useEffect(() => {
+    const statusParam = searchParams.get("status")
+    if (statusParam) {
+      setFilterStatus(statusParam)
+    }
+  }, [searchParams])
 
   // Parse imageUrl JSON string to get first image URL
   const getImageUrl = (facility: AdminFacility): string | null => {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,7 @@ import { useFacility } from "@/hooks/use-facility"
 import type { Booking, BookingStatus } from "@/types"
 
 export default function AdminBookingsPage() {
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { bookings: pendingBookings, fetchPendingApprovals, isLoading: isLoadingPending } = usePendingAdminApprovals()
   const { approveBookingAsAdmin, rejectBookingAsAdmin, isLoading: isMutating, error: mutationError } = useBookingMutations()
@@ -21,11 +23,36 @@ export default function AdminBookingsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [rejectReason, setRejectReason] = useState("")
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
+  const [filterStatus, setFilterStatus] = useState<string>("")
+  const [filterDate, setFilterDate] = useState<string>("")
   
   // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
   const { facility, isLoading: isLoadingFacility } = useFacility(
     selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
   )
+
+  // Read query params on mount
+  useEffect(() => {
+    const statusParam = searchParams.get("status")
+    const dateParam = searchParams.get("date")
+    const filterParam = searchParams.get("filter")
+    
+    if (statusParam) {
+      setFilterStatus(statusParam)
+    }
+    
+    if (dateParam) {
+      if (dateParam === "today") {
+        setFilterDate(new Date().toISOString().split('T')[0])
+      } else {
+        setFilterDate(dateParam)
+      }
+    }
+    
+    if (filterParam === "pending") {
+      // Already showing pending approvals by default
+    }
+  }, [searchParams])
 
   useEffect(() => {
     fetchPendingApprovals()
@@ -33,10 +60,21 @@ export default function AdminBookingsPage() {
 
   const filteredBookings = pendingBookings
     .filter(
-      (b) =>
-        b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
+      (b) => {
+        const matchesSearch =
+          b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
+        
+        const matchesStatus = !filterStatus || b.status === filterStatus
+        
+        const matchesDate = !filterDate || (() => {
+          const bookingDate = new Date(b.bookingDate).toISOString().split('T')[0]
+          return bookingDate === filterDate
+        })()
+        
+        return matchesSearch && matchesStatus && matchesDate
+      }
     )
     .sort((a, b) => {
       const timeA = new Date(a.createdAt).getTime()

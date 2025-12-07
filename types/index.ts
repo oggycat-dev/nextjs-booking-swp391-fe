@@ -474,6 +474,79 @@ export interface AuthState {
 }
 
 // ============================================
+// Notification Types (Firebase Cloud Messaging)
+// ============================================
+
+export interface NotificationType {
+  NEW_REGISTRATION: 'new_registration';
+  CAMPUS_CHANGE_REQUEST: 'campus_change_request';
+  NEW_BOOKING: 'new_booking';
+  BOOKING_APPROVED: 'booking_approved';
+  BOOKING_REJECTED: 'booking_rejected';
+}
+
+export interface NotificationData {
+  type?: string;
+  bookingId?: string;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  userRole?: string;
+  campusId?: string;
+  campusName?: string;
+  currentCampusId?: string; // For campus change requests
+  currentCampusName?: string; // For campus change requests
+  facilityName?: string;
+  bookingDate?: string;
+  startTime?: string;
+  endTime?: string;
+  requestId?: string; // For campus change requests
+  requestedCampusId?: string;
+  requestedCampusName?: string;
+  [key: string]: string | undefined;
+}
+
+export interface PushNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data?: NotificationData;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface RegisterFcmTokenRequest {
+  fcmToken: string;
+}
+
+export interface FirebaseNotificationState {
+  fcmToken: string | null;
+  isSupported: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Backend Notification DTOs
+export interface NotificationDto {
+  id: string;
+  title: string;
+  body: string;
+  type: string;
+  relatedEntityId: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  data: string | null; // JSON string
+}
+
+export interface NotificationSummaryDto {
+  totalCount: number;
+  unreadCount: number;
+  notifications: NotificationDto[];
+}
+
+// ============================================
 // Facility Issue Types
 // ============================================
 
@@ -529,4 +602,57 @@ export interface ChangeRoomResponse {
   category: string;
   imageUrls: string[];
   status: string;
+}
+
+// ============================================
+// Dashboard Types
+// ============================================
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalStudents: number;
+  totalLecturers: number;
+  pendingRegistrations: number;
+  pendingCampusChangeRequests: number;
+  totalBookingsToday: number;
+  totalBookingsThisWeek: number;
+  totalBookingsThisMonth: number;
+  pendingLecturerApprovals: number;
+  pendingAdminApprovals: number;
+  approvedBookingsToday: number;
+  rejectedBookingsToday: number;
+  inUseBookingsNow: number;
+  totalFacilities: number;
+  availableFacilities: number;
+  inUseFacilities: number;
+  maintenanceFacilities: number;
+  totalCampuses: number;
+  recentBookings: RecentBooking[];
+  recentRegistrations: RecentRegistration[];
+  facilityUtilizationRate: number;
+}
+
+export interface RecentBooking {
+  id: string;
+  bookingCode: string;
+  facilityName: string;
+  bookedByName: string;  // Mapped from userName
+  userName: string;
+  userRole: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface RecentRegistration {
+  id: string;
+  userCode: string;
+  fullName: string;
+  email: string;
+  role: string;
+  status: string;
+  isApproved: boolean;  // Mapped from status === "Approved"
+  createdAt: string;
 }

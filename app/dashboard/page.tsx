@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -11,9 +11,9 @@ import { useBookingActions } from "@/hooks/use-booking-actions"
 import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOutButton } from "@/lib/validation/booking-validation"
 import Link from "next/link"
 import { HeroSection } from "@/components/dashboard/hero-section"
-import { StatCard } from "@/components/dashboard/stat-card"
 import { useAuth } from "@/hooks/use-auth"
 import { useDashboardStats } from "@/hooks/use-dashboard"
+import type { BookingListDto } from "@/types"
 import { 
   Calendar, 
   Clock, 
@@ -23,15 +23,13 @@ import {
   Building2, 
   FileCheck,
   AlertCircle,
-  BarChart3,
   Loader2
 } from "lucide-react"
 
 // Booking Card Component with Check-in/Check-out
-function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void }) {
+function BookingCard({ booking, onUpdate }: { booking: BookingListDto; onUpdate: () => void }) {
   const [checkInDialog, setCheckInDialog] = useState(false)
   const [checkOutDialog, setCheckOutDialog] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
   const [validationWarning, setValidationWarning] = useState<string | null>(null)
   const { checkIn, checkOut, isProcessing } = useBookingActions()
   const { toast } = useToast()
@@ -61,7 +59,6 @@ function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void
   const canCheckOut = canShowCheckOutButton(booking)
 
   const handleCheckInClick = () => {
-    setValidationError(null)
     setValidationWarning(null)
     
     const validation = validateCheckIn(booking)
@@ -83,7 +80,6 @@ function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void
   }
 
   const handleCheckOutClick = () => {
-    setValidationError(null)
     setValidationWarning(null)
     
     const validation = validateCheckOut(booking)
@@ -243,7 +239,7 @@ function BookingCard({ booking, onUpdate }: { booking: any; onUpdate: () => void
 
 // Student/Lecturer Dashboard Component
 function StudentLecturerDashboard() {
-  const [bookings, setBookings] = useState<any[]>([])
+  const [bookings, setBookings] = useState<BookingListDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
@@ -253,13 +249,28 @@ function StudentLecturerDashboard() {
 
   const fetchBookings = async () => {
     try {
+      setIsLoading(true)
       const { bookingApi } = await import('@/lib/api/booking')
       const response = await bookingApi.getMyBookingHistory()
       if (response.success && response.data) {
-        setBookings(response.data)
+        setBookings(response.data || [])
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to fetch bookings",
+          variant: "destructive",
+        })
+        setBookings([])
       }
     } catch (err) {
       console.error('Error fetching bookings:', err)
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      setBookings([])
     } finally {
       setIsLoading(false)
     }
@@ -269,15 +280,40 @@ function StudentLecturerDashboard() {
     .filter((b) => b.status === "Approved" && new Date(b.bookingDate) >= new Date())
     .slice(0, 3)
 
+  // Calculate statistics from API data
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
   const statistics = {
     totalBookings: bookings.length,
+    completedCount: bookings.filter(b => b.status === "Completed").length,
     noShowCount: bookings.filter(b => b.status === "NoShow").length,
-    favoriteCount: 3,
-    upcomingCount: bookings.filter((b) => b.status === "Approved" && new Date(b.bookingDate) >= new Date()).length,
+    upcomingCount: bookings.filter((b) => {
+      const bookingDate = new Date(b.bookingDate)
+      bookingDate.setHours(0, 0, 0, 0)
+      return b.status === "Approved" && bookingDate >= today
+    }).length,
+    pendingCount: bookings.filter(b => 
+      b.status === "WaitingLecturerApproval" || 
+      b.status === "WaitingAdminApproval" || 
+      b.status === "Pending"
+    ).length,
+    rejectedCount: bookings.filter(b => b.status === "Rejected").length,
+  }
+
+  if (isLoading) {
+  return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Hero Section with Search */}
       <HeroSection 
         title="Discover & Book Facilities"
@@ -286,53 +322,93 @@ function StudentLecturerDashboard() {
         backgroundImage="/FPT layout.png"
       />
 
-      {/* Statistics Cards */}
+      {/* Top Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Bookings"
-          value={statistics.totalBookings}
-          icon={Calendar}
-          description="All time bookings"
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Upcoming"
-          value={statistics.upcomingCount}
-          icon={Clock}
-          description="Scheduled bookings"
-        />
-        <StatCard
-          title="Completed"
-          value={statistics.totalBookings - statistics.noShowCount}
-          icon={CheckCircle2}
-          description="Successfully used"
-        />
-        <StatCard
-          title="No-show Count"
-          value={statistics.noShowCount}
-          icon={TrendingUp}
-          description="Missed bookings"
-          className={statistics.noShowCount > 0 ? "border-orange-200 bg-orange-50/50" : ""}
-        />
+        <Link href="/dashboard/history">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Bookings</p>
+                  <p className="text-3xl font-bold text-gray-900">{statistics.totalBookings}</p>
+                  <p className="text-xs text-gray-500 mt-1">All time bookings</p>
+      </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/bookings?status=Approved">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Upcoming</p>
+                  <p className="text-3xl font-bold text-gray-900">{statistics.upcomingCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">Scheduled bookings</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/history?status=Completed">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Completed</p>
+                  <p className="text-3xl font-bold text-gray-900">{statistics.completedCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">Successfully used</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/history?status=NoShow">
+          <Card className={`bg-white ${statistics.noShowCount > 0 ? "border-orange-200" : "border-gray-200"} hover:shadow-lg transition-all cursor-pointer h-full`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">No-show Count</p>
+                  <p className="text-3xl font-bold text-gray-900">{statistics.noShowCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">Missed bookings</p>
+                </div>
+                <div className={`w-12 h-12 ${statistics.noShowCount > 0 ? "bg-orange-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
+                  <TrendingUp className={`h-6 w-6 ${statistics.noShowCount > 0 ? "text-orange-600" : "text-gray-600"}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      {/* Main Content Grid */}
+      {/* Main Content Grid - 2 Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Upcoming Bookings */}
-        <div className="lg:col-span-2">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
+        {/* Upcoming Bookings - Main Card */}
+        <Card className="lg:col-span-2 bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Upcoming Bookings</h2>
-                <p className="text-sm text-muted-foreground mt-1">Your next facility reservations</p>
+                <CardTitle className="text-lg font-semibold text-gray-900">Upcoming Bookings</CardTitle>
+                <CardDescription className="text-gray-500">Your next facility reservations</CardDescription>
               </div>
               <Link href="/dashboard/bookings">
-                <Button variant="outline" size="sm">
-                  View All
-                </Button>
+                <Button variant="outline" size="sm">View All</Button>
               </Link>
             </div>
-            
+          </CardHeader>
+          <CardContent>
             {upcomingBookings.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
@@ -350,70 +426,40 @@ function StudentLecturerDashboard() {
                 ))}
               </div>
             )}
-          </Card>
-        </div>
-
-        {/* Quick Actions & Features */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <Link href="/dashboard/search" className="block">
-                <Button className="w-full justify-start h-auto py-3 bg-primary hover:bg-primary/90 text-primary-foreground">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="font-semibold">Search Facilities</span>
-                    <span className="text-xs opacity-90">Find and book facilities</span>
-                  </div>
-                </Button>
-              </Link>
-              <Link href="/dashboard/bookings" className="block">
-                <Button variant="outline" className="w-full justify-start h-auto py-3">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="font-semibold">My Bookings</span>
-                    <span className="text-xs text-muted-foreground">View all bookings</span>
-                  </div>
-                </Button>
-              </Link>
-              <Link href="/dashboard/calendar" className="block">
-                <Button variant="outline" className="w-full justify-start h-auto py-3">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="font-semibold">Calendar View</span>
-                    <span className="text-xs text-muted-foreground">See your schedule</span>
-                  </div>
-                </Button>
-              </Link>
-            </div>
+          </CardContent>
           </Card>
 
-          {/* Features Info */}
-          <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <h3 className="font-bold text-lg mb-3">Why Choose Our System?</h3>
+        {/* Features Info - Sidebar */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Why Choose Our System?</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">Easy Booking</p>
-                  <p className="text-muted-foreground text-xs">Simple and intuitive booking process</p>
+                  <p className="font-medium text-gray-900">Easy Booking</p>
+                  <p className="text-gray-500 text-xs">Simple and intuitive booking process</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">Real-time Availability</p>
-                  <p className="text-muted-foreground text-xs">See facility status instantly</p>
+                  <p className="font-medium text-gray-900">Real-time Availability</p>
+                  <p className="text-gray-500 text-xs">See facility status instantly</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">Free for Students</p>
-                  <p className="text-muted-foreground text-xs">No cost for academic use</p>
+                  <p className="font-medium text-gray-900">Free for Students</p>
+                  <p className="text-gray-500 text-xs">No cost for academic use</p>
                 </div>
               </div>
             </div>
+          </CardContent>
           </Card>
-        </div>
       </div>
     </div>
   )
@@ -460,184 +506,355 @@ function AdminDashboard() {
         <p className="text-muted-foreground">System overview and management</p>
       </div>
 
-      {/* User Statistics */}
+      {/* Top Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Link href="/dashboard/admin/users">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
       <div>
-        <h2 className="text-xl font-semibold mb-4">User Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers}
-            icon={Users}
-            description="All registered users"
-          />
-          <StatCard
-            title="Students"
-            value={stats.totalStudents}
-            icon={Users}
-            description="Student accounts"
-            className="border-blue-200 bg-blue-50/50"
-          />
-          <StatCard
-            title="Lecturers"
-            value={stats.totalLecturers}
-            icon={Users}
-            description="Lecturer accounts"
-            className="border-purple-200 bg-purple-50/50"
-          />
-          <StatCard
-            title="Pending Registrations"
-            value={stats.pendingRegistrations}
-            icon={AlertCircle}
-            description="New user requests"
-            className={stats.pendingRegistrations > 0 ? "border-orange-200 bg-orange-50/50" : ""}
-          />
-          <StatCard
-            title="Campus Changes"
-            value={stats.pendingCampusChangeRequests}
-            icon={Building2}
-            description="Pending requests"
-            className={stats.pendingCampusChangeRequests > 0 ? "border-orange-200 bg-orange-50/50" : ""}
-          />
+                  <p className="text-sm font-medium text-gray-500">Total Users</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
+                  <p className="text-xs text-gray-500 mt-1">All registered users</p>
         </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600" />
+      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/admin/facilities">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+      <div>
+                  <p className="text-sm font-medium text-gray-500">Total Facilities</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalFacilities}</p>
+                  <p className="text-xs text-gray-500 mt-1">All facilities</p>
+        </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-green-600" />
+      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href={`/dashboard/admin/bookings?date=${new Date().toISOString().split('T')[0]}`}>
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+      <div>
+                  <p className="text-sm font-medium text-gray-500">Bookings This Month</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalBookingsThisMonth}</p>
+                  <p className="text-xs text-gray-500 mt-1">Monthly bookings</p>
+        </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-purple-600" />
+      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/admin/bookings?filter=pending">
+          <Card className={`bg-white ${totalPendingApprovals > 0 ? "border-orange-200" : "border-gray-200"} hover:shadow-lg transition-all cursor-pointer h-full`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+      <div>
+                  <p className="text-sm font-medium text-gray-500">Pending Approvals</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalPendingApprovals}</p>
+                  <p className="text-xs text-gray-500 mt-1">Requires attention</p>
+        </div>
+                <div className={`w-12 h-12 ${totalPendingApprovals > 0 ? "bg-orange-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
+                  <FileCheck className={`h-6 w-6 ${totalPendingApprovals > 0 ? "text-orange-600" : "text-gray-600"}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      {/* Booking Statistics */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Booking Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Pending Approvals"
-            value={totalPendingApprovals}
-            icon={FileCheck}
-            description={`Lecturer: ${stats.pendingLecturerApprovals}, Admin: ${stats.pendingAdminApprovals}`}
-            className={totalPendingApprovals > 0 ? "border-orange-200 bg-orange-50/50" : ""}
-          />
-          <StatCard
-            title="Approved Today"
-            value={stats.approvedBookingsToday}
-            icon={CheckCircle2}
-            description="Bookings approved"
-            className="border-green-200 bg-green-50/50"
-          />
-          <StatCard
-            title="Rejected Today"
-            value={stats.rejectedBookingsToday}
-            icon={AlertCircle}
-            description="Bookings rejected"
-            className={stats.rejectedBookingsToday > 0 ? "border-red-200 bg-red-50/50" : ""}
-          />
-          <StatCard
-            title="In Use Now"
-            value={stats.inUseBookingsNow}
-            icon={Clock}
-            description="Active bookings"
-            className="border-blue-200 bg-blue-50/50"
-          />
-        </div>
-      </div>
-
-      {/* Booking Activity */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Booking Activity</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            title="Today"
-            value={stats.totalBookingsToday}
-            icon={Calendar}
-            description="Bookings today"
-          />
-          <StatCard
-            title="This Week"
-            value={stats.totalBookingsThisWeek}
-            icon={TrendingUp}
-            description="Bookings this week"
-          />
-          <StatCard
-            title="This Month"
-            value={stats.totalBookingsThisMonth}
-            icon={BarChart3}
-            description="Bookings this month"
-          />
-        </div>
-      </div>
-
-      {/* Facility Statistics */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Facility Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard
-            title="Total Facilities"
-            value={stats.totalFacilities}
-            icon={Building2}
-            description="All facilities"
-          />
-          <StatCard
-            title="Available"
-            value={stats.availableFacilities}
-            icon={CheckCircle2}
-            description="Ready to book"
-            className="border-green-200 bg-green-50/50"
-          />
-          <StatCard
-            title="In Use"
-            value={stats.inUseFacilities}
-            icon={Clock}
-            description="Currently occupied"
-            className="border-blue-200 bg-blue-50/50"
-          />
-          <StatCard
-            title="Maintenance"
-            value={stats.maintenanceFacilities}
-            icon={AlertCircle}
-            description="Under maintenance"
-            className={stats.maintenanceFacilities > 0 ? "border-yellow-200 bg-yellow-50/50" : ""}
-          />
-          <StatCard
-            title="Total Campuses"
-            value={stats.totalCampuses}
-            icon={Building2}
-            description="Campus locations"
-          />
-        </div>
-      </div>
-
-      {/* Utilization Rate */}
-      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-primary/20 rounded-lg">
-            <BarChart3 className="w-6 h-6 text-primary" />
+      {/* Main Content Grid - 2 Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* User Overview - Main Card */}
+        <Card className="lg:col-span-2 bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">User Overview</CardTitle>
+            <CardDescription className="text-gray-500">User statistics and pending requests</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <Link href="/dashboard/admin/users?role=Student">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Facility Utilization Rate</h3>
-            <p className="text-sm text-muted-foreground">Overall facility usage</p>
+                    <p className="text-lg font-bold text-gray-900">{stats.totalStudents}</p>
+                    <p className="text-sm font-medium text-gray-700">Students</p>
+                    <p className="text-xs text-gray-500">Student accounts</p>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Current Rate</span>
-            <span className="text-sm font-bold text-primary">{stats.facilityUtilizationRate.toFixed(1)}%</span>
+              </Link>
+              <Link href="/dashboard/admin/users?role=Lecturer">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-purple-600" />
           </div>
-          <div className="w-full bg-muted rounded-full h-3">
-            <div 
-              className="bg-primary h-3 rounded-full transition-all"
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.totalLecturers}</p>
+                    <p className="text-sm font-medium text-gray-700">Lecturers</p>
+                    <p className="text-xs text-gray-500">Lecturer accounts</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/users?tab=pending">
+                <div className={`flex items-center gap-3 p-3 ${stats.pendingRegistrations > 0 ? "bg-orange-50" : "bg-gray-50"} rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}>
+                  <div className={`w-10 h-10 ${stats.pendingRegistrations > 0 ? "bg-orange-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
+                    <AlertCircle className={`h-5 w-5 ${stats.pendingRegistrations > 0 ? "text-orange-600" : "text-gray-600"}`} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.pendingRegistrations}</p>
+                    <p className="text-sm font-medium text-gray-700">Pending Registrations</p>
+                    <p className="text-xs text-gray-500">New user requests</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/users?tab=campus-change">
+                <div className={`flex items-center gap-3 p-3 ${stats.pendingCampusChangeRequests > 0 ? "bg-orange-50" : "bg-gray-50"} rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}>
+                  <div className={`w-10 h-10 ${stats.pendingCampusChangeRequests > 0 ? "bg-orange-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
+                    <Building2 className={`h-5 w-5 ${stats.pendingCampusChangeRequests > 0 ? "text-orange-600" : "text-gray-600"}`} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.pendingCampusChangeRequests}</p>
+                    <p className="text-sm font-medium text-gray-700">Campus Changes</p>
+                    <p className="text-xs text-gray-500">Pending requests</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Facility Status - Sidebar */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Facility Status</CardTitle>
+            <CardDescription className="text-gray-500">Current facility availability</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Link href="/dashboard/admin/facilities?status=Available">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Available</p>
+                      <p className="text-xs text-gray-500">Ready to book</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">{stats.availableFacilities}</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/facilities?status=Unavailable">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">In Use</p>
+                      <p className="text-xs text-gray-500">Currently occupied</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">{stats.inUseFacilities}</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/facilities?status=UnderMaintenance">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 ${stats.maintenanceFacilities > 0 ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-600"} rounded-full flex items-center justify-center`}>
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Maintenance</p>
+                      <p className="text-xs text-gray-500">Under maintenance</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">{stats.maintenanceFacilities}</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <Link href="/dashboard/admin/campuses">
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-800">Total Campuses:</span>
+                  <span className="text-lg font-bold text-blue-600">{stats.totalCampuses}</span>
+                </div>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Booking Overview - 2 Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Booking Statistics - Main Card */}
+        <Card className="lg:col-span-2 bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Booking Overview</CardTitle>
+            <CardDescription className="text-gray-500">Booking statistics and activity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <Link href="/dashboard/admin/bookings?status=Approved&date=today">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.approvedBookingsToday}</p>
+                    <p className="text-sm font-medium text-gray-700">Approved Today</p>
+                    <p className="text-xs text-gray-500">Bookings approved</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/bookings?status=Rejected&date=today">
+                <div className={`flex items-center gap-3 p-3 ${stats.rejectedBookingsToday > 0 ? "bg-red-50" : "bg-gray-50"} rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}>
+                  <div className={`w-10 h-10 ${stats.rejectedBookingsToday > 0 ? "bg-red-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
+                    <AlertCircle className={`h-5 w-5 ${stats.rejectedBookingsToday > 0 ? "text-red-600" : "text-gray-600"}`} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.rejectedBookingsToday}</p>
+                    <p className="text-sm font-medium text-gray-700">Rejected Today</p>
+                    <p className="text-xs text-gray-500">Bookings rejected</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/bookings?status=InUse">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.inUseBookingsNow}</p>
+                    <p className="text-sm font-medium text-gray-700">In Use Now</p>
+                    <p className="text-xs text-gray-500">Active bookings</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/dashboard/admin/bookings?date=today">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">{stats.totalBookingsToday}</p>
+                    <p className="text-sm font-medium text-gray-700">Today</p>
+                    <p className="text-xs text-gray-500">Bookings today</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            {/* Quick Stats */}
+            <Link href="/dashboard/admin/bookings">
+              <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors cursor-pointer">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">Booking Activity</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsToday}</p>
+                    <p className="text-xs text-gray-600">Today</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsThisWeek}</p>
+                    <p className="text-xs text-gray-600">This Week</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsThisMonth}</p>
+                    <p className="text-xs text-gray-600">This Month</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Utilization Rate - Sidebar */}
+        <Link href="/dashboard/admin/analytics">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">Utilization Rate</CardTitle>
+              <CardDescription className="text-gray-500">Overall facility usage</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-primary mb-2">{stats.facilityUtilizationRate.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-500">Current Rate</p>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-4">
+                  <div 
+                    className="bg-primary h-4 rounded-full transition-all"
               style={{ width: `${Math.min(stats.facilityUtilizationRate, 100)}%` }}
             ></div>
           </div>
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Pending Approvals:</span>
+                    <span className="font-medium text-gray-900">
+                      Lecturer: {stats.pendingLecturerApprovals}
+                    </span>
         </div>
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-gray-500">Admin:</span>
+                    <span className="font-medium text-gray-900">{stats.pendingAdminApprovals}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
       </Card>
+        </Link>
+      </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Bookings */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Bookings</h2>
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-gray-900">Recent Bookings</CardTitle>
+                <CardDescription className="text-gray-500">Latest booking activity</CardDescription>
+              </div>
+              <Link href="/dashboard/admin/bookings">
+                <Button variant="outline" size="sm">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-3">
             {stats.recentBookings && stats.recentBookings.length > 0 ? (
               stats.recentBookings.slice(0, 5).map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{booking.facilityName}</p>
-                    <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-sm text-gray-900">{booking.facilityName}</p>
+                      <p className="text-xs text-gray-500">
                       {booking.bookedByName} • {new Date(booking.bookingDate).toLocaleDateString()}
                     </p>
                   </div>
@@ -658,21 +875,33 @@ function AdminDashboard() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No recent bookings</p>
+                <p className="text-sm text-gray-500 text-center py-4">No recent bookings</p>
             )}
           </div>
+          </CardContent>
         </Card>
 
         {/* Recent Registrations */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Registrations</h2>
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-gray-900">Recent Registrations</CardTitle>
+                <CardDescription className="text-gray-500">New user registrations</CardDescription>
+              </div>
+              <Link href="/dashboard/admin/users">
+                <Button variant="outline" size="sm">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-3">
             {stats.recentRegistrations && stats.recentRegistrations.length > 0 ? (
               stats.recentRegistrations.slice(0, 5).map((registration) => (
-                <div key={registration.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div key={registration.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{registration.fullName}</p>
-                    <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-sm text-gray-900">{registration.fullName}</p>
+                      <p className="text-xs text-gray-500">
                       {registration.email} • {registration.role}
                     </p>
                   </div>
@@ -685,113 +914,13 @@ function AdminDashboard() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No recent registrations</p>
+                <p className="text-sm text-gray-500 text-center py-4">No recent registrations</p>
             )}
           </div>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link href="/dashboard/admin/bookings">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <FileCheck className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Booking Approvals</h3>
-                  <p className="text-sm text-muted-foreground">Review and approve bookings</p>
-                </div>
-              </div>
-              {totalPendingApprovals > 0 && (
-                <div className="flex items-center gap-2 text-sm text-orange-600">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{totalPendingApprovals} pending</span>
-                </div>
-              )}
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/admin/users">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">User Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage users and approvals</p>
-                </div>
-              </div>
-              {stats.pendingRegistrations > 0 && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{stats.pendingRegistrations} new registrations</span>
-                </div>
-              )}
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/admin/facilities">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Building2 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Facility Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage facilities and types</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/admin/analytics">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <BarChart3 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Analytics</h3>
-                  <p className="text-sm text-muted-foreground">View system statistics</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/admin/campuses">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Building2 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Campus Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage campuses</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/holidays">
-            <Card className="p-6 hover:shadow-lg transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Calendar className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Holiday Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage holidays</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        </div>
-      </div>
     </div>
   )
 }

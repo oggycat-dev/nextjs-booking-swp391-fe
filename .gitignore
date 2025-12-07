@@ -31,6 +31,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Firebase Service Worker with credentials
+# Use firebase-messaging-sw.example.js as template
+public/firebase-messaging-sw.js
+
 # IDEs and editors
 .idea/
 .vscode/
