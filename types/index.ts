@@ -510,6 +510,10 @@ export interface ChangeRoomRequest {
   adminResponse: string; // Required by backend
 }
 
+export interface RejectIssueRequest {
+  rejectionReason: string; // Required by backend
+}
+
 export interface ChangeRoomResponse {
   id: string;
   reportCode: string;
