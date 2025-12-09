@@ -83,8 +83,21 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     // Validate time range
     if (startTime >= endTime) {
       toast({
-        title: "Invalid Time Range",
         description: "End time must be after start time",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate booking time is in the future
+    const now = new Date()
+    const bookingDateTime = new Date(`${date}T${startTime}:00`)
+    
+    // Check if booking is in the past
+    if (bookingDateTime <= now) {
+      const nowTime = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+      toast({
+        description: `Cannot book in the past. Current time is ${nowTime}. Please select a future time slot.`,
         variant: "destructive",
       })
       return
@@ -143,17 +156,35 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
           onBookingCreated()
         }
       } else {
+        // Format error message to show time slot without title
+        let errorMessage = error || "Please try again"
+        
+        // If error mentions time slot, format it to show the time range
+        if (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked")) {
+          errorMessage = `This time slot is already booked from ${startTime} to ${endTime}`
+        } else if (startTime && endTime) {
+          // Show the attempted time slot even if error doesn't mention it
+          errorMessage = `This time slot is already booked from ${startTime} to ${endTime}`
+        }
+        
         toast({
-          title: "Failed to Create Booking",
-          description: error || "Please try again",
+          description: errorMessage,
           variant: "destructive",
         })
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create booking"
+      
+      // Format error message to show time slot without title
+      let formattedMessage = errorMessage
+      if (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked")) {
+        formattedMessage = `This time slot is already booked from ${startTime} to ${endTime}`
+      } else if (startTime && endTime) {
+        formattedMessage = `This time slot is already booked from ${startTime} to ${endTime}`
+      }
+      
       toast({
-        title: "Failed to Create Booking",
-        description: errorMessage,
+        description: formattedMessage,
         variant: "destructive",
       })
     }

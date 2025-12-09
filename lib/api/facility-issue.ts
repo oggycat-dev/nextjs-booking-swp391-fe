@@ -39,12 +39,8 @@ export const facilityIssueApi = {
 
       // For FormData, we need to let browser set Content-Type with boundary
       // So we only get auth headers without Content-Type
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      // Don't set Content-Type - browser will set it automatically with boundary for FormData
+      // Use getAuthHeaders with "multipart/form-data" to skip Content-Type header
+      const headers = getAuthHeaders("multipart/form-data");
 
       const url = `${API_URL}/FacilityIssue/report`;
       console.log('Reporting issue to:', url);
@@ -61,23 +57,33 @@ export const facilityIssueApi = {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         try {
           const errorData = errorText ? JSON.parse(errorText) : null;
-          errorMessage = errorData?.message || errorMessage;
+          if (errorData) {
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            // Include validation errors if available
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+              errorMessage += `: ${errorData.errors.join(', ')}`;
+            }
+          }
         } catch {
           if (errorText) errorMessage = errorText;
         }
+        console.error('Report issue error:', errorMessage);
+        console.error('Response status:', response.status);
+        console.error('Response text:', errorText);
         throw new Error(errorMessage);
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const text = await response.text();
-        if (!text || text.trim() === '') {
-          throw new Error('Empty response from server');
-        }
-        return JSON.parse(text);
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Empty response from server');
       }
-
-      return response.json();
+      
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', text);
+        throw new Error('Invalid response format from server');
+      }
     } catch (error) {
       console.error('Error reporting facility issue:', error);
       throw error;
