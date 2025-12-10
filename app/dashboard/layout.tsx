@@ -11,7 +11,13 @@ import { useAuth } from "@/hooks/use-auth"
 import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
 import { SessionManager } from "@/components/auth/session-manager"
 import { FirebaseNotificationProvider } from "@/components/notifications/firebase-notification-provider"
-import { Bell } from "lucide-react"
+import { Bell, MessageCircle, ChevronDown } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { storage } from "@/lib/storage-manager"
 
 export default function DashboardLayout({
@@ -182,19 +188,95 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-xl sticky top-0 z-50 border-b border-primary-foreground/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* System Title - Left Side */}
-          <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity">
-            <img src="/logo.png" alt="FPT" className="w-14 h-14 object-contain" />
+      <nav className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-sm sticky top-0 z-50 border-b border-primary-foreground/10">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center">
+          {/* Logo and Title - Left Side */}
+          <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0">
+            <img src="/logo.png" alt="FPT" className="w-12 h-12 object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-left">Facility Booking System</h1>
-              <p className="text-xs text-primary-foreground/80 text-left">FPT University</p>
+              <h1 className="text-lg font-bold text-left text-primary-foreground">
+                Facility Booking System
+              </h1>
+              <p className="text-xs text-left text-primary-foreground/80">
+                FPT University
+              </p>
             </div>
           </Link>
 
+          {/* Navigation Links - Center (only for Student/Lecturer) */}
+          {userRole !== "admin" && (
+            <div className="flex items-center gap-1 flex-1 justify-center">
+              <Link href="/dashboard">
+                <button
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
+                    pathname === "/dashboard"
+                      ? "bg-white/20 text-primary-foreground"
+                      : "text-primary-foreground/90 hover:bg-white/10"
+                  }`}
+                >
+                  Home
+                </button>
+              </Link>
+              <Link href="/dashboard/search">
+                <button
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
+                    pathname?.startsWith("/dashboard/search")
+                      ? "bg-white/20 text-primary-foreground"
+                      : "text-primary-foreground/90 hover:bg-white/10"
+                  }`}
+                >
+                  Search Facilities
+                </button>
+              </Link>
+              <Link href="/dashboard/bookings">
+                <button
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
+                    pathname === "/dashboard/bookings"
+                      ? "bg-white/20 text-primary-foreground"
+                      : "text-primary-foreground/90 hover:bg-white/10"
+                  }`}
+                >
+                  My Bookings
+                </button>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-1 ${
+                      pathname?.startsWith("/dashboard/calendar") || pathname?.startsWith("/dashboard/history") || pathname?.startsWith("/dashboard/holidays")
+                        ? "bg-white/20 text-primary-foreground"
+                        : "text-primary-foreground/90 hover:bg-white/10"
+                    }`}
+                  >
+                    More
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/calendar" className="cursor-pointer">
+                      Calendar View
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/history" className="cursor-pointer">
+                      Booking History
+                    </Link>
+                  </DropdownMenuItem>
+                  {userRole === "lecturer" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/holidays" className="cursor-pointer">
+                        Holidays
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
           {/* Profile Container - Right Side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
             {/* Notifications Button - Only for Admin */}
             {userRole === "admin" && (
               <Link href="/dashboard/notifications">
@@ -205,7 +287,6 @@ export default function DashboardLayout({
                   title="Notifications"
                 >
                   <Bell className="w-5 h-5" />
-                  {/* Badge for unread count */}
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
@@ -215,31 +296,30 @@ export default function DashboardLayout({
               </Link>
             )}
             
-            {/* Profile button - Only for Student and Lecturer */}
+            {/* User Profile - Student/Lecturer/Admin */}
             {userRole !== "admin" ? (
-              <Link href="/dashboard/profile">
-                <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg cursor-pointer hover:bg-white/20 transition-all duration-200">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
-                    {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{userInfo?.fullName || "User"}</span>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                        <span className="capitalize">{userRole}</span>
-                      </span>
-                      {userInfo?.campusName && (
-                        <>
-                          <span className="text-primary-foreground/40">•</span>
-                          <span>{userInfo.campusName}</span>
-                        </>
-                      )}
-                    </div>
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm text-primary-foreground">
+                  {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-primary-foreground">{userInfo?.fullName || "User"}</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                      <span className="capitalize text-primary-foreground/80">{userRole}</span>
+                    </span>
+                    {userInfo?.campusName && (
+                      <>
+                        <span className="text-primary-foreground/40">•</span>
+                        <span className="text-primary-foreground/80">{userInfo.campusName}</span>
+                      </>
+                    )}
                   </div>
                 </div>
-              </Link>
+              </div>
             ) : (
+              // Admin Profile
               <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
                   {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
@@ -255,6 +335,8 @@ export default function DashboardLayout({
                 </div>
               </div>
             )}
+            
+            {/* Logout Button */}
             <Button
               variant="ghost"
               size="sm"
@@ -275,34 +357,48 @@ export default function DashboardLayout({
         </div>
       </nav>
 
-      <div className="flex">
-        <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-80px)] p-6 shadow-lg">
-          <nav className="space-y-1.5">
-            {filteredNavItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <button
-                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    pathname === item.href
-                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              </Link>
-            ))}
-          </nav>
-        </aside>
+      {/* Sidebar for Admin, Topbar for Student/Lecturer */}
+      {userRole === "admin" ? (
+        <div className="flex">
+          <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-80px)] p-6 shadow-lg">
+            <nav className="space-y-1.5">
+              {filteredNavItems.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <button
+                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      pathname === item.href
+                        ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                </Link>
+              ))}
+            </nav>
+          </aside>
 
-        <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
-          <TokenRefreshProvider>
-            <SessionManager />
-            <FirebaseNotificationProvider userRole={userRole}>
-              {children}
-            </FirebaseNotificationProvider>
-          </TokenRefreshProvider>
-        </main>
-      </div>
+          <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
+            <TokenRefreshProvider>
+              <SessionManager />
+              <FirebaseNotificationProvider userRole={userRole}>
+                {children}
+              </FirebaseNotificationProvider>
+            </TokenRefreshProvider>
+          </main>
+        </div>
+       ) : (
+         <div className="flex flex-col">
+           <main className="flex-1 px-16 py-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-73px)]">
+             <TokenRefreshProvider>
+               <SessionManager />
+               <FirebaseNotificationProvider userRole={userRole}>
+                 {children}
+               </FirebaseNotificationProvider>
+             </TokenRefreshProvider>
+           </main>
+         </div>
+       )}
       <Toaster />
     </div>
   )

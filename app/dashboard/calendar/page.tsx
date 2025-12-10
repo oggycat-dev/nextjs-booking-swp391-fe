@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { useFacilities } from "@/hooks/use-facility"
 import { bookingApi } from "@/lib/api/booking"
-import type { BookingCalendarDto } from "@/types"
+import type { BookingCalendarDto, Facility } from "@/types"
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 AM to 10 PM
 
@@ -297,18 +298,18 @@ export default function CalendarPage() {
           {/* Facility Selector */}
           <div className="flex items-center gap-3 w-full md:w-auto">
             <label className="text-sm font-medium whitespace-nowrap">Select Facility:</label>
-            <select
-              value={selectedFacility}
-              onChange={(e) => setSelectedFacility(e.target.value)}
-              className="flex-1 md:min-w-[250px] px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">All Facilities</option>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.facilityName} ({facility.typeName})
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 md:min-w-[250px]">
+              <SearchableSelect
+                options={facilities}
+                value={selectedFacility}
+                onValueChange={(value) => setSelectedFacility(value)}
+                getOptionLabel={(facility: Facility) => `${facility.facilityName} (${facility.typeName})`}
+                getOptionValue={(facility: Facility) => facility.id}
+                placeholder="All Facilities"
+                searchPlaceholder="Search facilities..."
+                emptyMessage="No facility found."
+              />
+            </div>
           </div>
         </div>
       </Card>
