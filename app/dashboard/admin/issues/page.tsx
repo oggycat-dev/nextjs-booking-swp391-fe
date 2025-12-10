@@ -177,97 +177,146 @@ export default function AdminIssuesPage() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <Card className="p-12 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading issue reports...</p>
-        </Card>
-      ) : issues.length === 0 ? (
-        <Card className="p-12 text-center">
-          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg mb-2">No pending issue reports</p>
-          <p className="text-sm text-muted-foreground">All issues have been resolved</p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {issues.map((issue) => (
-            <Card key={issue.id} className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold">{issue.issueTitle}</h3>
-                    <Badge className={getSeverityColor(issue.severity)}>
-                      {issue.severity}
-                    </Badge>
-                    <Badge variant="outline">{issue.category}</Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        <span>Reported by: <strong className="text-foreground">{issue.reportedByName || issue.reportedByEmail}</strong></span>
+      {/* Issues Table */}
+      <Card className="overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading issue reports...</p>
+          </div>
+        ) : issues.length === 0 ? (
+          <div className="p-12 text-center">
+            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <p className="text-muted-foreground text-lg mb-2">No pending issue reports</p>
+            <p className="text-sm text-muted-foreground">All issues have been resolved</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-4 font-semibold text-sm">Issue Info</th>
+                  <th className="text-left p-4 font-semibold text-sm">Facility</th>
+                  <th className="text-left p-4 font-semibold text-sm">Reported By</th>
+                  <th className="text-left p-4 font-semibold text-sm">Description</th>
+                  <th className="text-center p-4 font-semibold text-sm">Severity</th>
+                  <th className="text-center p-4 font-semibold text-sm">Images</th>
+                  <th className="text-left p-4 font-semibold text-sm">Reported At</th>
+                  <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {issues.map((issue) => (
+                  <tr 
+                    key={issue.id} 
+                    className="border-b hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="p-4">
+                      <div>
+                        <div className="font-semibold text-base">{issue.issueTitle}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          <Badge variant="outline" className="text-xs">{issue.category}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Booking: {issue.bookingCode}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        <span>Facility: <strong className="text-foreground">{issue.facilityName}</strong></span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <span className="font-medium text-sm">{issue.facilityName}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span>Reported at: <strong className="text-foreground">{formatDate(issue.createdAt || new Date().toISOString())}</strong></span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-start gap-2">
+                        <User className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">{issue.reportedByName || "N/A"}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                            {issue.reportedByEmail}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Description:</h4>
-                <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  {issue.issueDescription}
-                </p>
-              </div>
-
-              {issue.imageUrls && issue.imageUrls.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" />
-                    Images ({issue.imageUrls.length})
-                  </h4>
-                  <div className="grid grid-cols-4 gap-2">
-                    {issue.imageUrls.map((imageUrl, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border">
-                        <img
-                          src={imageUrl}
-                          alt={`Issue image ${idx + 1}`}
-                          className="w-full h-full object-cover cursor-pointer hover:opacity-80"
-                          onClick={() => window.open(imageUrl, '_blank')}
-                        />
+                    </td>
+                    <td className="p-4">
+                      <p className="text-sm text-muted-foreground line-clamp-3 max-w-md">
+                        {issue.issueDescription}
+                      </p>
+                    </td>
+                    <td className="p-4 text-center">
+                      <Badge className={getSeverityColor(issue.severity)}>
+                        {issue.severity}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-center">
+                      {issue.imageUrls && issue.imageUrls.length > 0 ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{issue.imageUrls.length}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => {
+                              // Open first image in new tab, or show all in a modal
+                              if (issue.imageUrls && issue.imageUrls.length > 0) {
+                                window.open(issue.imageUrls[0], '_blank')
+                              }
+                            }}
+                            title="View images"
+                          >
+                            View
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-start gap-2">
+                        <Clock className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{formatDate(issue.createdAt || new Date().toISOString())}</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4 border-t">
-                <Button
-                  onClick={() => openChangeRoomDialog(issue)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Change Room
-                </Button>
-                <Button
-                  onClick={() => openRejectDialog(issue)}
-                  variant="destructive"
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Reject
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-3"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openChangeRoomDialog(issue)
+                          }}
+                          title="Change Room"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 px-3"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openRejectDialog(issue)
+                          }}
+                          title="Reject"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {/* Change Room Dialog */}
       <AlertDialog open={showChangeRoomDialog} onOpenChange={setShowChangeRoomDialog}>

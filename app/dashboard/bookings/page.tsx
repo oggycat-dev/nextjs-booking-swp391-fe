@@ -121,6 +121,42 @@ export default function BookingsPage() {
     }
   }, [error, toast])
 
+  // Auto-refresh for expired bookings (every 30 seconds)
+  useEffect(() => {
+    const checkAndRefreshExpiredBookings = () => {
+      const now = new Date()
+      
+      // Check if any approved bookings are about to expire or just expired
+      const hasExpiringBookings = historyBookings.some(booking => {
+        if ((booking.status === "Approved" || booking.status === "InUse") && !booking.checkedOutAt) {
+          const bookingDate = new Date(booking.bookingDate)
+          const [hours, minutes] = booking.endTime.split(':').map(Number)
+          const checkoutTime = new Date(bookingDate)
+          checkoutTime.setHours(hours, minutes, 0, 0)
+          
+          // Check if within 1 minute before grace period ends or just expired
+          const graceEndTime = new Date(checkoutTime.getTime() + 15 * 60 * 1000)
+          const timeDiff = graceEndTime.getTime() - now.getTime()
+          
+          // Refresh if within last minute of grace period or just expired (within 30 seconds after)
+          return timeDiff <= 60 * 1000 && timeDiff >= -30 * 1000
+        }
+        return false
+      })
+      
+      if (hasExpiringBookings) {
+        console.log('Auto-refreshing: Bookings near expiry detected')
+        fetchHistory()
+      }
+    }
+    
+    // Check every 30 seconds
+    const intervalId = setInterval(checkAndRefreshExpiredBookings, 30000)
+    
+    // Cleanup on unmount
+    return () => clearInterval(intervalId)
+  }, [historyBookings, fetchHistory])
+
   const fetchBookings = async () => {
     setIsLoading(true)
     try {
