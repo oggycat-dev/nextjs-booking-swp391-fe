@@ -533,68 +533,79 @@ export default function AdminUsersPage() {
             </Card>
           )}
           {!isPendingLoading && registrations.length > 0 && (
-            <div className="space-y-3">
-              {registrations.map((registration) => (
-                <Card
-                  key={registration.id}
-                  className="p-5 hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl flex items-center justify-center">
-                          <span className="text-lg font-bold text-yellow-600">
-                            {registration.fullName[0]}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-lg">{registration.fullName}</h3>
-                          <p className="text-sm text-muted-foreground">{registration.email}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-4 font-semibold text-sm">User Info</th>
+                      <th className="text-left p-4 font-semibold text-sm">Email</th>
+                      <th className="text-left p-4 font-semibold text-sm">Phone</th>
+                      <th className="text-left p-4 font-semibold text-sm">User Code</th>
+                      <th className="text-center p-4 font-semibold text-sm">Role</th>
+                      <th className="text-center p-4 font-semibold text-sm">Campus</th>
+                      <th className="text-left p-4 font-semibold text-sm">Created</th>
+                      <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrations.map((registration) => (
+                      <tr 
+                        key={registration.id} 
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <span className="text-base font-bold text-yellow-600">
+                                {registration.fullName[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm">{registration.fullName}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm text-muted-foreground">{registration.email}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{registration.phoneNumber}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm font-medium">{registration.userCode}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
                             {registration.role}
                           </span>
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
                             {registration.campusName}
                           </span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                          {registration.phoneNumber}
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {new Date(registration.createdAt).toLocaleDateString()}
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          {registration.userCode}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedPending(registration)}
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
-                        Review
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{new Date(registration.createdAt).toLocaleDateString()}</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedPending(registration)}
+                              className="text-green-600 border-green-200 hover:bg-green-50 h-8 px-3"
+                            >
+                              Review
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </>
       )}
@@ -618,63 +629,77 @@ export default function AdminUsersPage() {
             </Card>
           )}
           {!isCampusChangeLoading && campusChangeRequests.length > 0 && (
-            <div className="space-y-3">
-              {campusChangeRequests.map((request: CampusChangeRequest) => (
-                <Card
-                  key={request.id}
-                  className="p-5 hover:shadow-xl transition-all duration-300 border-2 hover:border-orange-500/50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl flex items-center justify-center">
-                          <span className="text-lg font-bold text-orange-600">
-                            {request.userName[0]}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-lg">{request.userName}</h3>
-                          <p className="text-sm text-muted-foreground">{request.userEmail}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-4 font-semibold text-sm">User Info</th>
+                      <th className="text-left p-4 font-semibold text-sm">Email</th>
+                      <th className="text-left p-4 font-semibold text-sm">Current Campus</th>
+                      <th className="text-left p-4 font-semibold text-sm">Requested Campus</th>
+                      <th className="text-left p-4 font-semibold text-sm">Reason</th>
+                      <th className="text-left p-4 font-semibold text-sm">Request Date</th>
+                      <th className="text-center p-4 font-semibold text-sm">Status</th>
+                      <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campusChangeRequests.map((request: CampusChangeRequest) => (
+                      <tr 
+                        key={request.id} 
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <span className="text-base font-bold text-orange-600">
+                                {request.userName[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm">{request.userName}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm text-muted-foreground">{request.userEmail}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm font-medium">{request.currentCampusName || "N/A"}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm font-semibold text-orange-600">{request.requestedCampusName}</span>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{request.reason}</p>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{new Date(request.createdAt).toLocaleDateString()}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
                             Pending
                           </span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Current Campus</p>
-                          <p className="font-semibold">{request.currentCampusName || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Requested Campus</p>
-                          <p className="font-semibold text-orange-600">{request.requestedCampusName}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Request Date</p>
-                          <p className="font-semibold">{new Date(request.createdAt).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 pl-16">
-                        <p className="text-xs text-muted-foreground mb-1">Reason</p>
-                        <p className="text-sm bg-muted p-2 rounded">{request.reason}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedCampusChange(request)}
-                        className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                      >
-                        Review
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedCampusChange(request)}
+                              className="text-orange-600 border-orange-200 hover:bg-orange-50 h-8 px-3"
+                            >
+                              Review
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </>
       )}
@@ -697,69 +722,95 @@ export default function AdminUsersPage() {
             )}
           </div>
 
-          <div className="space-y-3">
+          <Card className="overflow-hidden">
             {displayUsers.length === 0 ? (
-              <Card className="p-12 text-center">
+              <div className="p-12 text-center">
                 <p className="text-muted-foreground">No users found</p>
-              </Card>
+              </div>
             ) : (
-              displayUsers.map((user) => (
-                <Card
-                  key={user.id}
-                  className="p-5 hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 group"
-                  onClick={() => setSelectedUser(user)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
-                          <span className="text-lg font-bold text-primary">
-                            {user.fullName[0]}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                            {user.fullName}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-4 font-semibold text-sm">User Info</th>
+                      <th className="text-left p-4 font-semibold text-sm">Email</th>
+                      <th className="text-left p-4 font-semibold text-sm">User Code</th>
+                      <th className="text-center p-4 font-semibold text-sm">Role</th>
+                      <th className="text-left p-4 font-semibold text-sm">Created</th>
+                      <th className="text-center p-4 font-semibold text-sm">Status</th>
+                      <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayUsers.map((user) => (
+                      <tr 
+                        key={user.id} 
+                        className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => setSelectedUser(user)}
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <span className="text-base font-bold text-primary">
+                                {user.fullName[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm">{user.fullName}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm text-muted-foreground">{user.email}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm font-medium">{user.userCode}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
+                            user.role === "Student" 
+                              ? "bg-blue-100 text-blue-700 border-blue-200" 
+                              : user.role === "Lecturer"
+                              ? "bg-purple-100 text-purple-700 border-purple-200"
+                              : "bg-primary/10 text-primary border-primary/20"
+                          }`}>
                             {user.role}
                           </span>
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.isActive)} border`}>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{new Date(user.createdAt).toLocaleDateString()}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.isActive)} border`}>
                             {getStatusText(user.isActive)}
                           </span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm pl-16">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          {user.userCode}
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
-                        {user.lastLoginAt && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {new Date(user.lastLoginAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedUser(user)
+                              }}
+                              className="h-8 px-3"
+                              title="View Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+          </Card>
 
           {/* Pagination */}
           {users && users.totalPages > 1 && (

@@ -148,8 +148,9 @@ export default function AdminFacilitiesPage() {
       isActive: facility.isActive,
     })
     if (updated) {
-      toast({ title: "Status updated" })
+      toast({ title: "Status updated", duration: 1000 })
       fetchFacilities()
+      
     }
   }
 
@@ -221,13 +222,14 @@ export default function AdminFacilitiesPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      {/* Facility Table */}
+      <Card className="overflow-hidden">
         {isLoading ? (
-          <Card className="col-span-full p-12 text-center">
+          <div className="p-12 text-center">
             <p className="text-muted-foreground">Loading facilities...</p>
-          </Card>
+          </div>
         ) : filteredFacilities.length === 0 ? (
-          <Card className="col-span-full p-12 text-center">
+          <div className="p-12 text-center">
             <p className="text-muted-foreground mb-4">No facilities found</p>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -235,118 +237,142 @@ export default function AdminFacilitiesPage() {
             >
               Create New Facility
             </Button>
-          </Card>
+          </div>
         ) : (
-          filteredFacilities.map((facility) => (
-            <Card 
-              key={facility.id} 
-              className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer flex flex-col"
-              onClick={() => handleView(facility)}
-            >
-              {/* Image Section */}
-              <div className="relative w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-700 dark:to-gray-600">
-                {getImageUrl(facility) ? (
-                  <img
-                    src={getImageUrl(facility)!}
-                    alt={facility.facilityName}
-                    className="w-full h-full object-cover"
-                    crossOrigin="anonymous"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
-                {facility.status !== "Available" && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
-                      {facility.status === "UnderMaintenance" ? "Under Maintenance" : "Unavailable"}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Content Section */}
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-lg">{facility.facilityName}</h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${getStatusColor(facility.status)}`}>
-                    {facility.status}
-                  </span>
-                </div>
-                
-                <p className="text-xs text-muted-foreground mb-1">
-                  Code: <span className="font-medium">{facility.facilityCode}</span>
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {facility.typeName} • Campus: {facility.campusName} • Building {facility.building ?? "-"}, Floor {facility.floor ?? "-"} • Capacity: {facility.capacity}
-                </p>
-
-                {/* Equipment */}
-                {facility.equipment && (
-                  <div className="mb-4">
-                    <p className="text-xs text-muted-foreground mb-1">Equipment</p>
-                    <div className="flex flex-wrap gap-1">
-                      {facility.equipment
-                        .split(",")
-                        .map((e) => e.trim())
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .map((eq) => (
-                          <span key={eq} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                            {eq}
-                          </span>
-                        ))}
-                      {facility.equipment.split(",").filter(Boolean).length > 3 && (
-                        <span className="px-2 py-1 bg-muted text-xs rounded">
-                          +{facility.equipment.split(",").filter(Boolean).length - 3}
-                        </span>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-4 font-semibold text-sm">Facility Info</th>
+                  <th className="text-left p-4 font-semibold text-sm">Type</th>
+                  <th className="text-left p-4 font-semibold text-sm">Campus</th>
+                  <th className="text-left p-4 font-semibold text-sm">Location</th>
+                  <th className="text-center p-4 font-semibold text-sm">Capacity</th>
+                  <th className="text-left p-4 font-semibold text-sm">Equipment</th>
+                  <th className="text-center p-4 font-semibold text-sm">Status</th>
+                  <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredFacilities.map((facility) => (
+                  <tr 
+                    key={facility.id} 
+                    className="border-b hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="p-4">
+                      <div>
+                        <div className="font-bold text-base">{facility.facilityName}</div>
+                        <div className="text-xs text-muted-foreground">Code: {facility.facilityCode}</div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm">{facility.typeName}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm">{facility.campusName}</span>
+                    </td>
+                    <td className="p-4">
+                      <div className="text-sm">
+                        <div>Building: {facility.building ?? "-"}</div>
+                        <div className="text-xs text-muted-foreground">Floor: {facility.floor ?? "-"}</div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-sm font-semibold">{facility.capacity}</span>
+                    </td>
+                    <td className="p-4">
+                      {facility.equipment ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {facility.equipment
+                            .split(",")
+                            .map((e) => e.trim())
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((eq, idx) => (
+                              <span key={idx} className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded">
+                                {eq}
+                              </span>
+                            ))}
+                          {facility.equipment.split(",").filter(Boolean).length > 2 && (
+                            <span className="px-2 py-0.5 bg-muted text-xs rounded">
+                              +{facility.equipment.split(",").filter(Boolean).length - 2}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-2 mt-auto pt-4 border-t">
-                  <Button
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEdit(facility)
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <select
-                    value={facility.status}
-                    onChange={(e) => handleStatusChange(facility, e.target.value as FacilityStatus)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-2 py-1.5 text-xs border border-input rounded-lg bg-background w-full"
-                  >
-                    <option value="Available">Available</option>
-                    <option value="UnderMaintenance">Under maintenance</option>
-                    <option value="Unavailable">Unavailable</option>
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/10 w-full"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(facility)
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${getStatusColor(facility.status)}`}>
+                        {facility.status === "UnderMaintenance" ? "Maintenance" : facility.status}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleView(facility)
+                          }}
+                          className="h-8 px-3"
+                          title="View Details"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEdit(facility)
+                          }}
+                          className="h-8 px-3"
+                          title="Edit"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </Button>
+                        <select
+                          value={facility.status}
+                          onChange={(e) => handleStatusChange(facility, e.target.value as FacilityStatus)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-8 px-2 text-xs border border-input rounded-lg bg-background"
+                          title="Change Status"
+                        >
+                          <option value="Available">Available</option>
+                          <option value="UnderMaintenance">Maintenance</option>
+                          <option value="Unavailable">Unavailable</option>
+                        </select>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(facility)
+                          }}
+                          className="h-8 px-3"
+                          title="Delete"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </Card>
 
       {showModal && (
         <FacilityFormModal
