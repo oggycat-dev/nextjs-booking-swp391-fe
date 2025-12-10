@@ -156,16 +156,17 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
           onBookingCreated()
         }
       } else {
-        // Format error message to show time slot without title
+        // If createBooking returns null, check error state or use fallback
+        // But prefer checking error state first as it should be set by the hook
         let errorMessage = error || "Please try again"
         
-        // If error mentions time slot, format it to show the time range
-        if (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked")) {
-          errorMessage = `This time slot is already booked from ${startTime} to ${endTime}`
-        } else if (startTime && endTime) {
-          // Show the attempted time slot even if error doesn't mention it
+        // Only format message if it's about time slot being already booked
+        // Keep original message for working hours or other errors
+        if (errorMessage && (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked"))) {
           errorMessage = `This time slot is already booked from ${startTime} to ${endTime}`
         }
+        // Keep original message for working hours errors from BE
+        // No need to format - just show what BE returns
         
         toast({
           description: errorMessage,
@@ -175,13 +176,14 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create booking"
       
-      // Format error message to show time slot without title
+      // Only format message if it's about time slot being already booked
+      // Keep original message for working hours or other errors
       let formattedMessage = errorMessage
       if (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked")) {
         formattedMessage = `This time slot is already booked from ${startTime} to ${endTime}`
-      } else if (startTime && endTime) {
-        formattedMessage = `This time slot is already booked from ${startTime} to ${endTime}`
       }
+      // Keep original message for working hours errors from BE
+      // No need to format - just show what BE returns
       
       toast({
         description: formattedMessage,
