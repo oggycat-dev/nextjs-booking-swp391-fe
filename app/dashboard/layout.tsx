@@ -90,6 +90,14 @@ export default function DashboardLayout({
   }, [router, userRole]);
 
   useEffect(() => {
+    // Migrate from localStorage/sessionStorage to cookies if using cookies (for backward compatibility)
+    if (typeof window !== "undefined" && storage.getStorageType() === 'cookie') {
+      storage.migrateToCookies();
+    } else if (typeof window !== "undefined" && storage.getStorageType() === 'local') {
+      // Also migrate from sessionStorage to localStorage if using localStorage
+      storage.migrateFromSessionStorage();
+    }
+
     // Check for user with a small delay to ensure storage is ready
     const checkUser = () => {
       // Use storage manager instead of localStorage directly (supports sessionStorage)
