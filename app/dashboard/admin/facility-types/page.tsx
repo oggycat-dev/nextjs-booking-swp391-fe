@@ -368,11 +368,6 @@ export default function AdminFacilityTypesPage() {
                     <p className="mt-1">{selectedType.description}</p>
                   </div>
                 )}
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">ID</label>
-                  <p className="text-sm font-mono mt-1 text-muted-foreground">{selectedType.id}</p>
-                </div>
               </div>
 
               <div className="flex gap-3 mt-6">

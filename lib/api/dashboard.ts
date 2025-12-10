@@ -4,58 +4,9 @@
  */
 
 import { getAuthHeaders, apiConfig } from '../api-client';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, DashboardStats } from '@/types';
 
 const API_URL = apiConfig.baseURL;
-
-export interface DashboardStats {
-  totalUsers: number;
-  totalStudents: number;
-  totalLecturers: number;
-  pendingRegistrations: number;
-  pendingCampusChangeRequests: number;
-  totalBookingsToday: number;
-  totalBookingsThisWeek: number;
-  totalBookingsThisMonth: number;
-  pendingLecturerApprovals: number;
-  pendingAdminApprovals: number;
-  approvedBookingsToday: number;
-  rejectedBookingsToday: number;
-  inUseBookingsNow: number;
-  totalFacilities: number;
-  availableFacilities: number;
-  inUseFacilities: number;
-  maintenanceFacilities: number;
-  totalCampuses: number;
-  recentBookings: RecentBooking[];
-  recentRegistrations: RecentRegistration[];
-  facilityUtilizationRate: number;
-}
-
-export interface RecentBooking {
-  id: string;
-  bookingCode: string;
-  facilityName: string;
-  bookedByName: string;  // Added alias for userName
-  userName: string;
-  userRole: string;
-  bookingDate: string;
-  startTime: string;
-  endTime: string;
-  status: string;
-  createdAt: string;
-}
-
-export interface RecentRegistration {
-  id: string;
-  userCode: string;
-  fullName: string;
-  email: string;
-  role: string;
-  status: string;
-  isApproved: boolean;  // Added based on status
-  createdAt: string;
-}
 
 export const dashboardApi = {
   /**
@@ -90,7 +41,33 @@ export const dashboardApi = {
         throw new Error('Empty response from server');
       }
 
-      return JSON.parse(text);
+      const data = JSON.parse(text);
+      
+      // Map backend data to frontend format
+      if (data.data) {
+        // Map recent bookings: userName -> bookedByName
+        if (data.data.recentBookings && Array.isArray(data.data.recentBookings)) {
+          data.data.recentBookings = data.data.recentBookings.map((booking: any) => ({
+            ...booking,
+            bookedByName: booking.userName || booking.bookedByName || '',
+            // Ensure date strings are properly formatted
+            bookingDate: booking.bookingDate || '',
+            startTime: booking.startTime || '',
+            endTime: booking.endTime || '',
+            createdAt: booking.createdAt || '',
+          }));
+        }
+        
+        // Map recent registrations: status -> isApproved
+        if (data.data.recentRegistrations && Array.isArray(data.data.recentRegistrations)) {
+          data.data.recentRegistrations = data.data.recentRegistrations.map((registration: any) => ({
+            ...registration,
+            isApproved: registration.status === 'Approved' || registration.isApproved || false,
+          }));
+        }
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error fetching admin dashboard stats:', error);
       throw error;

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +13,7 @@ import { useCampusChangeRequests, useCampusChangeRequestMutations } from "@/hook
 import type { User, UserRole, PendingRegistration, CampusChangeRequest } from "@/types"
 
 export default function AdminUsersPage() {
+  const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<boolean | "">("")
@@ -52,6 +54,21 @@ export default function AdminUsersPage() {
   const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
   const { requests: campusChangeRequests, fetchPending: fetchCampusChangeRequests, isLoading: isCampusChangeLoading } = useCampusChangeRequests()
   const { approveRequest: approveCampusChangeRequest, isLoading: isApprovingCampusChange } = useCampusChangeRequestMutations()
+
+  // Read query params on mount
+  useEffect(() => {
+    const roleParam = searchParams.get("role")
+    const tabParam = searchParams.get("tab")
+    
+    if (roleParam) {
+      setFilterRole(roleParam)
+      setActiveTab("users")
+    }
+    
+    if (tabParam === "pending" || tabParam === "campus-change") {
+      setActiveTab(tabParam as "pending" | "campus-change")
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (activeTab === "users") {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,10 +53,20 @@ function formatDate(dateString: string): string {
 }
 
 export default function HistoryPage() {
+  const searchParams = useSearchParams()
   const { bookings, isLoading, error, fetchMyBookings } = useMyBookings()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
   const [facilityTypeMap, setFacilityTypeMap] = useState<Record<string, string>>({})
+  const [filterStatus, setFilterStatus] = useState<string>("")
+
+  // Read query params on mount
+  useEffect(() => {
+    const statusParam = searchParams.get("status")
+    if (statusParam) {
+      setFilterStatus(statusParam)
+    }
+  }, [searchParams])
 
   // Fetch facility types for all bookings
   useEffect(() => {
@@ -86,7 +97,13 @@ export default function HistoryPage() {
 
   // Map bookings to history entries
   const historyEntries: HistoryEntry[] = useMemo(() => {
-    return bookings.map((booking: Booking) => {
+    let filteredBookings = bookings
+    // Filter by status if provided
+    if (filterStatus) {
+      filteredBookings = filteredBookings.filter((booking: Booking) => booking.status === filterStatus)
+    }
+    
+    return filteredBookings.map((booking: Booking) => {
       const noShow = booking.status === "NoShow"
       
       return {
@@ -103,7 +120,7 @@ export default function HistoryPage() {
         booking,
       }
     })
-  }, [bookings, facilityTypeMap])
+  }, [bookings, facilityTypeMap, filterStatus])
 
   // Filter history based on search term
   const filteredHistory = useMemo(() => {

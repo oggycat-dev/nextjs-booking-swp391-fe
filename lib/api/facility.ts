@@ -170,8 +170,6 @@ export const facilityApi = {
    * Update a facility with images (Admin only)
    */
   update: async (id: string, request: UpdateFacilityRequest): Promise<ApiResponse<Facility>> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    
     // Create FormData for multipart/form-data
     const formData = new FormData();
     formData.append("facilityName", request.facilityName);
@@ -199,30 +197,47 @@ export const facilityApi = {
     
     console.log('Updating facility with FormData');
     
+    // Use getAuthHeaders with "multipart/form-data" to skip Content-Type header
+    const headers = getAuthHeaders("multipart/form-data");
+    
     const response = await fetch(`${API_URL}/Facility/${id}`, {
       method: "PUT",
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-        // Don't set Content-Type, let browser set it with boundary
-      },
+      headers: headers,
       body: formData,
     });
     
-    const text = await response.text();
-    console.log('Update response text:', text);
-    
     if (!response.ok) {
-      let errorData;
+      const errorText = await response.text();
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       try {
-        errorData = text ? JSON.parse(text) : null;
-      } catch (e) {
-        // Not JSON
+        const errorData = errorText ? JSON.parse(errorText) : null;
+        if (errorData) {
+          errorMessage = errorData.message || errorData.error || errorMessage;
+          // Include validation errors if available
+          if (errorData.errors && Array.isArray(errorData.errors)) {
+            errorMessage += `: ${errorData.errors.join(', ')}`;
+          }
+        }
+      } catch {
+        if (errorText) errorMessage = errorText;
       }
-      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      console.error('Update facility error:', errorMessage);
+      console.error('Response status:', response.status);
+      console.error('Response text:', errorText);
       throw new Error(errorMessage);
     }
+
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      throw new Error('Empty response from server');
+    }
     
-    return JSON.parse(text);
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', text);
+      throw new Error('Invalid response format from server');
+    }
   },
 
   /**
