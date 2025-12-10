@@ -27,13 +27,14 @@ yarn-error.log*
 
 # Local environment variables
 # Never commit .env files!
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
 # Firebase Service Worker (generated from template)
-public/firebase-messaging-sw.js
+#public/firebase-messaging-sw.js
 
 # IDEs and editors
 .idea/
