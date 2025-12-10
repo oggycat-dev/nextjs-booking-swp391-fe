@@ -223,6 +223,7 @@ export default function AdminCampusesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="text-left p-4 font-semibold text-sm">Campus Info</th>
                     <th className="text-left p-4 font-semibold text-sm">Address</th>
                     <th className="text-left p-4 font-semibold text-sm">Working Hours</th>
                     <th className="text-left p-4 font-semibold text-sm">Contact</th>
