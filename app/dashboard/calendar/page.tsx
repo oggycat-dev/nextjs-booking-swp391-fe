@@ -36,6 +36,7 @@ function getWeekDates(date: Date) {
 export default function CalendarPage() {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [selectedFacility, setSelectedFacility] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState<string>("")
   const [bookings, setBookings] = useState<BookingCalendarDto[]>([])
   const [selectedBooking, setSelectedBooking] = useState<BookingCalendarDto | null>(null)
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
@@ -50,6 +51,12 @@ export default function CalendarPage() {
   }, [currentWeek, selectedFacility])
   
   const fetchCalendarBookings = async () => {
+    // Don't load if no facility selected
+    if (!selectedFacility) {
+      setBookings([])
+      return
+    }
+    
     setIsLoadingBookings(true)
     try {
       const weekDates = getWeekDates(currentWeek)
@@ -294,20 +301,61 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {/* Facility Selector */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Facility Search and Selector */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
             <label className="text-sm font-medium whitespace-nowrap">Select Facility:</label>
+            
+            {/* Search Input */}
+            <div className="relative flex-1 md:min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Search facilities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 pr-8 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            
+            {/* Dropdown Selector */}
             <select
               value={selectedFacility}
               onChange={(e) => setSelectedFacility(e.target.value)}
-              className="flex-1 md:min-w-[250px] px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 md:min-w-[250px] px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              style={{
+                maxHeight: facilities.filter((facility) => 
+                  searchQuery === "" || 
+                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
+                ).length > 5 ? '200px' : 'auto',
+                overflowY: facilities.filter((facility) => 
+                  searchQuery === "" || 
+                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
+                ).length > 5 ? 'auto' : 'visible'
+              }}
+              size={1}
             >
-              <option value="">All Facilities</option>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.facilityName} ({facility.typeName})
-                </option>
-              ))}
+              <option value="">-- Select a facility --</option>
+              {facilities
+                .filter((facility) => 
+                  searchQuery === "" || 
+                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((facility) => (
+                  <option key={facility.id} value={facility.id}>
+                    {facility.facilityName} ({facility.typeName})
+                  </option>
+                ))}
             </select>
           </div>
         </div>
