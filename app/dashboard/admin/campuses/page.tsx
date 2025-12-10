@@ -211,96 +211,152 @@ export default function AdminCampusesPage() {
         </Card>
       )}
 
-      {/* Campus List */}
+      {/* Campus Table */}
       {!isLoading && !error && (
-        <div className="space-y-3">
+        <Card className="overflow-hidden">
           {campuses.length === 0 ? (
-            <Card className="p-12 text-center">
+            <div className="p-12 text-center">
               <p className="text-muted-foreground">No campuses found</p>
-            </Card>
+            </div>
           ) : (
-            campuses.map((campus) => (
-              <Card
-                key={campus.id}
-                className="group p-5 md:p-6 hover:shadow-2xl transition-all duration-300 border-0 ring-1 ring-gray-200 hover:ring-2 hover:ring-primary/50 cursor-pointer bg-white dark:bg-gray-900 hover:-translate-y-1"
-                onClick={() => handleViewDetail(campus)}
-              >
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary to-orange-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-4 font-semibold text-sm">Address</th>
+                    <th className="text-left p-4 font-semibold text-sm">Working Hours</th>
+                    <th className="text-left p-4 font-semibold text-sm">Contact</th>
+                    <th className="text-center p-4 font-semibold text-sm">Status</th>
+                    <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campuses.map((campus) => (
+                    <tr 
+                      key={campus.id} 
+                      className="border-b hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-bold text-base">{campus.campusName}</div>
+                            <div className="text-xs text-primary font-semibold">Code: {campus.campusCode}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-start gap-2 max-w-xs">
+                          <svg className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
+                          <span className="text-sm">{campus.address}</span>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-lg md:text-xl text-gray-900 dark:text-white group-hover:text-primary transition-colors">{campus.campusName}</h3>
-                          <p className="text-sm text-primary font-semibold">Code: {campus.campusCode}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap shadow-sm ${
-                      campus.isActive 
-                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white" 
-                        : "bg-gradient-to-r from-gray-400 to-gray-500 text-white"
-                    }`}>
-                      {campus.isActive ? "● ACTIVE" : "● INACTIVE"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <svg className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{campus.address}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Hours</p>
-                        <p className="text-xs font-semibold text-gray-900 dark:text-white">{campus.workingHoursStart.substring(0, 5)} - {campus.workingHoursEnd.substring(0, 5)}</p>
-                      </div>
-                    </div>
-                    {campus.contactPhone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
+                          <span className="text-sm font-medium">
+                            {campus.workingHoursStart.substring(0, 5)} - {campus.workingHoursEnd.substring(0, 5)}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Phone</p>
-                          <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{campus.contactPhone}</p>
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          {campus.contactPhone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              <span>{campus.contactPhone}</span>
+                            </div>
+                          )}
+                          {campus.contactEmail && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <svg className="w-4 h-4 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span className="truncate max-w-[180px]" title={campus.contactEmail}>{campus.contactEmail}</span>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                    {campus.contactEmail && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                          campus.isActive 
+                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        }`}>
+                          {campus.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleViewDetail(campus)
+                            }}
+                            className="h-8 px-3"
+                            title="View Details"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenEditModal(campus)
+                            }}
+                            className="h-8 px-3"
+                            title="Edit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={campus.isActive ? "destructive" : "default"}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleActive(campus)
+                            }}
+                            className="h-8 px-3"
+                            title={campus.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {campus.isActive ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                          </Button>
                         </div>
-                        <div className="overflow-hidden">
-                          <p className="text-xs text-gray-500">Email</p>
-                          <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{campus.contactEmail}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Create/Edit Modal */}
