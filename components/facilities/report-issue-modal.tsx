@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,7 @@ const CATEGORY_OPTIONS = [
 
 export function ReportIssueModal({ isOpen, onClose, booking, onReported }: ReportIssueModalProps) {
   const { toast } = useToast()
-  const { reportIssue, isLoading } = useFacilityIssueMutations()
+  const { reportIssue, isLoading, error } = useFacilityIssueMutations()
   
   const [issueTitle, setIssueTitle] = useState("")
   const [issueDescription, setIssueDescription] = useState("")
@@ -42,6 +42,19 @@ export function ReportIssueModal({ isOpen, onClose, booking, onReported }: Repor
   const [category, setCategory] = useState("")
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      // Reset form when modal opens
+      setIssueTitle("")
+      setIssueDescription("")
+      setSeverity("Medium")
+      setCategory("")
+      setImages([])
+      setImagePreviews([])
+    }
+  }, [isOpen])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -162,7 +175,7 @@ export function ReportIssueModal({ isOpen, onClose, booking, onReported }: Repor
       toast({
         variant: "destructive",
         title: "Failed to Report Issue",
-        description: "Please try again later",
+        description: error || "Please try again later",
       })
     }
   }
@@ -298,9 +311,13 @@ export function ReportIssueModal({ isOpen, onClose, booking, onReported }: Repor
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleSubmit}
+            onClick={(e) => {
+              e.preventDefault()
+              handleSubmit()
+            }}
             disabled={isLoading}
             className="bg-primary hover:bg-primary/90"
+            type="button"
           >
             {isLoading ? (
               <>

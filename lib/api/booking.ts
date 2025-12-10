@@ -24,22 +24,52 @@ export const bookingApi = {
    * Get all bookings with optional filters
    */
   getAll: async (query?: GetBookingsQuery): Promise<ApiResponse<Booking[]>> => {
-    const params = new URLSearchParams();
-    if (query?.status) params.append("status", query.status);
-    if (query?.facilityId) params.append("facilityId", query.facilityId);
-    if (query?.userId) params.append("userId", query.userId);
-    if (query?.startDate) params.append("startDate", query.startDate);
-    if (query?.endDate) params.append("endDate", query.endDate);
-    if (query?.pageNumber) params.append("pageNumber", query.pageNumber.toString());
-    if (query?.pageSize) params.append("pageSize", query.pageSize.toString());
+    try {
+      const params = new URLSearchParams();
+      if (query?.status) params.append("status", query.status);
+      if (query?.facilityId) params.append("facilityId", query.facilityId);
+      if (query?.userId) params.append("userId", query.userId);
+      if (query?.startDate) params.append("startDate", query.startDate);
+      if (query?.endDate) params.append("endDate", query.endDate);
+      if (query?.pageNumber) params.append("pageNumber", query.pageNumber.toString());
+      if (query?.pageSize) params.append("pageSize", query.pageSize.toString());
 
-    const url = `${API_URL}/bookings${params.toString() ? `?${params.toString()}` : ""}`;
-    
-    const response = await fetch(url, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-    return response.json();
+      const url = `${API_URL}/bookings${params.toString() ? `?${params.toString()}` : ""}`;
+      
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const text = await response.text();
+      
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // Not JSON
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: "No bookings found",
+          data: [],
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      throw error;
+    }
   },
 
   /**

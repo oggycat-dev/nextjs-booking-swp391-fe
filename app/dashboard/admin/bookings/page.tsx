@@ -208,103 +208,145 @@ export default function AdminBookingsPage() {
             </Button>
           </div>
 
-          {isLoadingPending ? (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">Loading pending bookings...</p>
-            </Card>
-          ) : filteredBookings.length === 0 ? (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">
-                {searchTerm ? "No bookings found matching your search" : "No pending bookings"}
-              </p>
-            </Card>
-          ) : (
-            filteredBookings.map((booking) => (
-              <Card
-                key={booking.id}
-                className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-400"
-                onClick={() => setSelectedBooking(booking)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-lg">{booking.facilityName}</h3>
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(booking.status)}`}>
-                        {booking.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Booking Code: {booking.bookingCode}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">Requester</p>
-                    <p className="font-medium">{booking.userName}</p>
-                    <p className="text-xs text-muted-foreground">{booking.userRole}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Date & Time</p>
-                    <p className="font-medium">{formatDate(booking.bookingDate)}</p>
-                    <p className="text-xs">{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Lecturer Email</p>
-                    <p className="font-medium">{booking.lecturerEmail || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Created At</p>
-                    <p className="font-medium">{formatDate(booking.createdAt)}</p>
-                  </div>
-                </div>
-
-                {booking.lecturerName && (
-                  <div className="mb-4 text-sm">
-                    <p className="text-muted-foreground text-xs">Approved by Lecturer</p>
-                    <p className="font-medium">{booking.lecturerName}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedBooking(booking)
-                      setActionType("approve")
-                    }}
-                    disabled={isMutating}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedBooking(booking)
-                      setActionType("reject")
-                    }}
-                    disabled={isMutating}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedBooking(booking)
-                    }}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            ))
-          )}
+          {/* Bookings Table */}
+          <Card className="overflow-hidden">
+            {isLoadingPending ? (
+              <div className="p-12 text-center">
+                <p className="text-muted-foreground">Loading pending bookings...</p>
+              </div>
+            ) : filteredBookings.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm ? "No bookings found matching your search" : "No pending bookings"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-4 font-semibold text-sm">Booking Info</th>
+                      <th className="text-left p-4 font-semibold text-sm">Facility</th>
+                      <th className="text-left p-4 font-semibold text-sm">Requester</th>
+                      <th className="text-left p-4 font-semibold text-sm">Date & Time</th>
+                      <th className="text-left p-4 font-semibold text-sm">Lecturer</th>
+                      <th className="text-center p-4 font-semibold text-sm">Status</th>
+                      <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBookings.map((booking) => (
+                      <tr 
+                        key={booking.id} 
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div>
+                            <div className="font-semibold text-sm">{booking.bookingCode}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Created: {formatDate(booking.createdAt)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="font-medium">{booking.facilityName}</span>
+                        </td>
+                        <td className="p-4">
+                          <div>
+                            <div className="font-medium text-sm">{booking.userName}</div>
+                            <div className="text-xs text-muted-foreground">{booking.userRole}</div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div>
+                            <div className="font-medium text-sm">{formatDate(booking.bookingDate)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div>
+                            {booking.lecturerName && (
+                              <>
+                                <div className="font-medium text-sm">{booking.lecturerName}</div>
+                                <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                  {booking.lecturerEmail}
+                                </div>
+                              </>
+                            )}
+                            {!booking.lecturerName && booking.lecturerEmail && (
+                              <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {booking.lecturerEmail}
+                              </div>
+                            )}
+                            {!booking.lecturerName && !booking.lecturerEmail && (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${getStatusColor(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                                setActionType("approve")
+                              }}
+                              disabled={isMutating}
+                              title="Approve"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                                setActionType("reject")
+                              }}
+                              disabled={isMutating}
+                              title="Reject"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                              }}
+                              title="View Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
       </Card>

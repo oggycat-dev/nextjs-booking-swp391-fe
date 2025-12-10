@@ -189,45 +189,96 @@ export default function AdminFacilityTypesPage() {
         Showing {filteredTypes.length} of {facilityTypes.length} facility types
       </div>
 
-      {/* Facility Types Grid */}
-      {isLoading ? (
-        <div className="text-center py-12">Loading facility types...</div>
-      ) : filteredTypes.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">No facility types found</p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTypes.map((type) => (
-            <Card
-              key={type.id}
-              className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => handleViewDetails(type)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{type.typeName}</h3>
-                  <p className="text-sm text-muted-foreground">{type.typeCode}</p>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    type.isActive
-                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                      : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                  }`}
-                >
-                  {type.isActive ? "Active" : "Inactive"}
-                </span>
-              </div>
-              {type.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {type.description}
-                </p>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Facility Types Table */}
+      <Card className="overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <p className="text-muted-foreground">Loading facility types...</p>
+          </div>
+        ) : filteredTypes.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-muted-foreground">No facility types found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-4 font-semibold text-sm">Type Code</th>
+                  <th className="text-left p-4 font-semibold text-sm">Type Name</th>
+                  <th className="text-left p-4 font-semibold text-sm">Description</th>
+                  <th className="text-center p-4 font-semibold text-sm">Status</th>
+                  <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTypes.map((type) => (
+                  <tr 
+                    key={type.id} 
+                    className="border-b hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="p-4">
+                      <span className="font-semibold text-primary">{type.typeCode}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="font-medium">{type.typeName}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-muted-foreground line-clamp-2 max-w-md">
+                        {type.description || "-"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${
+                          type.isActive
+                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        }`}
+                      >
+                        {type.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleViewDetails(type)
+                          }}
+                          className="h-8 px-3"
+                          title="View Details"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditClick(type)
+                          }}
+                          className="h-8 px-3"
+                          title="Edit"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {/* Create Modal */}
       {showCreateModal && (
@@ -368,11 +419,6 @@ export default function AdminFacilityTypesPage() {
                     <p className="mt-1">{selectedType.description}</p>
                   </div>
                 )}
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">ID</label>
-                  <p className="text-sm font-mono mt-1 text-muted-foreground">{selectedType.id}</p>
-                </div>
               </div>
 
               <div className="flex gap-3 mt-6">
