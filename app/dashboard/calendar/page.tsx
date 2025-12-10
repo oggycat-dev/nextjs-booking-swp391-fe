@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { useFacilities } from "@/hooks/use-facility"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingCalendarDto, Facility } from "@/types"
-import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -51,6 +51,12 @@ export default function CalendarPage() {
   }, [currentWeek, selectedFacility])
   
   const fetchCalendarBookings = async () => {
+    // Don't load if no facility selected
+    if (!selectedFacility) {
+      setBookings([])
+      return
+    }
+    
     setIsLoadingBookings(true)
     try {
       const weekDates = getWeekDates(currentWeek)
