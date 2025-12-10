@@ -8,6 +8,7 @@
 # Build output
 /.next/
 /out/
+*.tsbuildinfo
 
 # Production
 /build
@@ -31,8 +32,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Firebase Service Worker with credentials
-# Use firebase-messaging-sw.example.js as template
+# Firebase Service Worker (generated from template)
 public/firebase-messaging-sw.js
 
 # IDEs and editors
