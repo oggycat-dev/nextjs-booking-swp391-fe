@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { TokenRefreshProvider } from "@/components/auth/token-refresh-provider"
 import { SessionManager } from "@/components/auth/session-manager"
 import { FirebaseNotificationProvider } from "@/components/notifications/firebase-notification-provider"
-import { Bell, MessageCircle, ChevronDown } from "lucide-react"
+import { Bell, MessageCircle, ChevronDown, User, LogOut } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -296,91 +296,82 @@ export default function DashboardLayout({
               </Link>
             )}
             
-            {/* User Profile - Student/Lecturer/Admin */}
-            {userRole !== "admin" ? (
-              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm text-primary-foreground">
-                  {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-primary-foreground">{userInfo?.fullName || "User"}</span>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                      <span className="capitalize text-primary-foreground/80">{userRole}</span>
-                    </span>
-                    {userInfo?.campusName && (
-                      <>
-                        <span className="text-primary-foreground/40">•</span>
-                        <span className="text-primary-foreground/80">{userInfo.campusName}</span>
-                      </>
-                    )}
+            {/* User Profile Dropdown - Student/Lecturer/Admin */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white/20 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm text-primary-foreground">
+                    {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
                   </div>
-                </div>
-              </div>
-            ) : (
-              // Admin Profile
-              <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl shadow-lg">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-sm">
-                  {userInfo?.fullName ? userInfo.fullName.charAt(0).toUpperCase() : userRole.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{userInfo?.fullName || "System Administrator"}</span>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                      <span className="capitalize">{userRole}</span>
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-semibold text-primary-foreground">
+                      {userInfo?.fullName || (userRole === "admin" ? "System Administrator" : "User")}
                     </span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        <span className="capitalize text-primary-foreground/80">{userRole}</span>
+                      </span>
+                      {userInfo?.campusName && userRole !== "admin" && (
+                        <>
+                          <span className="text-primary-foreground/40">•</span>
+                          <span className="text-primary-foreground/80">{userInfo.campusName}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Logout Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-10 p-0 hover:bg-white/20 text-primary-foreground bg-white/10 rounded-xl"
-              onClick={async () => {
-                await authLogout()
-                if (typeof window !== "undefined") {
-                  window.location.href = "/"
-                }
-              }}
-              title="Logout"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </Button>
+                  <ChevronDown className="w-4 h-4 text-primary-foreground/60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile" className="cursor-pointer flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span>View Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
+                  onClick={async () => {
+                    await authLogout()
+                    if (typeof window !== "undefined") {
+                      window.location.href = "/"
+                    }
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </nav>
 
       {/* Sidebar for Admin, Topbar for Student/Lecturer */}
       {userRole === "admin" ? (
-        <div className="flex">
-          <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-80px)] p-6 shadow-lg">
-            <nav className="space-y-1.5">
-              {filteredNavItems.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  <button
+      <div className="flex">
+        <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-80px)] p-6 shadow-lg">
+          <nav className="space-y-1.5">
+            {filteredNavItems.map((item) => (
+              <Link key={item.href} href={item.href}>
+                <button
                     className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                      pathname === item.href
-                        ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                </Link>
-              ))}
-            </nav>
-          </aside>
+                    pathname === item.href
+                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </Link>
+            ))}
+          </nav>
+        </aside>
 
-          <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
-            <TokenRefreshProvider>
-              <SessionManager />
+        <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
+          <TokenRefreshProvider>
+            <SessionManager />
               <FirebaseNotificationProvider userRole={userRole}>
                 {children}
               </FirebaseNotificationProvider>
@@ -393,11 +384,11 @@ export default function DashboardLayout({
              <TokenRefreshProvider>
                <SessionManager />
                <FirebaseNotificationProvider userRole={userRole}>
-                 {children}
+            {children}
                </FirebaseNotificationProvider>
-             </TokenRefreshProvider>
-           </main>
-         </div>
+          </TokenRefreshProvider>
+        </main>
+      </div>
        )}
       <Toaster />
     </div>

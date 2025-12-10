@@ -5,14 +5,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Firebase configuration - will be replaced by build script
-const firebaseConfig = {
-  "apiKey": "AIzaSyBLPIHnLR1rSTCSwFwDC5w4Tfwdlp1zceM",
-  "authDomain": "fpt-booking-system.firebaseapp.com",
-  "projectId": "fpt-booking-system",
-  "storageBucket": "fpt-booking-system.firebasestorage.app",
-  "messagingSenderId": "1081921871782",
-  "appId": "1:1081921871782:web:8cb14aa1977ff2a04c7967"
-};
+/* FIREBASE_CONFIG_PLACEHOLDER */
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
