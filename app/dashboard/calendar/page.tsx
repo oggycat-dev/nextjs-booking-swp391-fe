@@ -4,8 +4,8 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { useFacilities } from "@/hooks/use-facility"
 import { bookingApi } from "@/lib/api/booking"
-import type { BookingCalendarDto } from "@/types"
-import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react"
+import type { BookingCalendarDto, Facility } from "@/types"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 AM to 10 PM
 
@@ -36,7 +37,6 @@ function getWeekDates(date: Date) {
 export default function CalendarPage() {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [selectedFacility, setSelectedFacility] = useState<string>("")
-  const [searchQuery, setSearchQuery] = useState<string>("")
   const [bookings, setBookings] = useState<BookingCalendarDto[]>([])
   const [selectedBooking, setSelectedBooking] = useState<BookingCalendarDto | null>(null)
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
@@ -301,62 +301,21 @@ export default function CalendarPage() {
             </button>
           </div>
 
-          {/* Facility Search and Selector */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+          {/* Facility Selector */}
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <label className="text-sm font-medium whitespace-nowrap">Select Facility:</label>
-            
-            {/* Search Input */}
-            <div className="relative flex-1 md:min-w-[200px]">
-              <input
-                type="text"
-                placeholder="Search facilities..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 pr-8 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            <div className="flex-1 md:min-w-[250px]">
+              <SearchableSelect
+                options={facilities}
+                value={selectedFacility}
+                onValueChange={(value) => setSelectedFacility(value)}
+                getOptionLabel={(facility: Facility) => `${facility.facilityName} (${facility.typeName})`}
+                getOptionValue={(facility: Facility) => facility.id}
+                placeholder="All Facilities"
+                searchPlaceholder="Search facilities..."
+                emptyMessage="No facility found."
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  title="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
             </div>
-            
-            {/* Dropdown Selector */}
-            <select
-              value={selectedFacility}
-              onChange={(e) => setSelectedFacility(e.target.value)}
-              className="flex-1 md:min-w-[250px] px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              style={{
-                maxHeight: facilities.filter((facility) => 
-                  searchQuery === "" || 
-                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
-                ).length > 5 ? '200px' : 'auto',
-                overflowY: facilities.filter((facility) => 
-                  searchQuery === "" || 
-                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
-                ).length > 5 ? 'auto' : 'visible'
-              }}
-              size={1}
-            >
-              <option value="">-- Select a facility --</option>
-              {facilities
-                .filter((facility) => 
-                  searchQuery === "" || 
-                  facility.facilityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  facility.typeName.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .map((facility) => (
-                  <option key={facility.id} value={facility.id}>
-                    {facility.facilityName} ({facility.typeName})
-                  </option>
-                ))}
-            </select>
           </div>
         </div>
       </Card>
