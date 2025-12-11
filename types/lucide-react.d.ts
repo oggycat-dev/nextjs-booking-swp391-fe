@@ -43,9 +43,24 @@ declare module 'lucide-react' {
   export const SearchIcon: LucideIcon
   export const MessageCircle: LucideIcon
   export const ChevronDown: LucideIcon
+  export const Settings: LucideIcon
+  export const Trash2: LucideIcon
+  export const ExternalLink: LucideIcon
+  export const RefreshCw: LucideIcon
+  export const XCircle: LucideIcon
+  
+  // Additional icons
+  export const Settings: LucideIcon
+  export const Trash2: LucideIcon
+  export const ExternalLink: LucideIcon
+  export const RefreshCw: LucideIcon
+  export const XCircle: LucideIcon
   
   // Allow dynamic icon imports - this helps TypeScript accept any icon name
   const createLucideIcon: (name: string) => LucideIcon
   export { createLucideIcon }
+  
+  // Re-export all icons from lucide-react to avoid type conflicts
+  export * from 'lucide-react'
 }
 
