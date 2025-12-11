@@ -40,3 +40,5 @@ public/firebase-messaging-sw.js
 # IDEs and editors
 .idea/
 .vscode/
+
+.SETUP.md
