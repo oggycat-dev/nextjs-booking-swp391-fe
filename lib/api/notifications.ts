@@ -60,14 +60,31 @@ export const notificationsApi = {
     }
 
     const url = `${API_URL}/notifications/my-notifications${params.toString() ? `?${params.toString()}` : ""}`;
+    
+    console.log('[Notifications API] Fetching from:', url);
+    
     const response = await fetch(url, {
       method: "GET",
       headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || "Failed to get notifications");
+      const text = await response.text();
+      let errorData;
+      try {
+        errorData = text ? JSON.parse(text) : {};
+      } catch (e) {
+        errorData = { message: text || `HTTP ${response.status}: ${response.statusText}` };
+      }
+      
+      console.error('[Notifications API] Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        error: errorData
+      });
+      
+      throw new Error(errorData.message || `Failed to get notifications (${response.status})`);
     }
 
     return response.json();

@@ -34,8 +34,11 @@ yarn-error.log*
 .env.production.local
 
 # Firebase Service Worker (generated from template)
-#public/firebase-messaging-sw.js
+# File này được generate tự động từ template, không nên commit
+public/firebase-messaging-sw.js
 
 # IDEs and editors
 .idea/
 .vscode/
+
+.SETUP.md
