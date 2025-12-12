@@ -16,7 +16,7 @@ import { validateCheckIn, validateCheckOut, canShowCheckInButton, canShowCheckOu
 import { ReportIssueModal } from "@/components/facilities/report-issue-modal"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingListDto, Booking } from "@/types"
-import { Calendar, Clock, MapPin, Users, CheckCircle2, XCircle, Loader2, AlertCircle, AlertTriangle } from "lucide-react"
+import { Calendar, Clock, Users, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react"
 
 export default function BookingsPage() {
   const searchParams = useSearchParams()
@@ -866,7 +866,7 @@ export default function BookingsPage() {
                       setReportIssueModal(booking)
                     }}
                   >
-                    <AlertTriangle className="w-4 h-4 mr-1" />
+                    <AlertCircle className="w-4 h-4 mr-1" />
                     Report Issue
                   </Button>
                 )}
@@ -1110,7 +1110,7 @@ export default function BookingsPage() {
                     setSelectedBooking(null)
                   }}
                 >
-                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  <AlertCircle className="w-4 h-4 mr-1" />
                   Report Issue
                 </Button>
               )}
