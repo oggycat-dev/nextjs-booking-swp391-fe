@@ -331,6 +331,15 @@ export default function DashboardLayout({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {userRole !== "admin" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile" className="cursor-pointer flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      <span>View Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem 
                   className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                   onClick={async () => {
