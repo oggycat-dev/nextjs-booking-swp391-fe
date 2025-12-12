@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useBookingMutations } from "@/hooks/use-booking"
+import { useCampus } from "@/hooks/use-campus"
+import { useHolidays } from "@/hooks/use-holidays"
 import type { Facility } from "@/types"
 
 interface BookingModalProps {
@@ -44,6 +46,10 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const [equipment, setEquipment] = useState<string[]>([])
   const [notes, setNotes] = useState("")
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+
+  // Get campus working hours for client-side validation
+  const { campus } = useCampus(facility.campusId)
+  const { holidays } = useHolidays()
 
   const purposes = ["Group study", "Club meeting", "Project discussion", "Event rehearsal", "Class session", "Other"]
 
@@ -91,6 +97,76 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     return undefined
   }
 
+  // Ensure time like "07:04 PM" or "07:04" becomes HH:mm:ss 24-hour
+  const ensureTimeFormatLocal = (time: string): string => {
+    if (!time) return time
+    let clean = time.trim()
+    const ampmMatch = clean.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/)
+    if (ampmMatch) {
+      let h = parseInt(ampmMatch[1], 10)
+      const m = ampmMatch[2]
+      const p = ampmMatch[3].toUpperCase()
+      if (p === 'PM' && h !== 12) h += 12
+      if (p === 'AM' && h === 12) h = 0
+      return `${h.toString().padStart(2, '0')}:${m}:00`
+    }
+    const parts = clean.split(':')
+    if (parts.length >= 2) {
+      const hh = parts[0].padStart(2, '0')
+      const mm = parts[1]
+      const ss = parts[2] || '00'
+      return `${hh}:${mm}:${ss}`
+    }
+    return clean
+  }
+
+  const timeToMinutes = (t: string): number => {
+    if (!t) return 0
+    const fmt = ensureTimeFormatLocal(t)
+    const [hh, mm] = fmt.split(':')
+    return Number(hh) * 60 + Number(mm)
+  }
+
+  const validateWorkingHours = (start: string, end: string): string | undefined => {
+    if (!campus) return undefined
+    if (!start || !end) return undefined
+    const campusStart = campus.workingHoursStart || '00:00:00'
+    const campusEnd = campus.workingHoursEnd || '23:59:59'
+    const campusStartMin = timeToMinutes(campusStart)
+    const campusEndMin = timeToMinutes(campusEnd)
+    const startMin = timeToMinutes(start)
+    const endMin = timeToMinutes(end)
+
+    if (startMin < campusStartMin || endMin > campusEndMin) {
+      return `Booking time must be within campus working hours (${campusStart} - ${campusEnd})`
+    }
+    return undefined
+  }
+
+  const normalizeDate = (d?: string) => {
+    if (!d) return ""
+    try {
+      const dt = new Date(d)
+      if (isNaN(dt.getTime())) return d
+      return dt.toISOString().split('T')[0]
+    } catch (e) {
+      return d
+    }
+  }
+
+  // Re-validate date against holidays when holidays data arrives or date changes
+  useEffect(() => {
+    if (!date || !holidays || holidays.length === 0) return
+    const norm = normalizeDate(date)
+    const isHoliday = holidays.some(h => normalizeDate(h.holidayDate) === norm)
+    if (isHoliday) {
+      setFieldErrors(prev => ({ ...prev, date: "Cannot book facilities on holidays" }))
+    } else {
+      // only clear holiday message if previous error was holiday message
+      setFieldErrors(prev => ({ ...prev, date: prev.date === "Cannot book facilities on holidays" ? undefined : prev.date }))
+    }
+  }, [holidays, date])
+
   const validateParticipants = (value: string): string | undefined => {
     if (!value) return undefined
     const participantsNum = Number.parseInt(value, 10)
@@ -123,11 +199,27 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     setDate(value)
     const error = validateDate(value)
     setFieldErrors(prev => ({ ...prev, date: error }))
+    // Check holiday
+    if (holidays && holidays.length > 0) {
+      const isHoliday = holidays.some(h => h.holidayDate === value)
+      if (isHoliday) {
+        setFieldErrors(prev => ({ ...prev, date: "Cannot book facilities on holidays" }))
+      }
+    }
     
     // Re-validate times when date changes
     if (startTime) {
       const startError = validateStartTime(startTime, value)
       setFieldErrors(prev => ({ ...prev, startTime: startError }))
+    }
+
+    // If both times present, validate against campus working hours
+    if (startTime && endTime) {
+      const wh = validateWorkingHours(startTime, endTime)
+        if (wh) {
+          setFieldErrors(prev => ({ ...prev, startTime: wh, endTime: wh }))
+          // show inline errors only
+      }
     }
   }
 
@@ -135,11 +227,13 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     setStartTime(value)
     const error = validateStartTime(value, date)
     setFieldErrors(prev => ({ ...prev, startTime: error }))
-    
+
     // Re-validate end time when start time changes
     if (endTime) {
       const endError = validateEndTime(endTime, date, value)
-      setFieldErrors(prev => ({ ...prev, endTime: endError }))
+      const wh = validateWorkingHours(value, endTime)
+      setFieldErrors(prev => ({ ...prev, startTime: error || wh, endTime: endError || wh }))
+      // show inline errors only
     }
   }
 
@@ -147,6 +241,12 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     setEndTime(value)
     const error = validateEndTime(value, date, startTime)
     setFieldErrors(prev => ({ ...prev, endTime: error }))
+
+    if (startTime) {
+      const wh = validateWorkingHours(startTime, value)
+      setFieldErrors(prev => ({ ...prev, startTime: prev.startTime || wh, endTime: error || wh }))
+      // show inline errors only
+    }
   }
 
   const handleParticipantsChange = (value: string) => {
@@ -179,6 +279,10 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     const errors: FieldErrors = {}
     
     errors.date = validateDate(date)
+    if (!errors.date && holidays && holidays.length > 0 && date) {
+      const isHoliday = holidays.some(h => h.holidayDate === date)
+      if (isHoliday) errors.date = "Cannot book facilities on holidays"
+    }
     errors.startTime = validateStartTime(startTime, date)
     errors.endTime = validateEndTime(endTime, date, startTime)
     errors.purpose = validatePurpose(purpose)
@@ -253,15 +357,21 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create booking"
-      
-      // Show toast immediately
-      toast({
-        description: errorMessage,
-        variant: "destructive",
-      })
-      
+
+      // Determine if this error should be shown inline (field error) instead of toast
+      const lower = errorMessage ? errorMessage.toLowerCase() : ""
+      const isFieldError = lower.includes("time slot") || lower.includes("already booked") || lower.includes("time") || lower.includes("date") || lower.includes("working hours") || lower.includes("holiday") || lower.includes("holidays")
+
+      // Only show destructive toast for non-field errors
+      if (!isFieldError) {
+        toast({
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+
       // Check if it's a time slot conflict
-      if (errorMessage && (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked"))) {
+      if (errorMessage && (lower.includes("time slot") || lower.includes("already booked"))) {
         const conflictError = `This time slot is already booked from ${startTime} to ${endTime}`
         setFieldErrors(prev => ({ ...prev, startTime: conflictError, endTime: conflictError }))
         // Go back to step 1 to show error after a small delay so user can see toast
@@ -271,8 +381,13 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
       } else {
         // For other errors, set to appropriate fields
         // If error is related to time, set to time fields and go back to step 1
-        if (errorMessage.toLowerCase().includes("time") || errorMessage.toLowerCase().includes("date") || errorMessage.toLowerCase().includes("working hours")) {
-          setFieldErrors(prev => ({ ...prev, startTime: errorMessage, endTime: errorMessage }))
+        if (errorMessage && (lower.includes("time") || lower.includes("date") || lower.includes("working hours") || lower.includes("holiday") || lower.includes("holidays"))) {
+          // Map holiday/date/time errors to time/date fields so they appear inline
+          if (lower.includes("holiday") || lower.includes("holidays")) {
+            setFieldErrors(prev => ({ ...prev, date: errorMessage }))
+          } else {
+            setFieldErrors(prev => ({ ...prev, startTime: errorMessage, endTime: errorMessage }))
+          }
           setTimeout(() => {
             setStep(1)
           }, 100)
@@ -319,7 +434,11 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 value={date}
                 onChange={(e) => handleDateChange(e.target.value)}
                 onBlur={() => {
-                  const error = validateDate(date)
+                  let error = validateDate(date)
+                  if (holidays && holidays.length > 0 && date) {
+                    const isHoliday = holidays.some(h => h.holidayDate === date)
+                    if (isHoliday) error = "Cannot book facilities on holidays"
+                  }
                   setFieldErrors(prev => ({ ...prev, date: error }))
                 }}
                 min={new Date().toISOString().split("T")[0]}
@@ -338,7 +457,16 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                   onChange={(e) => handleStartTimeChange(e.target.value)}
                   onBlur={() => {
                     const error = validateStartTime(startTime, date)
-                    setFieldErrors(prev => ({ ...prev, startTime: error }))
+                    let newErr = error
+                    if (endTime) {
+                      const wh = validateWorkingHours(startTime, endTime)
+                      if (wh) {
+                        newErr = newErr || wh
+                        setFieldErrors(prev => ({ ...prev, startTime: newErr, endTime: wh }))
+                        return
+                      }
+                    }
+                    setFieldErrors(prev => ({ ...prev, startTime: newErr }))
                   }}
                   className={`h-9 ${fieldErrors.startTime ? "border-destructive" : ""}`}
                 />
@@ -354,7 +482,16 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                   onChange={(e) => handleEndTimeChange(e.target.value)}
                   onBlur={() => {
                     const error = validateEndTime(endTime, date, startTime)
-                    setFieldErrors(prev => ({ ...prev, endTime: error }))
+                    let newErr = error
+                    if (startTime) {
+                      const wh = validateWorkingHours(startTime, endTime)
+                      if (wh) {
+                        newErr = newErr || wh
+                        setFieldErrors(prev => ({ ...prev, startTime: wh, endTime: newErr }))
+                        return
+                      }
+                    }
+                    setFieldErrors(prev => ({ ...prev, endTime: newErr }))
                   }}
                   className={`h-9 ${fieldErrors.endTime ? "border-destructive" : ""}`}
                 />
@@ -537,6 +674,10 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 if (step === 1) {
                   const errors: FieldErrors = {}
                   errors.date = validateDate(date)
+                  if (!errors.date && holidays && holidays.length > 0 && date) {
+                    const isHoliday = holidays.some(h => h.holidayDate === date)
+                    if (isHoliday) errors.date = "Cannot book facilities on holidays"
+                  }
                   errors.startTime = validateStartTime(startTime, date)
                   errors.endTime = validateEndTime(endTime, date, startTime)
                   setFieldErrors(errors)
@@ -562,7 +703,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 }
               }}
               disabled={
-                (step === 1 && (!date || !startTime || !endTime)) || 
+                (step === 1 && (!date || !startTime || !endTime || Boolean(fieldErrors.date))) || 
                 (step === 2 && (!purpose || !participants || (isStudent && !lecturerEmail)))
               }
             >
