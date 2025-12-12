@@ -950,15 +950,7 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Campus</p>
-                      <p className="font-bold">{selectedUser.campusName || "N/A"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Department</p>
-                      <p className="font-bold">{selectedUser.department || "N/A"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Major</p>
-                      <p className="font-bold">{selectedUser.major || "N/A"}</p>
+                      <p className="font-bold">{selectedUser.campusId || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Status</p>
