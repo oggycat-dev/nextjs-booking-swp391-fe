@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,15 @@ interface BookingModalProps {
   isOpen: boolean
   onClose: () => void
   onBookingCreated?: () => void
+}
+
+interface FieldErrors {
+  date?: string
+  startTime?: string
+  endTime?: string
+  purpose?: string
+  participants?: string
+  lecturerEmail?: string
 }
 
 export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: BookingModalProps) {
@@ -34,6 +43,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const [lecturerEmail, setLecturerEmail] = useState("")
   const [equipment, setEquipment] = useState<string[]>([])
   const [notes, setNotes] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const purposes = ["Group study", "Club meeting", "Project discussion", "Event rehearsal", "Class session", "Other"]
 
@@ -41,71 +51,155 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     setEquipment((prev) => (prev.includes(item) ? prev.filter((e) => e !== item) : [...prev, item]))
   }
 
-  const handleSubmit = async () => {
-    if (!date || !startTime || !endTime || !purpose || !participants) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (isStudent && !lecturerEmail) {
-      toast({
-        title: "Lecturer Email Required",
-        description: "Please provide your lecturer's email address",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Validate participants
-    const participantsNum = Number.parseInt(participants, 10)
-    if (isNaN(participantsNum) || participantsNum < 1) {
-      toast({
-        title: "Invalid Participants",
-        description: "Please enter a valid number of participants (at least 1)",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (participantsNum > facility.capacity) {
-      toast({
-        title: "Exceeds Capacity",
-        description: `Maximum capacity is ${facility.capacity} participants`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Validate time range
-    if (startTime >= endTime) {
-      toast({
-        description: "End time must be after start time",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Validate booking time is in the future
+  // Validation functions
+  const validateDate = (value: string): string | undefined => {
+    if (!value) return undefined
+    const selectedDate = new Date(value)
     const now = new Date()
-    const bookingDateTime = new Date(`${date}T${startTime}:00`)
+    now.setHours(0, 0, 0, 0)
+    if (selectedDate < now) return "Cannot book in the past"
+    return undefined
+  }
+
+  const validateStartTime = (value: string, dateValue: string): string | undefined => {
+    if (!value) return undefined
+    if (!dateValue) return undefined
     
-    // Check if booking is in the past
+    const now = new Date()
+    const bookingDateTime = new Date(`${dateValue}T${value}:00`)
+    
     if (bookingDateTime <= now) {
-      const nowTime = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
-      toast({
-        description: `Cannot book in the past. Current time is ${nowTime}. Please select a future time slot.`,
-        variant: "destructive",
-      })
+      const nowTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      return `Cannot book in the past. Current time is ${nowTime}. Please select a future time slot.`
+    }
+    
+    if (endTime && value >= endTime) {
+      return "End time must be after start time"
+    }
+    
+    return undefined
+  }
+
+  const validateEndTime = (value: string, dateValue: string, startTimeValue: string): string | undefined => {
+    if (!value) return undefined
+    if (!startTimeValue) return undefined
+    
+    if (startTimeValue >= value) {
+      return "End time must be after start time"
+    }
+    
+    return undefined
+  }
+
+  const validateParticipants = (value: string): string | undefined => {
+    if (!value) return undefined
+    const participantsNum = Number.parseInt(value, 10)
+    if (isNaN(participantsNum) || participantsNum < 1) {
+      return "Please enter a valid number of participants (at least 1)"
+    }
+    if (participantsNum > facility.capacity) {
+      return `Maximum capacity is ${facility.capacity} participants`
+    }
+    return undefined
+  }
+
+  const validateLecturerEmail = (value: string): string | undefined => {
+    if (isStudent && !value.trim()) {
+      return "Please provide your lecturer's email address"
+    }
+    if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      return "Invalid email format"
+    }
+    return undefined
+  }
+
+  const validatePurpose = (value: string): string | undefined => {
+    if (!value) return undefined
+    return undefined
+  }
+
+  // Handle field changes with validation
+  const handleDateChange = (value: string) => {
+    setDate(value)
+    const error = validateDate(value)
+    setFieldErrors(prev => ({ ...prev, date: error }))
+    
+    // Re-validate times when date changes
+    if (startTime) {
+      const startError = validateStartTime(startTime, value)
+      setFieldErrors(prev => ({ ...prev, startTime: startError }))
+    }
+  }
+
+  const handleStartTimeChange = (value: string) => {
+    setStartTime(value)
+    const error = validateStartTime(value, date)
+    setFieldErrors(prev => ({ ...prev, startTime: error }))
+    
+    // Re-validate end time when start time changes
+    if (endTime) {
+      const endError = validateEndTime(endTime, date, value)
+      setFieldErrors(prev => ({ ...prev, endTime: endError }))
+    }
+  }
+
+  const handleEndTimeChange = (value: string) => {
+    setEndTime(value)
+    const error = validateEndTime(value, date, startTime)
+    setFieldErrors(prev => ({ ...prev, endTime: error }))
+  }
+
+  const handleParticipantsChange = (value: string) => {
+    setParticipants(value)
+    const error = validateParticipants(value)
+    setFieldErrors(prev => ({ ...prev, participants: error }))
+  }
+
+  const handleLecturerEmailChange = (value: string) => {
+    setLecturerEmail(value)
+    const error = validateLecturerEmail(value)
+    setFieldErrors(prev => ({ ...prev, lecturerEmail: error }))
+  }
+
+  const handlePurposeChange = (value: string) => {
+    setPurpose(value)
+    const error = validatePurpose(value)
+    setFieldErrors(prev => ({ ...prev, purpose: error }))
+  }
+
+  // Clear field errors when modal closes or resets
+  useEffect(() => {
+    if (!isOpen) {
+      setFieldErrors({})
+    }
+  }, [isOpen])
+
+  const handleSubmit = async () => {
+    // Validate all fields
+    const errors: FieldErrors = {}
+    
+    errors.date = validateDate(date)
+    errors.startTime = validateStartTime(startTime, date)
+    errors.endTime = validateEndTime(endTime, date, startTime)
+    errors.purpose = validatePurpose(purpose)
+    errors.participants = validateParticipants(participants)
+    if (isStudent) {
+      errors.lecturerEmail = validateLecturerEmail(lecturerEmail)
+    }
+
+    setFieldErrors(errors)
+
+    // Check if there are any errors
+    if (Object.values(errors).some(error => error !== undefined)) {
+      // Scroll to first error field
       return
     }
 
     // Convert "HH:mm" (from input[type=time]) to "HH:mm:ss" as backend expects seconds
     const startTimeFormatted = startTime.length === 5 ? `${startTime}:00` : startTime
     const endTimeFormatted = endTime.length === 5 ? `${endTime}:00` : endTime
+
+    const participantsNum = Number.parseInt(participants, 10)
 
     // Build booking data object, only including defined fields
     const bookingData: any = {
@@ -152,43 +246,41 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         setLecturerEmail("")
         setEquipment([])
         setNotes("")
+        setFieldErrors({})
         if (onBookingCreated) {
           onBookingCreated()
         }
-      } else {
-        // If createBooking returns null, check error state or use fallback
-        // But prefer checking error state first as it should be set by the hook
-        let errorMessage = error || "Please try again"
-        
-        // Only format message if it's about time slot being already booked
-        // Keep original message for working hours or other errors
-        if (errorMessage && (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked"))) {
-          errorMessage = `This time slot is already booked from ${startTime} to ${endTime}`
-        }
-        // Keep original message for working hours errors from BE
-        // No need to format - just show what BE returns
-        
-        toast({
-          description: errorMessage,
-          variant: "destructive",
-        })
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create booking"
       
-      // Only format message if it's about time slot being already booked
-      // Keep original message for working hours or other errors
-      let formattedMessage = errorMessage
-      if (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked")) {
-        formattedMessage = `This time slot is already booked from ${startTime} to ${endTime}`
-      }
-      // Keep original message for working hours errors from BE
-      // No need to format - just show what BE returns
-      
+      // Show toast immediately
       toast({
-        description: formattedMessage,
+        description: errorMessage,
         variant: "destructive",
       })
+      
+      // Check if it's a time slot conflict
+      if (errorMessage && (errorMessage.toLowerCase().includes("time slot") || errorMessage.toLowerCase().includes("already booked"))) {
+        const conflictError = `This time slot is already booked from ${startTime} to ${endTime}`
+        setFieldErrors(prev => ({ ...prev, startTime: conflictError, endTime: conflictError }))
+        // Go back to step 1 to show error after a small delay so user can see toast
+        setTimeout(() => {
+          setStep(1)
+        }, 100)
+      } else {
+        // For other errors, set to appropriate fields
+        // If error is related to time, set to time fields and go back to step 1
+        if (errorMessage.toLowerCase().includes("time") || errorMessage.toLowerCase().includes("date") || errorMessage.toLowerCase().includes("working hours")) {
+          setFieldErrors(prev => ({ ...prev, startTime: errorMessage, endTime: errorMessage }))
+          setTimeout(() => {
+            setStep(1)
+          }, 100)
+        } else {
+          // Other errors, show in step 4
+          setFieldErrors(prev => ({ ...prev, startTime: errorMessage }))
+        }
+      }
     }
   }
 
@@ -225,19 +317,50 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
               <Input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => handleDateChange(e.target.value)}
+                onBlur={() => {
+                  const error = validateDate(date)
+                  setFieldErrors(prev => ({ ...prev, date: error }))
+                }}
                 min={new Date().toISOString().split("T")[0]}
-                className="h-9"
+                className={`h-9 ${fieldErrors.date ? "border-destructive" : ""}`}
               />
+              {fieldErrors.date && (
+                <p className="text-sm text-destructive mt-1">{fieldErrors.date}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Start Time</label>
-                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-9" />
+                <Input 
+                  type="time" 
+                  value={startTime} 
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                  onBlur={() => {
+                    const error = validateStartTime(startTime, date)
+                    setFieldErrors(prev => ({ ...prev, startTime: error }))
+                  }}
+                  className={`h-9 ${fieldErrors.startTime ? "border-destructive" : ""}`}
+                />
+                {fieldErrors.startTime && (
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.startTime}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">End Time</label>
-                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-9" />
+                <Input 
+                  type="time" 
+                  value={endTime} 
+                  onChange={(e) => handleEndTimeChange(e.target.value)}
+                  onBlur={() => {
+                    const error = validateEndTime(endTime, date, startTime)
+                    setFieldErrors(prev => ({ ...prev, endTime: error }))
+                  }}
+                  className={`h-9 ${fieldErrors.endTime ? "border-destructive" : ""}`}
+                />
+                {fieldErrors.endTime && (
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.endTime}</p>
+                )}
               </div>
             </div>
           </div>
@@ -251,8 +374,12 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 <label className="block text-sm font-medium mb-1">Purpose</label>
                 <select
                   value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-input rounded-lg bg-background h-9"
+                  onChange={(e) => handlePurposeChange(e.target.value)}
+                  onBlur={() => {
+                    const error = validatePurpose(purpose)
+                    setFieldErrors(prev => ({ ...prev, purpose: error }))
+                  }}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-lg bg-background h-9 ${fieldErrors.purpose ? "border-destructive" : "border-input"}`}
                 >
                   <option value="">Select purpose</option>
                   {purposes.map((p) => (
@@ -261,6 +388,9 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                     </option>
                   ))}
                 </select>
+                {fieldErrors.purpose && (
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.purpose}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -271,9 +401,16 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                   min="1"
                   max={facility.capacity}
                   value={participants}
-                  onChange={(e) => setParticipants(e.target.value)}
-                  className="h-9"
+                  onChange={(e) => handleParticipantsChange(e.target.value)}
+                  onBlur={() => {
+                    const error = validateParticipants(participants)
+                    setFieldErrors(prev => ({ ...prev, participants: error }))
+                  }}
+                  className={`h-9 ${fieldErrors.participants ? "border-destructive" : ""}`}
                 />
+                {fieldErrors.participants && (
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.participants}</p>
+                )}
               </div>
             </div>
             {isStudent && (
@@ -284,11 +421,18 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 <Input
                   type="email"
                   value={lecturerEmail}
-                  onChange={(e) => setLecturerEmail(e.target.value)}
+                  onChange={(e) => handleLecturerEmailChange(e.target.value)}
+                  onBlur={() => {
+                    const error = validateLecturerEmail(lecturerEmail)
+                    setFieldErrors(prev => ({ ...prev, lecturerEmail: error }))
+                  }}
                   placeholder="lecturer@fpt.edu.vn"
                   required
-                  className="h-9"
+                  className={`h-9 ${fieldErrors.lecturerEmail ? "border-destructive" : ""}`}
                 />
+                {fieldErrors.lecturerEmail && (
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.lecturerEmail}</p>
+                )}
               </div>
             )}
           </div>
@@ -333,6 +477,20 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         {step === 4 && (
           <div className="space-y-3">
             <h3 className="font-semibold text-base">Review Booking</h3>
+            {(fieldErrors.startTime || fieldErrors.endTime || fieldErrors.date) && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <p className="text-sm text-destructive font-medium mb-1">Lỗi:</p>
+                {fieldErrors.startTime && (
+                  <p className="text-sm text-destructive">{fieldErrors.startTime}</p>
+                )}
+                {fieldErrors.endTime && fieldErrors.endTime !== fieldErrors.startTime && (
+                  <p className="text-sm text-destructive">{fieldErrors.endTime}</p>
+                )}
+                {fieldErrors.date && (
+                  <p className="text-sm text-destructive">{fieldErrors.date}</p>
+                )}
+              </div>
+            )}
             <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <p><span className="font-medium">Facility:</span> {facility.facilityName}</p>
@@ -359,16 +517,53 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
 
         <div className="flex gap-2 mt-4">
           {step > 1 && (
-            <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1 h-9">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setStep(step - 1)
+                // Clear errors when going back
+                setFieldErrors({})
+              }} 
+              className="flex-1 h-9"
+            >
               Back
             </Button>
           )}
           {step < 4 ? (
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-9"
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                // Validate current step before proceeding
+                if (step === 1) {
+                  const errors: FieldErrors = {}
+                  errors.date = validateDate(date)
+                  errors.startTime = validateStartTime(startTime, date)
+                  errors.endTime = validateEndTime(endTime, date, startTime)
+                  setFieldErrors(errors)
+                  
+                  if (!errors.date && !errors.startTime && !errors.endTime && date && startTime && endTime) {
+                    setStep(step + 1)
+                  }
+                } else if (step === 2) {
+                  const errors: FieldErrors = {}
+                  errors.purpose = validatePurpose(purpose)
+                  errors.participants = validateParticipants(participants)
+                  if (isStudent) {
+                    errors.lecturerEmail = validateLecturerEmail(lecturerEmail)
+                  }
+                  setFieldErrors(errors)
+                  
+                  const hasErrors = Object.values(errors).some(error => error !== undefined)
+                  if (!hasErrors && purpose && participants && (!isStudent || lecturerEmail)) {
+                    setStep(step + 1)
+                  }
+                } else {
+                  setStep(step + 1)
+                }
+              }}
               disabled={
-                (step === 1 && (!date || !startTime || !endTime)) || (step === 2 && (!purpose || !participants))
+                (step === 1 && (!date || !startTime || !endTime)) || 
+                (step === 2 && (!purpose || !participants || (isStudent && !lecturerEmail)))
               }
             >
               Continue
