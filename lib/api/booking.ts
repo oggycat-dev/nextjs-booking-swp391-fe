@@ -202,14 +202,7 @@ export const bookingApi = {
         errorMessage = responseText.trim();
       }
       
-      console.error("Booking creation failed:", {
-        status: response.status,
-        statusText: response.statusText,
-        rawResponse: responseText,
-        parsedData: data,
-        errorMessage
-      });
-      
+      // Error message is thrown below for error handling
       throw new Error(errorMessage);
     }
 

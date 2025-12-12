@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react"
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 // Booking Card Component with Check-in/Check-out
 function BookingCard({ booking, onUpdate }: { booking: BookingListDto; onUpdate: () => void }) {
@@ -830,6 +831,147 @@ function AdminDashboard() {
             </CardContent>
       </Card>
         </Link>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Booking Statistics Chart */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Booking Statistics</CardTitle>
+            <CardDescription className="text-gray-500">Bookings by time period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={[
+                { name: "Today", value: stats.totalBookingsToday },
+                { name: "This Week", value: stats.totalBookingsThisWeek },
+                { name: "This Month", value: stats.totalBookingsThisMonth }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="oklch(0.6 0.2 29.23)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Facility Status Chart */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Facility Status</CardTitle>
+            <CardDescription className="text-gray-500">Current facility distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Available", value: stats.availableFacilities, color: "#10b981" },
+                    { name: "In Use", value: stats.inUseFacilities, color: "#3b82f6" },
+                    { name: "Maintenance", value: stats.maintenanceFacilities, color: "#f59e0b" }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {[
+                    { name: "Available", value: stats.availableFacilities, color: "#10b981" },
+                    { name: "In Use", value: stats.inUseFacilities, color: "#3b82f6" },
+                    { name: "Maintenance", value: stats.maintenanceFacilities, color: "#f59e0b" }
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* User Statistics Chart */}
+        <Card className="bg-white border-gray-200 lg:col-span-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">User Statistics</CardTitle>
+            <CardDescription className="text-gray-500">User distribution and pending requests</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={[
+                { 
+                  name: "Users", 
+                  Students: stats.totalStudents,
+                  Lecturers: stats.totalLecturers,
+                  "Pending": stats.pendingRegistrations,
+                  "Campus Change": stats.pendingCampusChangeRequests
+                }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Students" fill="#3b82f6" />
+                <Bar dataKey="Lecturers" fill="#8b5cf6" />
+                <Bar dataKey="Pending" fill="#f59e0b" />
+                <Bar dataKey="Campus Change" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Booking Approval Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Booking Approval Status</CardTitle>
+            <CardDescription className="text-gray-500">Today's booking approvals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                { name: "Approved", value: stats.approvedBookingsToday, fill: "#10b981" },
+                { name: "Rejected", value: stats.rejectedBookingsToday, fill: "#ef4444" }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Pending Approvals Breakdown */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Pending Approvals</CardTitle>
+            <CardDescription className="text-gray-500">Breakdown by approval level</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={[
+                { name: "Lecturer", value: stats.pendingLecturerApprovals, fill: "#f59e0b" },
+                { name: "Admin", value: stats.pendingAdminApprovals, fill: "#ef4444" }
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}

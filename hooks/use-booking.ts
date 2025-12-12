@@ -238,12 +238,14 @@ export function useBookingMutations() {
       } else {
         const errorMsg = response.message || response.errors?.join?.(", ") || "Failed to create booking";
         setError(errorMsg);
-        return null;
+        // Throw error so it can be caught in handleSubmit catch block
+        throw new Error(errorMsg);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create booking";
       setError(message);
-      return null;
+      // Re-throw error so handleSubmit can catch it and display the message
+      throw err;
     } finally {
       setIsLoading(false);
     }

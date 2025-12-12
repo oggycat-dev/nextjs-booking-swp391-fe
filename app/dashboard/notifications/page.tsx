@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useFirebaseNotification } from "@/hooks/use-firebase-notification"
-import { Bell, BellOff, Settings, Trash2, Check, ExternalLink, RefreshCw } from "lucide-react"
+import { Bell, Settings, Trash2, Check, ExternalLink, RefreshCw, XCircle } from "lucide-react"
 import type { PushNotification, NotificationData } from "@/types"
 import { useNotifications } from "@/hooks/use-notifications"
 
@@ -269,7 +269,7 @@ export default function NotificationsPage() {
             {error && (
               <div className="bg-destructive/10 p-3 rounded-lg">
                 <p className="text-sm text-destructive flex items-center gap-2">
-                  <BellOff className="w-4 h-4" />
+                  <XCircle className="w-4 h-4" />
                   {error}
                 </p>
               </div>

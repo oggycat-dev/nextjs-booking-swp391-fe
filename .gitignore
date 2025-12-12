@@ -8,6 +8,7 @@
 # Build output
 /.next/
 /out/
+*.tsbuildinfo
 
 # Production
 /build
@@ -26,15 +27,18 @@ yarn-error.log*
 
 # Local environment variables
 # Never commit .env files!
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Firebase Service Worker with credentials
-# Use firebase-messaging-sw.example.js as template
+# Firebase Service Worker (generated from template)
+# File này được generate tự động từ template, không nên commit
 public/firebase-messaging-sw.js
 
 # IDEs and editors
 .idea/
 .vscode/
+
+.SETUP.md

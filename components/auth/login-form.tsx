@@ -87,7 +87,7 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister, onForgotPassword
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</Label>
+            <Label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</Label>
               {onForgotPassword && (
                 <button
                   type="button"
