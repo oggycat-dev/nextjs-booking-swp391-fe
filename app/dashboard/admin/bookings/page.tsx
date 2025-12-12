@@ -59,28 +59,31 @@ export default function AdminBookingsPage() {
   }, [fetchPendingApprovals])
 
   const filteredBookings = pendingBookings
-    .filter(
-      (b) => {
-        const matchesSearch =
-          b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase())
-        
-        const matchesStatus = !filterStatus || b.status === filterStatus
-        
-        const matchesDate = !filterDate || (() => {
-          const bookingDate = new Date(b.bookingDate).toISOString().split('T')[0]
-          return bookingDate === filterDate
-        })()
-        
-        return matchesSearch && matchesStatus && matchesDate
-      }
-    )
-    .sort((a, b) => {
-      const timeA = new Date(a.createdAt).getTime()
-      const timeB = new Date(b.createdAt).getTime()
-      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB
+    .filter((b) => {
+      // Ẩn booking nếu ngày booking nhỏ hơn ngày hiện tại (so sánh yyyy-mm-dd string UTC)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const bookingDateStr = new Date(b.bookingDate).toISOString().split('T')[0];
+      if (bookingDateStr < todayStr) return false;
+
+      const matchesSearch =
+        b.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.bookingCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus = !filterStatus || b.status === filterStatus;
+
+      const matchesDate = !filterDate || (() => {
+        const bookingDateStr = new Date(b.bookingDate).toISOString().split('T')[0];
+        return bookingDateStr === filterDate;
+      })();
+
+      return matchesSearch && matchesStatus && matchesDate;
     })
+    .sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
 
   const getStatusColor = (status: BookingStatus) => {
     const colors: Record<string, string> = {
@@ -158,19 +161,19 @@ export default function AdminBookingsPage() {
     <div className="space-y-6">
       <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({pendingBookings.length})</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({filteredBookings.length})</h3>
         </div>
 
       <div className="grid grid-cols-1 gap-4 mb-6">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
-          <p className="text-3xl font-bold text-primary">{pendingBookings.length}</p>
+          <p className="text-3xl font-bold text-primary">{filteredBookings.length}</p>
         </Card>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>
-          <TabsTrigger value="pending">Pending ({pendingBookings.length})</TabsTrigger>
+          <TabsTrigger value="pending">Pending ({filteredBookings.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-4 space-y-4">
