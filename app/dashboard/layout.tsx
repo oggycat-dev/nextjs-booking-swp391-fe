@@ -178,7 +178,6 @@ export default function DashboardLayout({
     { href: "/dashboard/admin/bookings", label: "Booking Approvals", roles: ["admin"] },
     { href: "/dashboard/admin/issues", label: "Issue Reports", roles: ["admin"] },
     { href: "/dashboard/admin/users", label: "User Management", roles: ["admin"] },
-    { href: "/dashboard/admin/analytics", label: "Analytics", roles: ["admin"] },
   ]
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(userRole))
@@ -332,12 +331,6 @@ export default function DashboardLayout({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/profile" className="cursor-pointer flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    <span>View Profile</span>
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                   onClick={async () => {
