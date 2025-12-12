@@ -10,6 +10,7 @@ import { FacilityDetailModal } from "@/components/facilities/facility-detail-mod
 import { useFacilities } from "@/hooks/use-facility"
 import { useFacilityTypes } from "@/hooks/use-facility-type"
 import { facilityApi } from "@/lib/api/facility"
+import { storage } from "@/lib/storage-manager";
 import type { Facility } from "@/types"
 
 interface FilterOptions {
@@ -32,43 +33,90 @@ export default function SearchPage() {
   // Fetch facility types for filter dropdown
   const { facilityTypes } = useFacilityTypes(true) // Only active types
 
-  // Fetch facilities with filters
-  const query = useMemo(() => ({
-    facilityTypeId: filterOptions.facilityTypeId,
-    availableOnly: filterOptions.availableOnly,
-  }), [filterOptions.facilityTypeId, filterOptions.availableOnly])
+  // Always include campusId from storage for facility search
+  // Use storage manager for consistency
+
+  function getUserCampusId() {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = storage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          return user.campusId;
+        }
+      } catch {}
+    }
+    return undefined;
+  }
+
+  // Always get campusId from storage and include in query dependencies
+  const campusId = getUserCampusId();
+  const query = useMemo(() => {
+    return {
+      facilityTypeId: filterOptions.facilityTypeId,
+      availableOnly: filterOptions.availableOnly,
+      ...(campusId ? { campusId } : {})
+    };
+  }, [filterOptions.facilityTypeId, filterOptions.availableOnly, campusId]);
 
   const { facilities, fetchFacilities, isLoading, error } = useFacilities(query)
 
-  // Apply client-side filters (capacity, equipment) on fetched facilities
+  // Apply client-side filters (campus, capacity, equipment) on fetched facilities
   const filteredFacilities = useMemo(() => {
-    let filtered = facilities || []
+    let filtered = facilities || [];
+
+    // Helper: always get campusId as string
+    function getFacilityCampusId(facility: any): string | undefined {
+      if (!facility) return undefined;
+      if (typeof facility.campusId === 'string') return facility.campusId;
+      if (typeof facility.campusId === 'object' && facility.campusId !== null) {
+        if (typeof facility.campusId.id === 'string') return facility.campusId.id;
+        if (typeof facility.campusId._id === 'string') return facility.campusId._id;
+      }
+      return undefined;
+    }
+    function getUserCampusId() {
+      if (typeof window !== "undefined") {
+        try {
+          const userStr = window.sessionStorage.getItem("user") || window.localStorage.getItem("user");
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            return user.campusId;
+          }
+        } catch {}
+      }
+      return undefined;
+    }
+    const campusId = getUserCampusId();
+    if (campusId) {
+      filtered = filtered.filter(f => getFacilityCampusId(f) === campusId);
+    }
 
     // Filter by capacity
     if (filterOptions.capacity) {
       filtered = filtered.filter(
         (f) => f.capacity >= filterOptions.capacity![0] && f.capacity <= filterOptions.capacity![1]
-      )
+      );
     }
 
     // Filter by equipment
     if (filterOptions.equipment && filterOptions.equipment.length > 0) {
       filtered = filtered.filter((f) => {
-        if (!f.equipment) return false
-        const facilityEquipment = f.equipment.split(",").map((e) => e.trim().toLowerCase())
+        if (!f.equipment) return false;
+        const facilityEquipment = f.equipment.split(",").map((e) => e.trim().toLowerCase());
         return filterOptions.equipment!.some((eq) =>
           facilityEquipment.some((fe) => fe.includes(eq.toLowerCase()))
-        )
-      })
+        );
+      });
     }
 
     // Filter by availability status
     if (filterOptions.availableOnly) {
-      filtered = filtered.filter((f) => f.status === "Available" && f.isActive)
+      filtered = filtered.filter((f) => f.status === "Available" && f.isActive);
     }
 
-    return filtered
-  }, [facilities, filterOptions])
+    return filtered;
+  }, [facilities, filterOptions]);
 
   const handleFilter = (filters: {
     type?: string
