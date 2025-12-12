@@ -35,6 +35,7 @@ export default function AdminFacilitiesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTypeId, setFilterTypeId] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<string>("")
+  const [filterCampusId, setFilterCampusId] = useState<string>("")
 
   // Read query params on mount
   useEffect(() => {
@@ -68,10 +69,11 @@ export default function AdminFacilitiesPage() {
         f.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         f.facilityCode.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesType = !filterTypeId || f.typeId === filterTypeId
+      const matchesCampus = !filterCampusId || f.campusId === filterCampusId
       const matchesStatus = !filterStatus || f.status === filterStatus
-      return matchesSearch && matchesType && matchesStatus
+      return matchesSearch && matchesType && matchesCampus && matchesStatus
     })
-  }, [facilities, searchTerm, filterTypeId, filterStatus])
+  }, [facilities, searchTerm, filterTypeId, filterCampusId, filterStatus])
 
   const handleCreate = () => {
     setEditingFacility(null)
@@ -156,6 +158,18 @@ export default function AdminFacilitiesPage() {
 
   const getStatusColor = (status: string) => STATUS_COLORS[status] ?? "bg-gray-100 text-gray-700"
 
+  const resolveTypeName = (f: AdminFacility) => {
+    if (f.typeName && f.typeName.trim()) return f.typeName
+    const t = facilityTypes.find((ft) => ft.id === f.typeId)
+    return t?.typeName ?? "-"
+  }
+
+  const resolveCampusName = (f: AdminFacility) => {
+    if (f.campusName && f.campusName.trim()) return f.campusName
+    const c = campuses.find((cc) => cc.id === f.campusId)
+    return c?.campusName ?? "-"
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -169,7 +183,7 @@ export default function AdminFacilitiesPage() {
       </div>
 
       <Card className="p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Search</label>
             <Input
@@ -194,6 +208,21 @@ export default function AdminFacilitiesPage() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium mb-2">Campus</label>
+            <select
+              value={filterCampusId}
+              onChange={(e) => setFilterCampusId(e.target.value)}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+            >
+              <option value="">All Campuses</option>
+              {campuses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.campusName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-2">Status</label>
             <select
               value={filterStatus}
@@ -213,6 +242,7 @@ export default function AdminFacilitiesPage() {
               onClick={() => {
                 setSearchTerm("")
                 setFilterTypeId("")
+                setFilterCampusId("")
                 setFilterStatus("")
               }}
             >
@@ -266,10 +296,10 @@ export default function AdminFacilitiesPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="text-sm">{facility.typeName}</span>
+                      <span className="text-sm">{resolveTypeName(facility)}</span>
                     </td>
                     <td className="p-4">
-                      <span className="text-sm">{facility.campusName}</span>
+                      <span className="text-sm">{resolveCampusName(facility)}</span>
                     </td>
                     <td className="p-4">
                       <div className="text-sm">
