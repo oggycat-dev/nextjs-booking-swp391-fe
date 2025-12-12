@@ -887,6 +887,22 @@ interface FacilityViewModalProps {
 
 function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewModalProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const { facilityTypes } = useFacilityTypes()
+  const { campuses } = useCampuses()
+
+  // Get type name from typeId
+  const getTypeName = (): string => {
+    if (facility.typeName && facility.typeName !== "-") return facility.typeName
+    const type = facilityTypes.find(t => t.id === facility.typeId)
+    return type?.typeName || facility.typeName || "-"
+  }
+
+  // Get campus name from campusId
+  const getCampusName = (): string => {
+    if (facility.campusName && facility.campusName !== "-") return facility.campusName
+    const campus = campuses.find(c => c.id === facility.campusId)
+    return campus?.campusName || facility.campusName || "-"
+  }
   
   if (!isOpen) return null
 
@@ -1034,11 +1050,15 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium">{facility.typeName}</span>
+                  <span className="font-medium">{getTypeName()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Campus:</span>
-                  <span className="font-medium">{facility.campusName}</span>
+                  <span className="font-medium">{getCampusName()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Campus ID:</span>
+                  <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{facility.campusId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Capacity:</span>
