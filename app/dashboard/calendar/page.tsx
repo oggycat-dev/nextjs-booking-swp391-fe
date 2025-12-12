@@ -6,6 +6,7 @@ import { useFacilities } from "@/hooks/use-facility"
 import { bookingApi } from "@/lib/api/booking"
 import type { BookingCalendarDto, Facility } from "@/types"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { storage } from "@/lib/storage-manager";
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -40,11 +41,31 @@ export default function CalendarPage() {
   const [bookings, setBookings] = useState<BookingCalendarDto[]>([])
   const [selectedBooking, setSelectedBooking] = useState<BookingCalendarDto | null>(null)
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
-  const { facilities, fetchFacilities } = useFacilities()
-  
+
+  // Get campusId from storage
+  // Use the same logic as in search page
+
+  function getUserCampusId() {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = storage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          return user.campusId;
+        }
+      } catch {}
+    }
+    return undefined;
+  }
+  const campusId = getUserCampusId();
+  const { facilities, fetchFacilities } = useFacilities({ campusId });
+
+  // Only show facilities with status 'Available'
+  const availableFacilities = facilities.filter(f => f.status === 'Available' && f.isActive);
+
   useEffect(() => {
-    fetchFacilities()
-  }, [])
+    fetchFacilities({ campusId });
+  }, [campusId])
   
   useEffect(() => {
     fetchCalendarBookings()
@@ -306,7 +327,7 @@ export default function CalendarPage() {
             <label className="text-sm font-medium whitespace-nowrap">Select Facility:</label>
             <div className="flex-1 md:min-w-[250px]">
               <SearchableSelect
-                options={facilities}
+                options={availableFacilities}
                 value={selectedFacility}
                 onValueChange={(value) => setSelectedFacility(value)}
                 getOptionLabel={(facility: Facility) => `${facility.facilityName} (${facility.typeName})`}

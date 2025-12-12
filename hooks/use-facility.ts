@@ -14,6 +14,7 @@ export function useFacilities(initialQuery?: GetFacilitiesQuery) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+
   const fetchFacilities = useCallback(async (query?: GetFacilitiesQuery) => {
     setIsLoading(true);
     setError(null);
@@ -35,10 +36,12 @@ export function useFacilities(initialQuery?: GetFacilitiesQuery) {
     }
   }, []);
 
-  // Fetch on mount with initial query
+  // Memoize initialQuery to avoid infinite loop
+  const initialQueryString = JSON.stringify(initialQuery || {});
   useEffect(() => {
     fetchFacilities(initialQuery);
-  }, [fetchFacilities, initialQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQueryString]);
 
   return {
     facilities,
