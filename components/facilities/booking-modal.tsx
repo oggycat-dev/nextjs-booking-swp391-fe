@@ -9,7 +9,9 @@ import { useAuth } from "@/hooks/use-auth"
 import { useBookingMutations } from "@/hooks/use-booking"
 import { useCampus } from "@/hooks/use-campus"
 import { useHolidays } from "@/hooks/use-holidays"
-import type { Facility } from "@/types"
+import { bookingApi } from "@/lib/api/booking"
+import type { Facility, BookingCalendarDto } from "@/types"
+import { Loader2 } from "lucide-react"
 
 interface BookingModalProps {
   facility: Facility
@@ -46,10 +48,44 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const [equipment, setEquipment] = useState<string[]>([])
   const [notes, setNotes] = useState("")
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [dayBookings, setDayBookings] = useState<BookingCalendarDto[]>([])
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false)
 
   // Get campus working hours for client-side validation
   const { campus } = useCampus(facility.campusId)
   const { holidays } = useHolidays()
+
+  // Fetch calendar bookings when date changes
+  useEffect(() => {
+    if (!date) {
+      setDayBookings([])
+      return
+    }
+
+    const fetchDayBookings = async () => {
+      setIsLoadingBookings(true)
+      try {
+        const response = await bookingApi.getCalendarBookings({
+          startDate: date,
+          endDate: date,
+          facilityId: facility.id,
+        })
+        
+        if (response.success && response.data) {
+          setDayBookings(response.data)
+        } else {
+          setDayBookings([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch day bookings:', error)
+        setDayBookings([])
+      } finally {
+        setIsLoadingBookings(false)
+      }
+    }
+
+    fetchDayBookings()
+  }, [date, facility.id])
 
   const purposes = ["Group study", "Club meeting", "Project discussion", "Event rehearsal", "Class session", "Other"]
 
@@ -267,10 +303,11 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     setFieldErrors(prev => ({ ...prev, purpose: error }))
   }
 
-  // Clear field errors when modal closes or resets
+  // Clear field errors and bookings when modal closes or resets
   useEffect(() => {
     if (!isOpen) {
       setFieldErrors({})
+      setDayBookings([])
     }
   }, [isOpen])
 
@@ -351,6 +388,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         setEquipment([])
         setNotes("")
         setFieldErrors({})
+        setDayBookings([])
         if (onBookingCreated) {
           onBookingCreated()
         }
@@ -405,6 +443,44 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   }
 
   const availableEquipment = getEquipmentList()
+
+  // Calendar helper functions
+  const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 AM to 10 PM
+
+  const getBookingStyle = (booking: BookingCalendarDto) => {
+    const startHour = parseInt(booking.startTime.split(':')[0])
+    const startMinute = parseInt(booking.startTime.split(':')[1])
+    const endHour = parseInt(booking.endTime.split(':')[0])
+    const endMinute = parseInt(booking.endTime.split(':')[1])
+    
+    // Calculate position from 7:00
+    const topPosition = (startHour - 7) * 40 + (startMinute / 60) * 40
+    
+    // Calculate height based on duration
+    const durationHours = (endHour - startHour) + (endMinute - startMinute) / 60
+    const height = durationHours * 40
+    
+    return {
+      top: `${topPosition}px`,
+      height: `${Math.max(height, 20)}px`, // Minimum 20px height
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Approved':
+        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-700 text-white'
+      case 'InUse':
+        return 'bg-gradient-to-br from-pink-400 to-pink-600 border-pink-700 text-white'
+      case 'Pending':
+        return 'bg-gradient-to-br from-gray-400 to-gray-600 border-gray-700 text-white'
+      case 'WaitingLecturerApproval':
+      case 'WaitingAdminApproval':
+        return 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white'
+      default:
+        return 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-700 text-white'
+    }
+  }
 
   if (!isOpen) return null
 
@@ -500,6 +576,85 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 )}
               </div>
             </div>
+
+            {/* Day Calendar View */}
+            {date && (
+              <div className="mt-4 border rounded-lg p-3 bg-muted/20">
+                <h4 className="text-sm font-semibold mb-2">
+                  {new Date(date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h4>
+                <div className="relative" style={{ minHeight: '640px' }}>
+                  {isLoadingBookings ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="ml-2 text-sm text-muted-foreground">Loading bookings...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Time labels */}
+                      <div className="absolute left-0 top-0 w-12 space-y-[0px]">
+                        {HOURS.map((hour) => (
+                          <div key={hour} className="h-10 text-xs text-muted-foreground flex items-start pt-1">
+                            {hour}:00
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Calendar grid */}
+                      <div className="ml-14 relative">
+                        {/* Background grid */}
+                        <div className="space-y-[0px]">
+                          {HOURS.map((hour) => (
+                            <div
+                              key={hour}
+                              className="h-10 border-t border-input bg-muted/20"
+                            />
+                          ))}
+                        </div>
+
+                        {/* Booking bars overlay */}
+                        <div className="absolute inset-0">
+                          {dayBookings.map((booking, idx) => {
+                            const style = getBookingStyle(booking)
+                            const height = parseInt(style.height)
+                            const statusColor = getStatusColor(booking.status)
+                            
+                            // Adapt text size based on height
+                            const isSmall = height < 40
+                            const isMedium = height >= 40 && height < 80
+                            
+                            return (
+                              <div
+                                key={`${booking.id}-${idx}`}
+                                className={`absolute left-0 right-0 rounded-lg border-l-[4px] shadow-sm ${statusColor}`}
+                                style={style}
+                                title={`${booking.startTime.slice(0,5)} - ${booking.endTime.slice(0,5)} | ${booking.status}`}
+                              >
+                                <div className={`h-full flex flex-col justify-center ${isSmall ? 'px-1.5 py-0.5' : isMedium ? 'px-2 py-1' : 'px-2 py-1.5'}`}>
+                                  <div className={`font-semibold truncate ${isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs'}`}>
+                                    {booking.startTime.slice(0,5)} - {booking.endTime.slice(0,5)}
+                                  </div>
+                                  {!isSmall && (
+                                    <div className={`opacity-90 truncate ${isMedium ? 'text-[9px]' : 'text-[10px]'}`}>
+                                      {booking.status}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
