@@ -130,10 +130,13 @@ export default function CalendarPage() {
   }
 
   // Get bookings for a specific day
+  // Note: All bookings are shown, including those that are completed/checked out or have campus changes
+  // This ensures historical data remains visible in the calendar view
   const getBookingsForDay = (date: Date) => {
     return bookings.filter(booking => {
       const bookingDate = new Date(booking.bookingDate)
       return bookingDate.toDateString() === date.toDateString()
+      // No additional filtering - all bookings (including completed/checked out and campus changes) are shown
     })
   }
 
@@ -215,6 +218,7 @@ export default function CalendarPage() {
                     const height = parseInt(style.height)
                     
                     // Determine styling based on status
+                    // Note: Completed/Checked out bookings and campus changes are still shown with appropriate styling
                     const statusColor = 
                       booking.status === 'Approved' 
                         ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-700'
@@ -224,6 +228,8 @@ export default function CalendarPage() {
                         ? 'bg-gradient-to-br from-gray-400 to-gray-600 border-gray-700 text-white hover:from-gray-500 hover:to-gray-700'
                         : booking.status === 'WaitingLecturerApproval' || booking.status === 'WaitingAdminApproval'
                         ? 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white hover:from-amber-500 hover:to-amber-700'
+                        : booking.status === 'Completed'
+                        ? 'bg-gradient-to-br from-slate-400 to-slate-600 border-slate-700 text-white hover:from-slate-500 hover:to-slate-700'
                         : 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-700 text-white hover:from-blue-500 hover:to-blue-700'
                     
                     // Adapt text size based on height

@@ -96,6 +96,19 @@ export default function BookingsPage() {
     return historyBookings.filter(b => b.status === filterStatus)
   }, [historyBookings, filterStatus])
 
+  // Filter out past bookings from My Pending tab
+  const filteredMyPendingBookings = useMemo(() => {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0) // Reset time to compare dates only
+    
+    return myPendingBookings.filter(booking => {
+      const bookingDate = new Date(booking.bookingDate)
+      bookingDate.setHours(0, 0, 0, 0)
+      // Only show bookings with date >= today
+      return bookingDate >= now
+    })
+  }, [myPendingBookings])
+
   useEffect(() => {
     fetchBookings()
     fetchHistory()
@@ -901,7 +914,7 @@ export default function BookingsPage() {
         <Tabs defaultValue={isLecturer ? "pending" : "mypending"} className="w-full">
           <TabsList>
             <TabsTrigger value="mypending">
-              My Pending ({myPendingBookings.length})
+              My Pending ({filteredMyPendingBookings.length})
             </TabsTrigger>
             {isLecturer && (
               <TabsTrigger value="pending">
@@ -918,12 +931,12 @@ export default function BookingsPage() {
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
-            ) : myPendingBookings.length === 0 ? (
+            ) : filteredMyPendingBookings.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">No pending bookings</p>
               </Card>
             ) : (
-              myPendingBookings.map((booking) => renderBookingCard({
+              filteredMyPendingBookings.map((booking) => renderBookingCard({
                 id: booking.id,
                 bookingCode: booking.bookingCode,
                 facilityId: booking.facilityId,
