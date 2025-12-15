@@ -7,25 +7,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useFirebaseNotification } from "@/hooks/use-firebase-notification"
-import { Bell, Settings, Trash2, Check, ExternalLink, RefreshCw, XCircle } from "lucide-react"
+import { Bell, Settings, Trash2, Check, ExternalLink, RefreshCw, XCircle, Users, Building2, Calendar, CheckCircle2 } from "lucide-react"
 import type { PushNotification, NotificationData } from "@/types"
 import { useNotifications } from "@/hooks/use-notifications"
 
 // Get icon based on notification type
 const getNotificationIcon = (type: string) => {
+  const iconClass = "w-5 h-5"
   switch (type) {
     case "new_registration":
-      return "👤"
+      return <Users className={`${iconClass} text-blue-500`} />
     case "campus_change_request":
-      return "🏫"
+      return <Building2 className={`${iconClass} text-purple-500`} />
     case "new_booking":
-      return "📅"
+      return <Calendar className={`${iconClass} text-green-500`} />
     case "booking_approved":
-      return "✅"
+      return <CheckCircle2 className={`${iconClass} text-emerald-500`} />
     case "booking_rejected":
-      return "❌"
+      return <XCircle className={`${iconClass} text-red-500`} />
     default:
-      return "🔔"
+      return <Bell className={`${iconClass} text-gray-500`} />
   }
 }
 
@@ -68,7 +69,7 @@ const getTypeLabel = (type: string) => {
 export default function NotificationsPage() {
   const [selectedNotification, setSelectedNotification] = useState<PushNotification | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  
+
   // Use notifications hook for all business logic
   const {
     notifications,
@@ -80,16 +81,16 @@ export default function NotificationsPage() {
     deleteNotification,
     clearAll: clearAllNotifications,
   } = useNotifications()
-  
+
   // Use Firebase notification hook for push notification settings
-  const { 
-    fcmToken, 
-    isSupported, 
-    isLoading: isLoadingFirebase, 
+  const {
+    fcmToken,
+    isSupported,
+    isLoading: isLoadingFirebase,
     error,
     setupNotifications,
     unregisterToken,
-    handleNotificationClick 
+    handleNotificationClick
   } = useFirebaseNotification()
 
   const handleViewDetails = (notification: PushNotification) => {
@@ -103,7 +104,7 @@ export default function NotificationsPage() {
     const date = new Date(timestamp)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
-    
+
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
@@ -118,15 +119,14 @@ export default function NotificationsPage() {
   const renderNotification = (notification: PushNotification) => (
     <Card
       key={notification.id}
-      className={`p-4 cursor-pointer hover:shadow-lg transition-all ${
-        !notification.read ? "bg-primary/5 border-l-4 border-primary" : ""
-      }`}
+      className={`p-4 cursor-pointer hover:shadow-lg transition-all ${!notification.read ? "bg-primary/5 border-l-4 border-primary" : ""
+        }`}
       onClick={() => setSelectedNotification(notification)}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">{getNotificationIcon(notification.type)}</div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold">{notification.title}</h3>
@@ -136,7 +136,6 @@ export default function NotificationsPage() {
               </div>
               <p className="text-xs text-muted-foreground">{formatTimestamp(notification.createdAt)}</p>
             </div>
-            {!notification.read && <div className="w-2 h-2 rounded-full bg-primary ml-auto flex-shrink-0" />}
           </div>
           <p className="text-sm text-muted-foreground line-clamp-2">{notification.body}</p>
         </div>
@@ -197,16 +196,16 @@ export default function NotificationsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setShowSettings(!showSettings)}
           >
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={loadNotifications}
             disabled={isLoadingNotifications}
@@ -233,25 +232,25 @@ export default function NotificationsPage() {
       {showSettings && (
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Push Notification Settings</h2>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Push Notifications</p>
                 <p className="text-sm text-muted-foreground">
-                  {isSupported 
+                  {isSupported
                     ? "Receive real-time notifications for new registrations, bookings, and campus change requests"
                     : "Push notifications are not supported in this browser"}
                 </p>
               </div>
-              <Switch 
+              <Switch
                 checked={!!fcmToken}
-                 disabled={!isSupported || isLoadingFirebase}
-                onCheckedChange={(checked) => {
+                disabled={!isSupported || isLoadingFirebase}
+                onCheckedChange={(checked: boolean) => {
                   if (checked) {
-                     setupNotifications()
+                    setupNotifications()
                   } else {
-                     unregisterToken()
+                    unregisterToken()
                   }
                 }}
               />
@@ -275,7 +274,7 @@ export default function NotificationsPage() {
               </div>
             )}
 
-             {isLoadingFirebase && (
+            {isLoadingFirebase && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 Setting up notifications...
@@ -292,47 +291,47 @@ export default function NotificationsPage() {
           <p className="text-muted-foreground">Loading notifications from server...</p>
         </Card>
       ) : (
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">All ({notifications.length})</TabsTrigger>
-          <TabsTrigger value="unread">
-            Unread ({unreadCount})
-          </TabsTrigger>
-          <TabsTrigger value="registrations">Registrations</TabsTrigger>
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="campus">Campus Changes</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+            <TabsTrigger value="all">All ({notifications.length})</TabsTrigger>
+            <TabsTrigger value="unread">
+              Unread ({unreadCount})
+            </TabsTrigger>
+            <TabsTrigger value="registrations">Registrations</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="campus">Campus Changes</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="all" className="space-y-3 mt-4">
-          {notifications.length === 0 
-            ? renderEmptyState("No notifications yet")
-            : notifications.map(renderNotification)}
-        </TabsContent>
+          <TabsContent value="all" className="space-y-3 mt-4">
+            {notifications.length === 0
+              ? renderEmptyState("No notifications yet")
+              : notifications.map(renderNotification)}
+          </TabsContent>
 
-        <TabsContent value="unread" className="space-y-3 mt-4">
-          {notifications.filter((n) => !n.read).length === 0 
-            ? renderEmptyState("All caught up!")
-            : notifications.filter((n) => !n.read).map(renderNotification)}
-        </TabsContent>
+          <TabsContent value="unread" className="space-y-3 mt-4">
+            {notifications.filter((n) => !n.read).length === 0
+              ? renderEmptyState("All caught up!")
+              : notifications.filter((n) => !n.read).map(renderNotification)}
+          </TabsContent>
 
-        <TabsContent value="registrations" className="space-y-3 mt-4">
-          {notifications.filter((n) => n.type === "new_registration").length === 0
-            ? renderEmptyState("No registration notifications")
-            : notifications.filter((n) => n.type === "new_registration").map(renderNotification)}
-        </TabsContent>
+          <TabsContent value="registrations" className="space-y-3 mt-4">
+            {notifications.filter((n) => n.type === "new_registration").length === 0
+              ? renderEmptyState("No registration notifications")
+              : notifications.filter((n) => n.type === "new_registration").map(renderNotification)}
+          </TabsContent>
 
-        <TabsContent value="bookings" className="space-y-3 mt-4">
-          {notifications.filter((n) => n.type.includes("booking")).length === 0
-            ? renderEmptyState("No booking notifications")
-            : notifications.filter((n) => n.type.includes("booking")).map(renderNotification)}
-        </TabsContent>
+          <TabsContent value="bookings" className="space-y-3 mt-4">
+            {notifications.filter((n) => n.type.includes("booking")).length === 0
+              ? renderEmptyState("No booking notifications")
+              : notifications.filter((n) => n.type.includes("booking")).map(renderNotification)}
+          </TabsContent>
 
-        <TabsContent value="campus" className="space-y-3 mt-4">
-          {notifications.filter((n) => n.type === "campus_change_request").length === 0
-            ? renderEmptyState("No campus change notifications")
-            : notifications.filter((n) => n.type === "campus_change_request").map(renderNotification)}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="campus" className="space-y-3 mt-4">
+            {notifications.filter((n) => n.type === "campus_change_request").length === 0
+              ? renderEmptyState("No campus change notifications")
+              : notifications.filter((n) => n.type === "campus_change_request").map(renderNotification)}
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Notification Detail Modal */}
@@ -341,7 +340,7 @@ export default function NotificationsPage() {
           <Card className="w-full max-w-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-4xl">{getNotificationIcon(selectedNotification.type)}</span>
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">{getNotificationIcon(selectedNotification.type)}</div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">{selectedNotification.title}</h2>
@@ -356,9 +355,9 @@ export default function NotificationsPage() {
               </div>
               <button
                 onClick={() => setSelectedNotification(null)}
-                className="text-muted-foreground hover:text-foreground text-2xl"
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               >
-                ✕
+                <XCircle className="w-6 h-6" />
               </button>
             </div>
 
