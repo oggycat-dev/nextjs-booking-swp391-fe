@@ -73,7 +73,7 @@ export default function DashboardLayout({
         updateUnreadCount();
       }
     };
-    
+
     navigator.serviceWorker?.addEventListener('message', handleMessage);
 
     // Poll for changes (fallback)
@@ -102,7 +102,7 @@ export default function DashboardLayout({
     const checkUser = () => {
       // Use storage manager instead of localStorage directly (supports sessionStorage)
       const token = storage.getItem("token")
-      
+
       if (!token) {
         // If no token, redirect to login
         if (typeof window !== "undefined") {
@@ -110,9 +110,9 @@ export default function DashboardLayout({
         }
         return
       }
-      
+
       const user = getCurrentUser()
-      
+
       if (user) {
         // Role can be string from backend or UserRole type - handle both
         let roleStr = ""
@@ -121,7 +121,7 @@ export default function DashboardLayout({
         } else {
           roleStr = String(user.role).toLowerCase()
         }
-        
+
         setUserRole(roleStr || "student")
         setUserInfo({
           fullName: user.fullName,
@@ -160,7 +160,7 @@ export default function DashboardLayout({
         }
       }
     }
-    
+
     checkUser()
   }, [getCurrentUser, router])
 
@@ -215,33 +215,30 @@ export default function DashboardLayout({
             <div className="flex items-center gap-1 flex-1 justify-center">
               <Link href="/dashboard">
                 <button
-                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
-                    pathname === "/dashboard"
-                      ? "bg-white/20 text-primary-foreground"
-                      : "text-primary-foreground/90 hover:bg-white/10"
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${pathname === "/dashboard"
+                    ? "bg-white/20 text-primary-foreground"
+                    : "text-primary-foreground/90 hover:bg-white/10"
+                    }`}
                 >
                   Home
                 </button>
               </Link>
               <Link href="/dashboard/search">
                 <button
-                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
-                    pathname?.startsWith("/dashboard/search")
-                      ? "bg-white/20 text-primary-foreground"
-                      : "text-primary-foreground/90 hover:bg-white/10"
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${pathname?.startsWith("/dashboard/search")
+                    ? "bg-white/20 text-primary-foreground"
+                    : "text-primary-foreground/90 hover:bg-white/10"
+                    }`}
                 >
                   Search Facilities
                 </button>
               </Link>
               <Link href="/dashboard/bookings">
                 <button
-                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${
-                    pathname === "/dashboard/bookings"
-                      ? "bg-white/20 text-primary-foreground"
-                      : "text-primary-foreground/90 hover:bg-white/10"
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg ${pathname === "/dashboard/bookings"
+                    ? "bg-white/20 text-primary-foreground"
+                    : "text-primary-foreground/90 hover:bg-white/10"
+                    }`}
                 >
                   My Bookings
                 </button>
@@ -249,11 +246,10 @@ export default function DashboardLayout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-1 ${
-                      pathname?.startsWith("/dashboard/calendar") || pathname?.startsWith("/dashboard/history") || pathname?.startsWith("/dashboard/holidays")
-                        ? "bg-white/20 text-primary-foreground"
-                        : "text-primary-foreground/90 hover:bg-white/10"
-                    }`}
+                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-1 ${pathname?.startsWith("/dashboard/calendar") || pathname?.startsWith("/dashboard/history") || pathname?.startsWith("/dashboard/holidays")
+                      ? "bg-white/20 text-primary-foreground"
+                      : "text-primary-foreground/90 hover:bg-white/10"
+                      }`}
                   >
                     More
                     <ChevronDown className="w-4 h-4" />
@@ -302,7 +298,7 @@ export default function DashboardLayout({
                 </Button>
               </Link>
             )}
-            
+
             {/* User Profile Dropdown - Student/Lecturer/Admin */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -340,7 +336,7 @@ export default function DashboardLayout({
                   </DropdownMenuItem>
                 )}
 
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                   onClick={async () => {
                     await authLogout()
@@ -360,46 +356,45 @@ export default function DashboardLayout({
 
       {/* Sidebar for Admin, Topbar for Student/Lecturer */}
       {userRole === "admin" ? (
-      <div className="flex">
-        <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-80px)] p-6 shadow-lg">
-          <nav className="space-y-1.5">
-            {filteredNavItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <button
-                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    pathname === item.href
+        <div className="flex">
+          <aside className="w-64 bg-gradient-to-b from-sidebar to-sidebar/95 border-r border-sidebar-border min-h-[calc(100vh-76px)] h-[calc(100vh-76px)] sticky top-[76px] p-6 shadow-lg overflow-y-auto">
+            <nav className="space-y-1.5">
+              {filteredNavItems.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <button
+                    className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-200 ${pathname === item.href
                       ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              </Link>
-            ))}
-          </nav>
-        </aside>
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                </Link>
+              ))}
+            </nav>
+          </aside>
 
-        <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
-          <TokenRefreshProvider>
-            <SessionManager />
+          <main className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-80px)]">
+            <TokenRefreshProvider>
+              <SessionManager />
               <FirebaseNotificationProvider userRole={userRole}>
                 {children}
               </FirebaseNotificationProvider>
             </TokenRefreshProvider>
           </main>
         </div>
-       ) : (
-         <div className="flex flex-col">
-           <main className="flex-1 px-16 py-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-73px)]">
-             <TokenRefreshProvider>
-               <SessionManager />
-               <FirebaseNotificationProvider userRole={userRole}>
-            {children}
-               </FirebaseNotificationProvider>
-          </TokenRefreshProvider>
-        </main>
-      </div>
-       )}
+      ) : (
+        <div className="flex flex-col">
+          <main className="flex-1 px-16 py-8 bg-gradient-to-br from-background via-background to-muted/20 min-h-[calc(100vh-73px)]">
+            <TokenRefreshProvider>
+              <SessionManager />
+              <FirebaseNotificationProvider userRole={userRole}>
+                {children}
+              </FirebaseNotificationProvider>
+            </TokenRefreshProvider>
+          </main>
+        </div>
+      )}
       <Toaster />
     </div>
   )
