@@ -247,7 +247,7 @@ export default function NotificationsPage() {
               <Switch 
                 checked={!!fcmToken}
                  disabled={!isSupported || isLoadingFirebase}
-                onCheckedChange={(checked) => {
+                onCheckedChange={(checked: boolean) => {
                   if (checked) {
                      setupNotifications()
                   } else {
