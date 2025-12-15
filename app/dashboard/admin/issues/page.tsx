@@ -151,17 +151,21 @@ export default function AdminIssuesPage() {
     })
   }
 
-  // Filter facilities with similar type (same facility type as the reported facility)
+  // Filter facilities with similar type AND same campus as the reported facility
   const getSimilarFacilities = () => {
     if (!selectedIssue || !facilities.length) return []
-    
+
     // Try to find the original facility to get its type
     const originalFacility = facilities.find(f => f.id === selectedIssue.facilityId)
-    if (!originalFacility) return facilities
+    if (!originalFacility) return []
 
-    // Filter facilities with same type, excluding the original facility
+    // Filter facilities with same type & same campus, excluding the original facility
     return facilities.filter(
-      f => f.typeId === originalFacility.typeId && f.id !== selectedIssue.facilityId && f.status === "Available"
+      f =>
+        f.typeId === originalFacility.typeId &&
+        f.campusId === originalFacility.campusId &&
+        f.id !== selectedIssue.facilityId &&
+        f.status === "Available"
     )
   }
 

@@ -601,8 +601,10 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         capacity: Number(capacity),
         description: description || undefined,
         equipment: equipment || undefined,
-        imageUrl: facility.imageUrl || undefined,  // Keep existing images
-        images: images.length > 0 ? images : undefined,  // Add new images
+        // Nếu có upload ảnh mới thì để backend tự xử lý images mới,
+        // không gửi lại imageUrl cũ để tránh lỗi 500 từ API
+        imageUrl: images.length === 0 ? facility.imageUrl || undefined : undefined,
+        images: images.length > 0 ? images : undefined,
         status,
         isActive,
       })
@@ -858,23 +860,32 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             </p>
           </div>
 
-          {!isEdit && (
-            <div>
-              <label className="block text-sm font-semibold mb-2">Images (Multiple files allowed)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  multiple
-                  onChange={handleImageChange}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} file(s) selected</span>}
-              </p>
+          {/* Images upload - used for both create and update (matches Swagger images[] array) */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Images (Multiple files allowed)
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif"
+                multiple
+                onChange={handleImageChange}
+                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+              />
             </div>
-          )}
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF.&nbsp;
+              {isEdit
+                ? "Các ảnh mới upload sẽ được thêm vào cùng với các ảnh hiện có."
+                : "Bạn có thể upload nhiều ảnh cho facility khi tạo mới."}
+              {images.length > 0 && (
+                <span className="font-medium text-primary"> {" "}
+                  {images.length} file(s) selected
+                </span>
+              )}
+            </p>
+          </div>
 
           <div>
             <label className="block text-sm font-semibold mb-2">Description</label>
