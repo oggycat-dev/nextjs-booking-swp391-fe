@@ -546,8 +546,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         errors.push("Campus is required")
       }
 
-      // Validate images
+      // Validate images (limit to 2 files)
       if (images.length > 0) {
+        if (images.length > 2) {
+          errors.push("You can upload a maximum of 2 images")
+        }
         images.forEach((file, index) => {
           if (file.size > 5 * 1024 * 1024) {
             errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
@@ -572,6 +575,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     if (isEdit && facility) {
       // Validate new images in edit mode
       if (images.length > 0) {
+        if (images.length > 2) {
+          errors.push("You can upload a maximum of 2 images")
+        }
         images.forEach((file, index) => {
           if (file.size > 5 * 1024 * 1024) {
             errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
@@ -595,6 +601,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
       const updated = await updateFacility(facility.id, {
         facilityName,
         typeId,
+        campusId: campusId || undefined,
         building: building || undefined,
         floor: floor || undefined,
         roomNumber: roomNumber || undefined,
@@ -657,7 +664,16 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         }
         return true
       })
-      setImages(validFiles)
+
+      // Enforce maximum 2 images - keep first 2 valid files
+      if (validFiles.length > 2) {
+        toast({
+          title: "Too many files",
+          description: "You can upload a maximum of 2 images",
+          variant: "destructive",
+        })
+      }
+      setImages(validFiles.slice(0, 2))
     }
   }
 
@@ -721,10 +737,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                 Campus <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
-                disabled={isEdit}
               >
                 <option value="">Select campus</option>
                 {campuses.map((c) => (
@@ -733,7 +748,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                   </option>
                 ))}
               </select>
-              {isEdit && <p className="text-xs text-muted-foreground mt-1.5">Cannot change campus after creation</p>}
+              {/* Campus can now be changed when editing */}
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">
@@ -863,7 +878,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
           {/* Images upload - used for both create and update (matches Swagger images[] array) */}
           <div>
             <label className="block text-sm font-semibold mb-2">
-              Images (Multiple files allowed)
+              Images (Up to 2 files)
             </label>
             <div className="relative">
               <input
