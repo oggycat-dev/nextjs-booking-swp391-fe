@@ -175,6 +175,8 @@ export const facilityApi = {
     formData.append("facilityName", request.facilityName);
     formData.append("typeId", request.typeId);
     formData.append("capacity", request.capacity.toString());
+    // Allow updating campus on edit
+    if ((request as any).campusId) formData.append("campusId", (request as any).campusId);
     formData.append("status", request.status);
     formData.append("isActive", request.isActive.toString());
     

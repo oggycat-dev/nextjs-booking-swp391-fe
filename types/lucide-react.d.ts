@@ -1,15 +1,15 @@
 declare module 'lucide-react' {
   import * as React from 'react'
-  
+
   export interface LucideProps extends React.SVGProps<SVGSVGElement> {
     size?: string | number
     absoluteStrokeWidth?: boolean
   }
-  
+
   export type LucideIcon = React.ForwardRefExoticComponent<
     LucideProps & React.RefAttributes<SVGSVGElement>
   >
-  
+
   // Export all common icons used in the project
   export const CheckIcon: LucideIcon
   export const ChevronDownIcon: LucideIcon
@@ -18,7 +18,10 @@ declare module 'lucide-react' {
   export const Clock: LucideIcon
   export const CheckCircle2: LucideIcon
   export const TrendingUp: LucideIcon
+  export const User: LucideIcon
+  export const UserIcon: LucideIcon
   export const Users: LucideIcon
+  export const LogOut: LucideIcon
   export const Building2: LucideIcon
   export const FileCheck: LucideIcon
   export const AlertCircle: LucideIcon
@@ -48,18 +51,18 @@ declare module 'lucide-react' {
   export const ExternalLink: LucideIcon
   export const RefreshCw: LucideIcon
   export const XCircle: LucideIcon
-  
+
   // Additional icons
   export const Settings: LucideIcon
   export const Trash2: LucideIcon
   export const ExternalLink: LucideIcon
   export const RefreshCw: LucideIcon
   export const XCircle: LucideIcon
-  
+
   // Allow dynamic icon imports - this helps TypeScript accept any icon name
   const createLucideIcon: (name: string) => LucideIcon
   export { createLucideIcon }
-  
+
   // Re-export all icons from lucide-react to avoid type conflicts
   export * from 'lucide-react'
 }

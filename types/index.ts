@@ -240,6 +240,7 @@ export interface CreateFacilityRequest {
 export interface UpdateFacilityRequest {
   facilityName: string;
   typeId: string;
+  campusId?: string;
   building?: string;
   floor?: string;
   roomNumber?: string;

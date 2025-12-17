@@ -546,8 +546,11 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         errors.push("Campus is required")
       }
 
-      // Validate images
+      // Validate images (limit to 2 files)
       if (images.length > 0) {
+        if (images.length > 2) {
+          errors.push("You can upload a maximum of 2 images")
+        }
         images.forEach((file, index) => {
           if (file.size > 5 * 1024 * 1024) {
             errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
@@ -572,6 +575,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     if (isEdit && facility) {
       // Validate new images in edit mode
       if (images.length > 0) {
+        if (images.length > 2) {
+          errors.push("You can upload a maximum of 2 images")
+        }
         images.forEach((file, index) => {
           if (file.size > 5 * 1024 * 1024) {
             errors.push(`Image ${index + 1} (${file.name}) exceeds 5MB`)
@@ -595,14 +601,17 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
       const updated = await updateFacility(facility.id, {
         facilityName,
         typeId,
+        campusId: campusId || undefined,
         building: building || undefined,
         floor: floor || undefined,
         roomNumber: roomNumber || undefined,
         capacity: Number(capacity),
         description: description || undefined,
         equipment: equipment || undefined,
-        imageUrl: facility.imageUrl || undefined,  // Keep existing images
-        images: images.length > 0 ? images : undefined,  // Add new images
+        // Nếu có upload ảnh mới thì để backend tự xử lý images mới,
+        // không gửi lại imageUrl cũ để tránh lỗi 500 từ API
+        imageUrl: images.length === 0 ? facility.imageUrl || undefined : undefined,
+        images: images.length > 0 ? images : undefined,
         status,
         isActive,
       })
@@ -655,7 +664,16 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
         }
         return true
       })
-      setImages(validFiles)
+
+      // Enforce maximum 2 images - keep first 2 valid files
+      if (validFiles.length > 2) {
+        toast({
+          title: "Too many files",
+          description: "You can upload a maximum of 2 images",
+          variant: "destructive",
+        })
+      }
+      setImages(validFiles.slice(0, 2))
     }
   }
 
@@ -719,10 +737,9 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                 Campus <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
-                disabled={isEdit}
               >
                 <option value="">Select campus</option>
                 {campuses.map((c) => (
@@ -731,7 +748,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
                   </option>
                 ))}
               </select>
-              {isEdit && <p className="text-xs text-muted-foreground mt-1.5">Cannot change campus after creation</p>}
+              {/* Campus can now be changed when editing */}
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">
@@ -858,23 +875,32 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             </p>
           </div>
 
-          {!isEdit && (
-            <div>
-              <label className="block text-sm font-semibold mb-2">Images (Multiple files allowed)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  multiple
-                  onChange={handleImageChange}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF. {images.length > 0 && <span className="font-medium text-primary">{images.length} file(s) selected</span>}
-              </p>
+          {/* Images upload - used for both create and update (matches Swagger images[] array) */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Images (Up to 2 files)
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif"
+                multiple
+                onChange={handleImageChange}
+                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+              />
             </div>
-          )}
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF.&nbsp;
+              {isEdit
+                ? "Các ảnh mới upload sẽ được thêm vào cùng với các ảnh hiện có."
+                : "Bạn có thể upload nhiều ảnh cho facility khi tạo mới."}
+              {images.length > 0 && (
+                <span className="font-medium text-primary"> {" "}
+                  {images.length} file(s) selected
+                </span>
+              )}
+            </p>
+          </div>
 
           <div>
             <label className="block text-sm font-semibold mb-2">Description</label>
