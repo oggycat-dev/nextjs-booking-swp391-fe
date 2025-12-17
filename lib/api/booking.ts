@@ -221,6 +221,74 @@ export const bookingApi = {
   },
 
   /**
+   * Cancel a booking with a reason (preferred - backend: POST /bookings/{id}/cancel)
+   */
+  cancelWithReason: async (id: string, reason?: string): Promise<ApiResponse<null>> => {
+    try {
+      const url = `${API_URL}/bookings/${id}/cancel`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+
+      const text = await response.text().catch(() => '');
+
+      if (!response.ok) {
+        let errorData: any = null;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // ignore
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        return {
+          statusCode: response.status,
+          success: false,
+          message: errorMessage,
+          data: null,
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: 'Booking cancelled',
+          data: null,
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        return {
+          statusCode: 200,
+          success: true,
+          message: 'Booking cancelled',
+          data: null,
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch (err) {
+      console.error('Error cancelling booking with reason:', err);
+      return {
+        statusCode: 500,
+        success: false,
+        message: (err as Error).message || 'Failed to cancel booking',
+        data: null,
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
    * Approve a booking (Lecturer/Admin)
    * Lecturer can approve Student bookings → status becomes "WaitingAdminApproval"
    * Admin can approve bookings → status becomes "Approved"
@@ -380,6 +448,120 @@ export const bookingApi = {
     } catch (error) {
       console.error('Error fetching pending admin approvals:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Get approved bookings (Admin only)
+   * Maps to: GET /api/bookings/approved
+   */
+  getApprovedBookings: async (query?: GetBookingsQuery): Promise<ApiResponse<any>> => {
+    // Similar to other admin endpoints, attempt an auth refresh on 401/403 and retry once.
+    const params = new URLSearchParams();
+    if (query?.facilityId) params.append('facilityId', query.facilityId);
+    if (query?.campusId) params.append('campusId', query.campusId);
+    if (query?.pageNumber) params.append('pageNumber', String(query.pageNumber));
+    if (query?.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query?.startDate) params.append('fromDate', query.startDate);
+    if (query?.endDate) params.append('toDate', query.endDate);
+    if ((query as any)?.searchTerm) params.append('searchTerm', (query as any).searchTerm);
+
+    const url = `${API_URL}/bookings/approved${params.toString() ? `?${params.toString()}` : ''}`;
+
+    // First request
+    let response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    // If 401/403, try refresh token and retry once
+    if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
+      const refreshToken = storage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json().catch(() => null);
+            if (refreshData?.success && refreshData.data) {
+              storage.setItem('token', refreshData.data.token);
+              storage.setItem('refreshToken', refreshData.data.refreshToken);
+              // retry
+              response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
+            }
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+        }
+      }
+    }
+
+    // Handle 404/405 gracefully by returning empty result
+    if (response.status === 404 || response.status === 405) {
+      return {
+        statusCode: 200,
+        success: true,
+        message: 'Approved bookings endpoint not available',
+        data: [],
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    const text = await response.text().catch(() => '');
+
+    if (!response.ok) {
+      let errorData: any = null;
+      try {
+        errorData = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // ignore
+      }
+      const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+      // Use warn to avoid Next's error overlay for expected API errors — include URL and response text for debugging
+      try {
+        console.warn('Approved bookings request failed', { url, status: response.status, message: errorMessage, responseText: text });
+      } catch (e) {
+        // fallback
+        console.warn('Approved bookings request failed:', errorMessage);
+      }
+      return {
+        statusCode: response.status,
+        success: false,
+        message: errorMessage,
+        data: [],
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    if (!text || text.trim() === '') {
+      return {
+        statusCode: 200,
+        success: true,
+        message: 'No approved bookings found',
+        data: [],
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error('Failed to parse approved bookings response:', parseError);
+      return {
+        statusCode: 200,
+        success: false,
+        message: 'Invalid JSON response from approved bookings endpoint',
+        data: [],
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
     }
   },
 
