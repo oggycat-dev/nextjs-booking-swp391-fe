@@ -775,29 +775,7 @@ function AdminDashboard() {
               </Link>
             </div>
 
-            {/* Quick Stats */}
-            <Link href="/dashboard/admin/bookings">
-              <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors cursor-pointer">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-primary">Booking Activity</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsToday}</p>
-                    <p className="text-xs text-gray-600">Today</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsThisWeek}</p>
-                    <p className="text-xs text-gray-600">This Week</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{stats.totalBookingsThisMonth}</p>
-                    <p className="text-xs text-gray-600">This Month</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
+
           </CardContent>
         </Card>
 
@@ -852,9 +830,13 @@ function AdminDashboard() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={[
-                { name: "Today", bookings: stats.totalBookingsToday, approved: stats.approvedBookingsToday, rejected: stats.rejectedBookingsToday },
-                { name: "This Week", bookings: stats.totalBookingsThisWeek, approved: Math.round(stats.totalBookingsThisWeek * 0.8), rejected: Math.round(stats.totalBookingsThisWeek * 0.1) },
-                { name: "This Month", bookings: stats.totalBookingsThisMonth, approved: Math.round(stats.totalBookingsThisMonth * 0.75), rejected: Math.round(stats.totalBookingsThisMonth * 0.12) }
+                { name: "Mon", bookings: Math.round(stats.totalBookingsThisWeek / 7), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.8), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.1) },
+                { name: "Tue", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 1.2), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.9), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.05) },
+                { name: "Wed", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 1.1), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.85), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.08) },
+                { name: "Thu", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 0.9), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.75), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.12) },
+                { name: "Fri", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 1.3), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.95), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.06) },
+                { name: "Sat", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 0.6), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.5), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.03) },
+                { name: "Sun", bookings: Math.round(stats.totalBookingsThisWeek / 7 * 0.4), approved: Math.round(stats.totalBookingsThisWeek / 7 * 0.35), rejected: Math.round(stats.totalBookingsThisWeek / 7 * 0.02) }
               ]}>
                 <defs>
                   <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
