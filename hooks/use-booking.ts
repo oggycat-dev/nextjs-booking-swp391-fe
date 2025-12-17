@@ -26,7 +26,7 @@ export function useBookings(query?: GetBookingsQuery) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await bookingApi.getAll(query);
+      const response = await bookingApi.getAll(query);// gọi API để lấy tất cả booking với query
       if (response.success && response.data) {
         setBookings(response.data);
       } else {
@@ -44,7 +44,7 @@ export function useBookings(query?: GetBookingsQuery) {
     fetchBookings();
   }, [fetchBookings]);
 
-  return {
+  return { //Giá trị trả về cho component sử dụng hook này
     bookings,
     fetchBookings,
     isLoading,

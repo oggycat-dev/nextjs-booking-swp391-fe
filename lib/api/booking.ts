@@ -36,12 +36,12 @@ export const bookingApi = {
 
       const url = `${API_URL}/bookings${params.toString() ? `?${params.toString()}` : ""}`;
       
-      const response = await fetch(url, {
+      const response = await fetch(url, { //Gọi fetch để lấy dữ liệu từ API
         method: "GET",
         headers: getAuthHeaders(),
       });
 
-      const text = await response.text();
+      const text = await response.text(); // Đọc raw text từ response
       
       if (!response.ok) {
         let errorData;
@@ -149,7 +149,7 @@ export const bookingApi = {
     
     // Debug log
     console.log("Creating booking:", request);
-    
+    //fetch POST
     const response = await fetch(`${API_URL}/bookings`, {
       method: "POST",
       headers: getAuthHeaders(),
