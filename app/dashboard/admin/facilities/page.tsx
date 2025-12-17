@@ -48,7 +48,7 @@ export default function AdminFacilitiesPage() {
   // Parse imageUrl JSON string to get first image URL
   const getImageUrl = (facility: AdminFacility): string | null => {
     if (!facility.imageUrl) return null
-    
+
     try {
       // imageUrl is a JSON string containing array of URLs
       const urls = JSON.parse(facility.imageUrl)
@@ -88,16 +88,16 @@ export default function AdminFacilitiesPage() {
         setViewingFacility(response.data)
         setShowViewModal(true)
       } else {
-        toast({ 
-          title: "Error", 
+        toast({
+          title: "Error",
           description: response.message || "Failed to fetch facility details",
           variant: "destructive"
         })
       }
     } catch (error) {
       console.error('Error fetching facility details:', error)
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: error instanceof Error ? error.message : "Failed to fetch facility details",
         variant: "destructive"
       })
@@ -111,15 +111,15 @@ export default function AdminFacilitiesPage() {
         setEditingFacility(response.data)
         setShowModal(true)
       } else {
-        toast({ 
-          title: "Error", 
+        toast({
+          title: "Error",
           description: response.message || "Failed to fetch facility details",
           variant: "destructive"
         })
       }
     } catch (error) {
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: error instanceof Error ? error.message : "Failed to fetch facility details",
         variant: "destructive"
       })
@@ -152,7 +152,7 @@ export default function AdminFacilitiesPage() {
     if (updated) {
       toast({ title: "Status updated", duration: 1000 })
       fetchFacilities()
-      
+
     }
   }
 
@@ -285,8 +285,8 @@ export default function AdminFacilitiesPage() {
               </thead>
               <tbody>
                 {filteredFacilities.map((facility) => (
-                  <tr 
-                    key={facility.id} 
+                  <tr
+                    key={facility.id}
                     className="border-b hover:bg-muted/30 transition-colors"
                   >
                     <td className="p-4">
@@ -564,10 +564,10 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
     }
 
     if (errors.length > 0) {
-      toast({ 
-        title: "Validation Error", 
+      toast({
+        title: "Validation Error",
         description: errors.join("; "),
-        variant: "destructive" 
+        variant: "destructive"
       })
       return
     }
@@ -587,12 +587,12 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             errors.push(`Image ${index + 1} (${file.name}) must be JPEG, JPG, PNG, or GIF`)
           }
         })
-        
+
         if (errors.length > 0) {
-          toast({ 
-            title: "Validation Error", 
+          toast({
+            title: "Validation Error",
             description: errors.join("; "),
-            variant: "destructive" 
+            variant: "destructive"
           })
           return
         }
@@ -647,18 +647,18 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
       // Validate file size and type
       const validFiles = filesArray.filter(file => {
         if (file.size > 5 * 1024 * 1024) {
-          toast({ 
-            title: "File too large", 
+          toast({
+            title: "File too large",
             description: `${file.name} is larger than 5MB`,
-            variant: "destructive" 
+            variant: "destructive"
           })
           return false
         }
         if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(file.type.toLowerCase())) {
-          toast({ 
-            title: "Invalid file type", 
+          toast({
+            title: "Invalid file type",
             description: `${file.name} must be JPEG, JPG, PNG, or GIF`,
-            variant: "destructive" 
+            variant: "destructive"
           })
           return false
         }
@@ -680,255 +680,252 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-50" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-8" onClick={onClose}>
+      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col relative z-50 py-0 gap-0" onClick={(e) => e.stopPropagation()}>
+        {/* Header - Fixed at top, NOT scrollable */}
+        <div className="flex-shrink-0 bg-white dark:bg-gray-950 border-b px-6 py-4 flex items-center justify-between rounded-t-lg">
           <h2 className="text-2xl font-bold">{isEdit ? "Edit Facility" : "Create Facility"}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl px-2">
             ✕
           </button>
         </div>
 
-        <form className="p-6 space-y-6" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
-          {/* Basic Information */}
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Basic Information</h3>
-            <p className="text-sm text-muted-foreground">Enter the facility details</p>
-          </div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <form className="px-6 pt-4 pb-6 space-y-5" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Facility Code <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={facilityCode}
+                  onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
+                  placeholder="ABC"
+                  disabled={isEdit}
+                  maxLength={20}
+                  pattern="[A-Z0-9-]+"
+                  title="Only uppercase letters, numbers, and hyphens allowed"
+                  className="h-11"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Only uppercase, numbers, and hyphens (max 20 chars)
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Facility Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={facilityName}
+                  onChange={(e) => setFacilityName(e.target.value)}
+                  placeholder="Room name"
+                  maxLength={200}
+                  className="h-11"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">Max 200 characters</p>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Campus <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={campusId}
+                  onChange={(e) => setCampusId(e.target.value)}
+                >
+                  <option value="">Select campus</option>
+                  {campuses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.campusName}
+                    </option>
+                  ))}
+                </select>
+                {/* Campus can now be changed when editing */}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={typeId}
+                  onChange={(e) => setTypeId(e.target.value)}
+                >
+                  <option value="">Select type</option>
+                  {facilityTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.typeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-lg font-semibold">Location</h3>
+              <p className="text-sm text-muted-foreground">Specify the facility location</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Building</label>
+                <Input
+                  value={building}
+                  onChange={(e) => setBuilding(e.target.value)}
+                  placeholder="A"
+                  className="h-11"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Floor</label>
+                <Input
+                  value={floor}
+                  onChange={(e) => setFloor(e.target.value)}
+                  placeholder="2"
+                  className="h-11"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Room Number</label>
+                <Input
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                  placeholder="201"
+                  className="h-11"
+                />
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-lg font-semibold">Settings</h3>
+              <p className="text-sm text-muted-foreground">Configure capacity and availability</p>
+            </div>
+
+            <div className={`grid grid-cols-1 ${isEdit ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-4`}>
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Capacity <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="number"
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  placeholder="30"
+                  min="1"
+                  max="1000"
+                  className="h-11"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">Must be between 1-1000</p>
+              </div>
+              {isEdit && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Status</label>
+                    <select
+                      className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as FacilityStatus)}
+                    >
+                      <option value="Available">Available</option>
+                      <option value="UnderMaintenance">Under maintenance</option>
+                      <option value="Unavailable">Unavailable</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3 pt-8">
+                    <input
+                      id="facility-active"
+                      type="checkbox"
+                      className="w-5 h-5 accent-primary cursor-pointer"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                    />
+                    <label htmlFor="facility-active" className="text-sm font-medium cursor-pointer">Active</label>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-lg font-semibold">Additional Information</h3>
+              <p className="text-sm text-muted-foreground">Equipment and description</p>
+            </div>
+
             <div>
-              <label className="block text-sm font-semibold mb-2">
-                Facility Code <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm font-semibold mb-2">Equipment (comma separated)</label>
               <Input
-                value={facilityCode}
-                onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
-                placeholder="ABC"
-                disabled={isEdit}
-                maxLength={20}
-                pattern="[A-Z0-9-]+"
-                title="Only uppercase letters, numbers, and hyphens allowed"
+                value={equipment}
+                onChange={(e) => setEquipment(e.target.value)}
+                placeholder="Projector, Whiteboard, PCs"
+                maxLength={500}
                 className="h-11"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                Only uppercase, numbers, and hyphens (max 20 chars)
+                {equipment.length}/500 characters
               </p>
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Facility Name <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={facilityName}
-                onChange={(e) => setFacilityName(e.target.value)}
-                placeholder="Room name"
-                maxLength={200}
-                className="h-11"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">Max 200 characters</p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Images upload - used for both create and update (matches Swagger images[] array) */}
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Campus <span className="text-red-500">*</span>
+                Images (Up to 2 files)
               </label>
-              <select
-                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                value={campusId}
-                onChange={(e) => setCampusId(e.target.value)}
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  multiple
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Max 5MB per file. Formats: JPEG, JPG, PNG, GIF.&nbsp;
+                {isEdit
+                  ? "Các ảnh mới upload sẽ được thêm vào cùng với các ảnh hiện có."
+                  : "Bạn có thể upload nhiều ảnh cho facility khi tạo mới."}
+                {images.length > 0 && (
+                  <span className="font-medium text-primary"> {" "}
+                    {images.length} file(s) selected
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">Description</label>
+              <textarea
+                placeholder="Enter facility description..."
+                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background min-h-28 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={1000}
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {description.length}/1000 characters
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t">
+              <Button
+                type="submit"
+                className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                disabled={isLoading}
               >
-                <option value="">Select campus</option>
-                {campuses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.campusName}
-                  </option>
-                ))}
-              </select>
-              {/* Campus can now be changed when editing */}
+                {isLoading ? "Saving..." : isEdit ? "Update Facility" : "Create Facility"}
+              </Button>
+              <Button type="button" variant="outline" className="flex-1 h-11 bg-transparent font-semibold" onClick={onClose}>
+                Cancel
+              </Button>
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                value={typeId}
-                onChange={(e) => setTypeId(e.target.value)}
-              >
-                <option value="">Select type</option>
-                {facilityTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.typeName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="space-y-1 pt-2">
-            <h3 className="text-lg font-semibold">Location</h3>
-            <p className="text-sm text-muted-foreground">Specify the facility location</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Building</label>
-              <Input 
-                value={building} 
-                onChange={(e) => setBuilding(e.target.value)} 
-                placeholder="A" 
-                className="h-11" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Floor</label>
-              <Input 
-                value={floor} 
-                onChange={(e) => setFloor(e.target.value)} 
-                placeholder="2" 
-                className="h-11" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Room Number</label>
-              <Input 
-                value={roomNumber} 
-                onChange={(e) => setRoomNumber(e.target.value)} 
-                placeholder="201" 
-                className="h-11" 
-              />
-            </div>
-          </div>
-
-          {/* Settings */}
-          <div className="space-y-1 pt-2">
-            <h3 className="text-lg font-semibold">Settings</h3>
-            <p className="text-sm text-muted-foreground">Configure capacity and availability</p>
-          </div>
-
-          <div className={`grid grid-cols-1 ${isEdit ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-4`}>
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Capacity <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="number"
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-                placeholder="30"
-                min="1"
-                max="1000"
-                className="h-11"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">Must be between 1-1000</p>
-            </div>
-            {isEdit && (
-              <>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Status</label>
-                  <select
-                    className="w-full h-11 px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as FacilityStatus)}
-                  >
-                    <option value="Available">Available</option>
-                    <option value="UnderMaintenance">Under maintenance</option>
-                    <option value="Unavailable">Unavailable</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-3 pt-8">
-                  <input
-                    id="facility-active"
-                    type="checkbox"
-                    className="w-5 h-5 accent-primary cursor-pointer"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                  />
-                  <label htmlFor="facility-active" className="text-sm font-medium cursor-pointer">Active</label>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Additional Information */}
-          <div className="space-y-1 pt-2">
-            <h3 className="text-lg font-semibold">Additional Information</h3>
-            <p className="text-sm text-muted-foreground">Equipment and description</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2">Equipment (comma separated)</label>
-            <Input
-              value={equipment}
-              onChange={(e) => setEquipment(e.target.value)}
-              placeholder="Projector, Whiteboard, PCs"
-              maxLength={500}
-              className="h-11"
-            />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {equipment.length}/500 characters
-            </p>
-          </div>
-
-          {/* Images upload - used for both create and update (matches Swagger images[] array) */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Images (Up to 2 files)
-            </label>
-            <div className="relative">
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif"
-                multiple
-                onChange={handleImageChange}
-                className="w-full px-3 py-2.5 border border-input rounded-lg bg-background file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Max 5MB per file. Formats: JPEG, JPG, PNG, GIF.&nbsp;
-              {isEdit
-                ? "Các ảnh mới upload sẽ được thêm vào cùng với các ảnh hiện có."
-                : "Bạn có thể upload nhiều ảnh cho facility khi tạo mới."}
-              {images.length > 0 && (
-                <span className="font-medium text-primary"> {" "}
-                  {images.length} file(s) selected
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2">Description</label>
-            <textarea
-              placeholder="Enter facility description..."
-              className="w-full px-3 py-2.5 border border-input rounded-lg bg-background min-h-28 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={1000}
-            />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {description.length}/1000 characters
-            </p>
-          </div>
-
-          <div className="flex gap-3 pt-6 border-t">
-            <Button
-              type="submit"
-              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-              disabled={isLoading}
-            >
-              {isLoading ? "Saving..." : isEdit ? "Update Facility" : "Create Facility"}
-            </Button>
-            <Button type="button" variant="outline" className="flex-1 h-11 bg-transparent font-semibold" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </form>
+          </form>
+        </div>
       </Card>
     </div>
   )
@@ -959,7 +956,7 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
     const campus = campuses.find(c => c.id === facility.campusId)
     return campus?.campusName || facility.campusName || "-"
   }
-  
+
   if (!isOpen) return null
 
   // Parse imageUrl - backend returns JSON array string or comma-separated URLs
@@ -968,10 +965,10 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
       console.log('No imageUrl found')
       return []
     }
-    
+
     console.log('Raw imageUrl:', facility.imageUrl)
     console.log('Type of imageUrl:', typeof facility.imageUrl)
-    
+
     try {
       // Try to parse as JSON array first
       const parsed = JSON.parse(facility.imageUrl)
@@ -1074,9 +1071,8 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
                       <button
                         key={idx}
                         onClick={() => setCurrentImageIndex(idx)}
-                        className={`flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${
-                          idx === currentImageIndex ? 'border-primary shadow-md scale-105' : 'border-muted hover:border-primary/50'
-                        }`}
+                        className={`flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-primary shadow-md scale-105' : 'border-muted hover:border-primary/50'
+                          }`}
                       >
                         <img
                           src={url}
