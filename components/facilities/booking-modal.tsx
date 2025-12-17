@@ -448,21 +448,46 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 AM to 10 PM
 
   const getBookingStyle = (booking: BookingCalendarDto) => {
+    const gridStartHour = 7  // 7:00 AM
+    const gridEndHour = 22   // 10:00 PM (22:00)
+    
     const startHour = parseInt(booking.startTime.split(':')[0])
     const startMinute = parseInt(booking.startTime.split(':')[1])
     const endHour = parseInt(booking.endTime.split(':')[0])
     const endMinute = parseInt(booking.endTime.split(':')[1])
     
-    // Calculate position from 7:00
-    const topPosition = (startHour - 7) * 40 + (startMinute / 60) * 40
+    // Check if booking spans across midnight
+    const spansMidnight = endHour < startHour || (endHour === startHour && endMinute < startMinute)
     
-    // Calculate height based on duration
-    const durationHours = (endHour - startHour) + (endMinute - startMinute) / 60
-    const height = durationHours * 40
+    // For daily view, determine the visible portion of the booking
+    // Calculate the start position (clamp to grid start if before)
+    const visibleStartHour = Math.max(startHour, gridStartHour)
+    const visibleStartMinute = startHour < gridStartHour ? 0 : startMinute
+    
+    // Calculate the end position (clamp to grid end or end of day for midnight-spanning bookings)
+    let visibleEndHour: number
+    let visibleEndMinute: number
+    
+    if (spansMidnight) {
+      // Booking spans midnight - show until end of grid (22:00) or end of day
+      visibleEndHour = gridEndHour
+      visibleEndMinute = 59
+    } else {
+      // Normal booking - clamp to grid end if needed
+      visibleEndHour = Math.min(endHour, gridEndHour)
+      visibleEndMinute = endHour > gridEndHour ? 59 : endMinute
+    }
+    
+    // Calculate top position from grid start (each hour = 40px, each minute = 40/60 px)
+    const topPosition = (visibleStartHour - gridStartHour) * 40 + (visibleStartMinute / 60) * 40
+    
+    // Calculate height based on visible duration
+    const durationMinutes = (visibleEndHour - visibleStartHour) * 60 + (visibleEndMinute - visibleStartMinute)
+    const height = Math.max((durationMinutes / 60) * 40, 20) // Minimum 20px height
     
     return {
       top: `${topPosition}px`,
-      height: `${Math.max(height, 20)}px`, // Minimum 20px height
+      height: `${height}px`,
     }
   }
 
@@ -619,35 +644,65 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
 
                         {/* Booking bars overlay */}
                         <div className="absolute inset-0">
-                          {dayBookings.map((booking, idx) => {
-                            const style = getBookingStyle(booking)
-                            const height = parseInt(style.height)
-                            const statusColor = getStatusColor(booking.status)
-                            
-                            // Adapt text size based on height
-                            const isSmall = height < 40
-                            const isMedium = height >= 40 && height < 80
-                            
-                            return (
-                              <div
-                                key={`${booking.id}-${idx}`}
-                                className={`absolute left-0 right-0 rounded-lg border-l-[4px] shadow-sm ${statusColor}`}
-                                style={style}
-                                title={`${booking.startTime.slice(0,5)} - ${booking.endTime.slice(0,5)} | ${booking.status}`}
-                              >
-                                <div className={`h-full flex flex-col justify-center ${isSmall ? 'px-1.5 py-0.5' : isMedium ? 'px-2 py-1' : 'px-2 py-1.5'}`}>
-                                  <div className={`font-semibold truncate ${isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs'}`}>
-                                    {booking.startTime.slice(0,5)} - {booking.endTime.slice(0,5)}
-                                  </div>
-                                  {!isSmall && (
-                                    <div className={`opacity-90 truncate ${isMedium ? 'text-[9px]' : 'text-[10px]'}`}>
-                                      {booking.status}
+                          {dayBookings
+                            .filter((booking) => {
+                              // Filter out bookings that are completely outside visible range (7:00 - 22:00)
+                              const startHour = parseInt(booking.startTime.split(':')[0])
+                              const endHour = parseInt(booking.endTime.split(':')[0])
+                              const endMinute = parseInt(booking.endTime.split(':')[1])
+                              
+                              // If booking spans midnight, it's visible if it starts before grid end
+                              if (endHour < startHour || (endHour === startHour && endMinute < parseInt(booking.startTime.split(':')[1]))) {
+                                return startHour < 22 // Show if starts before 22:00
+                              }
+                              
+                              // For normal bookings, show if they overlap with visible range
+                              return (startHour < 22) && (endHour >= 7)
+                            })
+                            .map((booking, idx) => {
+                              const style = getBookingStyle(booking)
+                              const height = parseFloat(style.height.replace('px', ''))
+                              const statusColor = getStatusColor(booking.status)
+                              
+                              // Check if booking spans midnight
+                              const startHour = parseInt(booking.startTime.split(':')[0])
+                              const endHour = parseInt(booking.endTime.split(':')[0])
+                              const startMinute = parseInt(booking.startTime.split(':')[1])
+                              const endMinute = parseInt(booking.endTime.split(':')[1])
+                              const spansMidnight = endHour < startHour || (endHour === startHour && endMinute < startMinute)
+                              
+                              // Adapt text size based on height
+                              const isSmall = height < 40
+                              const isMedium = height >= 40 && height < 80
+                              
+                              // Format display time - if spans midnight, show end as "23:59" or grid end
+                              let displayEndTime = booking.endTime.slice(0,5)
+                              if (spansMidnight) {
+                                // For midnight-spanning bookings, show until end of day in daily view
+                                displayEndTime = "23:59"
+                              }
+                              
+                              return (
+                                <div
+                                  key={`${booking.id}-${idx}`}
+                                  className={`absolute left-0 right-0 rounded-lg border-l-[4px] shadow-sm ${statusColor}`}
+                                  style={style}
+                                  title={`${booking.startTime.slice(0,5)} - ${booking.endTime.slice(0,5)}${spansMidnight ? ' (overnight)' : ''} | ${booking.status}`}
+                                >
+                                  <div className={`h-full flex flex-col justify-center ${isSmall ? 'px-1.5 py-0.5' : isMedium ? 'px-2 py-1' : 'px-2 py-1.5'}`}>
+                                    <div className={`font-semibold truncate ${isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs'}`}>
+                                      {booking.startTime.slice(0,5)} - {displayEndTime}
+                                      {spansMidnight && !isSmall && ' *'}
                                     </div>
-                                  )}
+                                    {!isSmall && (
+                                      <div className={`opacity-90 truncate ${isMedium ? 'text-[9px]' : 'text-[10px]'}`}>
+                                        {booking.status}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )
-                          })}
+                              )
+                            })}
                         </div>
                       </div>
                     </>
