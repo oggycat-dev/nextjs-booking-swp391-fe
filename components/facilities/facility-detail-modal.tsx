@@ -39,7 +39,7 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
   // Parse imageUrl JSON string to get array of images
   const getImages = (): string[] => {
     if (!facility.imageUrl) return []
-    
+
     try {
       const urls = JSON.parse(facility.imageUrl)
       if (Array.isArray(urls)) {
@@ -76,7 +76,7 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
         {/* Header */}
         <div className="sticky top-0 bg-background border-b px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold">{facility.facilityName}</h2>
-          <button 
+          <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -102,7 +102,7 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
                 />
-                
+
                 {/* Navigation Arrows */}
                 {images.length > 1 && (
                   <>
@@ -159,11 +159,10 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className={`font-medium px-2 py-0.5 rounded text-xs ${
-                    isAvailable 
-                      ? "bg-green-100 text-green-700" 
+                  <span className={`font-medium px-2 py-0.5 rounded text-xs ${isAvailable
+                      ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
-                  }`}>
+                    }`}>
                     {isAvailable ? "Available" : facility.status || "Unavailable"}
                   </span>
                 </div>
@@ -203,8 +202,8 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
               <h3 className="font-semibold text-lg mb-2">Equipment</h3>
               <div className="flex flex-wrap gap-2">
                 {equipmentList.map((eq) => (
-                  <span 
-                    key={eq} 
+                  <span
+                    key={eq}
                     className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-md font-medium flex items-center gap-1.5"
                   >
                     <CheckCircle2 className="w-4 h-4" />
@@ -218,8 +217,8 @@ export function FacilityDetailModal({ facility, isOpen, onClose, onBookNow }: Fa
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-background border-t px-6 py-4 flex items-center justify-end gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={onClose}
           >
             Close

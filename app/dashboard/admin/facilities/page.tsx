@@ -1016,9 +1016,9 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-background border-b p-6 flex items-center justify-between z-10">
+      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col py-0 gap-0 overflow-hidden">
+        {/* Header - Fixed, not scrollable */}
+        <div className="flex-shrink-0 bg-background border-b p-6 flex items-center justify-between rounded-t-xl">
           <div>
             <h2 className="text-2xl font-bold">{facility.facilityName}</h2>
             <p className="text-sm text-muted-foreground mt-1">Code: {facility.facilityCode}</p>
@@ -1028,8 +1028,8 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Image Gallery */}
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Images</h3>
@@ -1171,8 +1171,8 @@ function FacilityViewModal({ isOpen, onClose, facility, onEdit }: FacilityViewMo
           )}
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-background border-t p-6 flex justify-end">
+        {/* Footer - Fixed at bottom */}
+        <div className="flex-shrink-0 bg-background border-t p-6 flex justify-end rounded-b-xl">
           <Button onClick={onEdit} className="bg-primary hover:bg-primary/90 text-primary-foreground">
             Edit Facility
           </Button>
