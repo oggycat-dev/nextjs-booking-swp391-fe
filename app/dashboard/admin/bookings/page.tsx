@@ -36,12 +36,13 @@ export default function AdminBookingsPage() {
   const { facilities } = useFacilities(historyCampusId ? { campusId: historyCampusId } : undefined)
 
   // Memoize the query to avoid unnecessary re-fetches
+  // If only fromDate is selected without toDate, filter for that specific date only
   const approvedQuery = useMemo(() => ({
     searchTerm: historySearchTerm || undefined,
     campusId: historyCampusId || undefined,
     facilityId: historyFacilityId || undefined,
     fromDate: historyFromDate || undefined,
-    toDate: historyToDate || undefined,
+    toDate: historyToDate || (historyFromDate ? historyFromDate : undefined),
   }), [historySearchTerm, historyCampusId, historyFacilityId, historyFromDate, historyToDate])
 
   // Approved bookings for admin tab with filters
@@ -625,7 +626,7 @@ export default function AdminBookingsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Participants</p>
-                    <p className="font-bold">{selectedBooking.participants}</p>
+                    <p className="font-bold">{selectedBooking.participants || (selectedBooking as any).expectedAttendees || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Purpose</p>
@@ -700,19 +701,24 @@ export default function AdminBookingsPage() {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                  onClick={() => setActionType("approve")}
-                >
-                  Approve Booking
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 text-destructive hover:text-destructive bg-transparent"
-                  onClick={() => setActionType("reject")}
-                >
-                  Reject Booking
-                </Button>
+                {/* Only show Approve/Reject for pending bookings */}
+                {((selectedBooking as any).status === 'PendingLecturerApproval' || (selectedBooking as any).status === 'PendingAdminApproval') && (
+                  <>
+                    <Button
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => setActionType("approve")}
+                    >
+                      Approve Booking
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-destructive hover:text-destructive bg-transparent"
+                      onClick={() => setActionType("reject")}
+                    >
+                      Reject Booking
+                    </Button>
+                  </>
+                )}
                 <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedBooking(null)}>
                   Close
                 </Button>
