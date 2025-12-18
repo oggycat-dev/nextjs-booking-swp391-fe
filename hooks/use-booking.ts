@@ -504,23 +504,45 @@ export function useBookingHistory() {
 }
 
 /**
- * Hook to get approved bookings (Admin)
+ * Hook to get approved bookings (Admin) with filters
  */
-export function useApprovedBookings(facilityId?: string, pageNumber: number = 1, pageSize: number = 50) {
+export interface ApprovedBookingsQuery {
+  facilityId?: string;
+  campusId?: string;
+  fromDate?: string;
+  toDate?: string;
+  searchTerm?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
+export function useApprovedBookings(query?: ApprovedBookingsQuery) {
   const [bookings, setBookings] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchApproved = useCallback(async () => {
+  const fetchApproved = useCallback(async (overrideQuery?: ApprovedBookingsQuery) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await bookingApi.getApprovedBookings({ facilityId, pageNumber, pageSize });
+      const q = overrideQuery || query || {};
+      const response = await bookingApi.getApprovedBookings({
+        facilityId: q.facilityId,
+        campusId: q.campusId,
+        startDate: q.fromDate,
+        endDate: q.toDate,
+        searchTerm: q.searchTerm,
+        pageNumber: q.pageNumber || 1,
+        pageSize: q.pageSize || 50,
+      } as any);
       if (response && response.success && response.data) {
         // response.data may be paginated or a list depending on backend
-        // try to normalize
         const data = Array.isArray(response.data) ? response.data : (response.data.items || []);
         setBookings(data);
+        // Try to get total count from paginated response
+        const total = response.data.totalCount ?? response.data.total ?? data.length;
+        setTotalCount(total);
       } else {
         setError(response?.message || 'Failed to fetch approved bookings');
       }
@@ -530,12 +552,13 @@ export function useApprovedBookings(facilityId?: string, pageNumber: number = 1,
     } finally {
       setIsLoading(false);
     }
-  }, [facilityId, pageNumber, pageSize]);
+  }, [query]);
 
   useEffect(() => {
     fetchApproved();
   }, [fetchApproved]);
 
-  return { bookings, fetchApproved, isLoading, error };
+  return { bookings, totalCount, fetchApproved, isLoading, error };
 }
+
 
