@@ -625,10 +625,6 @@ export default function AdminBookingsPage() {
                     <p className="font-bold">{formatDate(selectedBooking.createdAt)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Participants</p>
-                    <p className="font-bold">{selectedBooking.participants || (selectedBooking as any).expectedAttendees || 'N/A'}</p>
-                  </div>
-                  <div>
                     <p className="text-sm text-muted-foreground mb-1">Purpose</p>
                     <p className="font-bold">{selectedBooking.purpose}</p>
                   </div>
