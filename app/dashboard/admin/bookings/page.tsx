@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { usePendingAdminApprovals, useBookingMutations } from "@/hooks/use-booking"
+import { usePendingAdminApprovals, useBookingMutations, useApprovedBookings } from "@/hooks/use-booking"
+import { useAuth } from '@/hooks/use-auth'
 import { useFacility } from "@/hooks/use-facility"
 import type { Booking, BookingStatus } from "@/types"
 
@@ -15,13 +16,22 @@ export default function AdminBookingsPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const { bookings: pendingBookings, fetchPendingApprovals, isLoading: isLoadingPending } = usePendingAdminApprovals()
-  const { approveBookingAsAdmin, rejectBookingAsAdmin, isLoading: isMutating, error: mutationError } = useBookingMutations()
+  const { approveBookingAsAdmin, rejectBookingAsAdmin, isLoading: isMutating, error: mutationError, cancelBooking } = useBookingMutations()
+  const router = useRouter()
+  const { getCurrentUser } = useAuth()
+  const currentUser = getCurrentUser()
+  const isAdmin = currentUser?.role === 'Admin'
+  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
 
+  // Approved bookings for admin tab
+  const { bookings: approvedBookings, fetchApproved, isLoading: isLoadingApproved, error: approvedError } = useApprovedBookings(isAdmin ? undefined : undefined)
+  
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
-  const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
+  const [actionType, setActionType] = useState<"approve" | "reject" | "cancel" | null>(null)
   const [comment, setComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [rejectReason, setRejectReason] = useState("")
+  const [cancelReason, setCancelReason] = useState("")
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [filterStatus, setFilterStatus] = useState<string>("")
   const [filterDate, setFilterDate] = useState<string>("")
@@ -157,6 +167,37 @@ export default function AdminBookingsPage() {
     }
   }
 
+  const handleCancel = async (booking: Booking) => {
+    if (!cancelReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for cancellation",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const result = await cancelBooking(booking.id, cancelReason)
+    if (result) {
+      toast({
+        title: "Booking Cancelled",
+        description: "The booking has been cancelled",
+      })
+      setSelectedBooking(null)
+      setActionType(null)
+      setCancelReason("")
+      // refresh lists
+      try { fetchApproved() } catch {}
+      try { fetchPendingApprovals() } catch {}
+    } else {
+      toast({
+        title: "Failed to Cancel",
+        description: mutationError || "The booking could not be cancelled. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="p-6 bg-white dark:bg-gray-900 shadow-lg border-0 ring-1 ring-gray-200 dark:ring-gray-800">
@@ -164,65 +205,42 @@ export default function AdminBookingsPage() {
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approvals ({filteredBookings.length})</h3>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 mb-6">
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
-            <p className="text-3xl font-bold text-primary">{filteredBookings.length}</p>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 gap-4 mb-6">
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
+          <p className="text-3xl font-bold text-primary">{filteredBookings.length}</p>
+        </Card>
+      </div>
 
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList>
-            <TabsTrigger value="pending">Pending ({filteredBookings.length})</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <TabsList>
+          <TabsTrigger value="pending">Pending ({filteredBookings.length})</TabsTrigger>
+          {isAdmin && <TabsTrigger value="history">Approval History</TabsTrigger>}
+        </TabsList>
 
-          <TabsContent value="pending" className="mt-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <Card className="p-4 flex-1">
-                <Input
-                  placeholder="Search by facility, requester, or booking code..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </Card>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                className="flex items-center gap-2 whitespace-nowrap"
-              >
-                {sortOrder === 'newest' ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 5v14" />
-                      <path d="m19 12-7 7-7-7" />
-                    </svg>
-                    Newest First
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 19V5" />
-                      <path d="m5 12 7-7 7 7" />
-                    </svg>
-                    Oldest First
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Bookings Table */}
-            <Card className="overflow-hidden">
-              {isLoadingPending ? (
-                <div className="p-12 text-center">
-                  <p className="text-muted-foreground">Loading pending bookings...</p>
-                </div>
-              ) : filteredBookings.length === 0 ? (
-                <div className="p-12 text-center">
-                  <p className="text-muted-foreground">
-                    {searchTerm ? "No bookings found matching your search" : "No pending bookings"}
-                  </p>
-                </div>
+        <TabsContent value="pending" className="mt-4 space-y-4">
+          <div className="flex items-center gap-4">
+            <Card className="p-4 flex-1">
+              <Input
+                placeholder="Search by facility, requester, or booking code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+              className="flex items-center gap-2 whitespace-nowrap"
+            >
+              {sortOrder === 'newest' ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14"/>
+                    <path d="m19 12-7 7-7-7"/>
+                  </svg>
+                  Newest First
+                </>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -282,57 +300,124 @@ export default function AdminBookingsPage() {
                                 <div className="text-xs text-muted-foreground truncate max-w-[150px]">
                                   {booking.lecturerEmail}
                                 </div>
-                              )}
-                              {!booking.lecturerName && !booking.lecturerEmail && (
-                                <span className="text-xs text-muted-foreground">N/A</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-center">
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${getStatusColor(booking.status)}`}>
-                              {booking.status}
-                            </span>
-                          </td>
-                          <td className="p-4">
+                              </>
+                            )}
+                            {!booking.lecturerName && booking.lecturerEmail && (
+                              <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {booking.lecturerEmail}
+                              </div>
+                            )}
+                            {!booking.lecturerName && !booking.lecturerEmail && (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${getStatusColor(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                                setActionType("approve")
+                              }}
+                              disabled={isMutating}
+                              title="Approve"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                                setActionType("reject")
+                              }}
+                              disabled={isMutating}
+                              title="Reject"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBooking(booking)
+                              }}
+                              title="View Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="history" className="mt-4 space-y-4">
+            <Card className="p-4">
+              <div className="text-sm text-muted-foreground mb-4">Showing approved bookings</div>
+
+              {isLoadingApproved ? (
+                <div className="p-8 text-center">Loading approved bookings...</div>
+              ) : approvedError ? (
+                <div className="p-8 text-center text-destructive">{approvedError}</div>
+              ) : approvedBookings.length === 0 ? (
+                <div className="p-8 text-center">No approved bookings found</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-3 font-semibold text-sm">Booking Code</th>
+                        <th className="text-left p-3 font-semibold text-sm">Date</th>
+                        <th className="text-left p-3 font-semibold text-sm">Time</th>
+                        <th className="text-left p-3 font-semibold text-sm">Requester</th>
+                        <th className="text-left p-3 font-semibold text-sm">Status</th>
+                        <th className="text-center p-3 font-semibold text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {approvedBookings.map((b: any) => (
+                        <tr key={b.id} className="border-b hover:bg-muted/30">
+                          <td className="p-3">{b.bookingCode}</td>
+                          <td className="p-3">{new Date(b.bookingDate).toLocaleDateString()}</td>
+                          <td className="p-3">{b.startTime?.substring(0,5)} - {b.endTime?.substring(0,5)}</td>
+                          <td className="p-3">{b.userName}</td>
+                          <td className="p-3">{b.status}</td>
+                          <td className="p-3 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white h-8 px-3"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedBooking(booking)
-                                  setActionType("approve")
-                                }}
-                                disabled={isMutating}
-                                title="Approve"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="h-8 px-3"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedBooking(booking)
-                                  setActionType("reject")
-                                }}
-                                disabled={isMutating}
-                                title="Reject"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="h-8 px-3"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  setSelectedBooking(booking)
+                                  setSelectedBooking(b)
+                                  setActionType(null)
                                 }}
                                 title="View Details"
                               >
@@ -340,6 +425,22 @@ export default function AdminBookingsPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-8 px-3"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedBooking(b)
+                                  setActionType("cancel")
+                                  setCancelReason("")
+                                }}
+                                disabled={isMutating}
+                                title="Cancel booking"
+                              >
+                                Cancel
                               </Button>
                             </div>
                           </td>
@@ -351,7 +452,8 @@ export default function AdminBookingsPage() {
               )}
             </Card>
           </TabsContent>
-        </Tabs>
+        )}
+      </Tabs>
       </Card>
 
       {/* Booking Details Modal */}
@@ -579,6 +681,46 @@ export default function AdminBookingsPage() {
                 disabled={isMutating}
               >
                 Cancel
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+      {/* Cancel Modal */}
+      {selectedBooking && actionType === "cancel" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6">
+            <h2 className="text-2xl font-bold mb-4">Cancel Booking</h2>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Cancellation Reason <span className="text-destructive">*</span></label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background mb-4 min-h-[100px]"
+                placeholder="Provide a reason for cancellation"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 text-destructive hover:text-destructive bg-transparent"
+                onClick={() => handleCancel(selectedBooking)}
+                disabled={!cancelReason || isMutating}
+              >
+                {isMutating ? "Cancelling..." : "Cancel Booking"}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1 bg-transparent" 
+                onClick={() => {
+                  setActionType(null)
+                  setCancelReason("")
+                }}
+                disabled={isMutating}
+              >
+                Close
               </Button>
             </div>
           </Card>

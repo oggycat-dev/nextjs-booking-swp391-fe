@@ -26,7 +26,7 @@ export function useBookings(query?: GetBookingsQuery) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await bookingApi.getAll(query);
+      const response = await bookingApi.getAll(query);// gọi API để lấy tất cả booking với query
       if (response.success && response.data) {
         setBookings(response.data);
       } else {
@@ -44,7 +44,7 @@ export function useBookings(query?: GetBookingsQuery) {
     fetchBookings();
   }, [fetchBookings]);
 
-  return {
+  return { //Giá trị trả về cho component sử dụng hook này
     bookings,
     fetchBookings,
     isLoading,
@@ -370,15 +370,15 @@ export function useBookingMutations() {
     []
   );
 
-  const cancelBooking = useCallback(async (id: string): Promise<boolean> => {
+  const cancelBooking = useCallback(async (id: string, reason?: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await bookingApi.cancel(id);
-      if (response.success) {
+      const response = reason ? await bookingApi.cancelWithReason(id, reason) : await bookingApi.cancel(id);
+      if (response && response.success) {
         return true;
       } else {
-        setError(response.message || "Failed to cancel booking");
+        setError(response?.message || "Failed to cancel booking");
         return false;
       }
     } catch (err) {
@@ -501,5 +501,41 @@ export function useBookingHistory() {
     isLoading,
     error,
   };
+}
+
+/**
+ * Hook to get approved bookings (Admin)
+ */
+export function useApprovedBookings(facilityId?: string, pageNumber: number = 1, pageSize: number = 50) {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchApproved = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await bookingApi.getApprovedBookings({ facilityId, pageNumber, pageSize });
+      if (response && response.success && response.data) {
+        // response.data may be paginated or a list depending on backend
+        // try to normalize
+        const data = Array.isArray(response.data) ? response.data : (response.data.items || []);
+        setBookings(data);
+      } else {
+        setError(response?.message || 'Failed to fetch approved bookings');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch approved bookings';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [facilityId, pageNumber, pageSize]);
+
+  useEffect(() => {
+    fetchApproved();
+  }, [fetchApproved]);
+
+  return { bookings, fetchApproved, isLoading, error };
 }
 

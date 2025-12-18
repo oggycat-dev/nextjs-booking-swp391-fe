@@ -437,6 +437,8 @@ export interface GetBookingsQuery {
   status?: BookingStatus;
   facilityId?: string;
   userId?: string;
+  campusId?: string;
+  searchTerm?: string;
   startDate?: string;
   endDate?: string;
   pageNumber?: number;
