@@ -844,7 +844,7 @@ function AdminDashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-                <YAxis tick={{ fill: '#6b7280' }} />
+                <YAxis tick={{ fill: '#6b7280' }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                 />
