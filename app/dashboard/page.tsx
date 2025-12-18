@@ -780,40 +780,38 @@ function AdminDashboard() {
         </Card>
 
         {/* Utilization Rate - Sidebar */}
-        <Link href="/dashboard/admin/analytics">
-          <Card className="bg-white border-gray-200 hover:shadow-lg transition-all cursor-pointer h-full">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold text-gray-900">Utilization Rate</CardTitle>
-              <CardDescription className="text-gray-500">Overall facility usage</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary mb-2">{stats.facilityUtilizationRate.toFixed(1)}%</p>
-                  <p className="text-sm text-gray-500">Current Rate</p>
+        <Card className="bg-white border-gray-200 h-full">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900">Utilization Rate</CardTitle>
+            <CardDescription className="text-gray-500">Overall facility usage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-4xl font-bold text-primary mb-2">{stats.facilityUtilizationRate.toFixed(1)}%</p>
+                <p className="text-sm text-gray-500">Current Rate</p>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4">
+                <div
+                  className="bg-primary h-4 rounded-full transition-all"
+                  style={{ width: `${Math.min(stats.facilityUtilizationRate, 100)}%` }}
+                ></div>
+              </div>
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Pending Approvals:</span>
+                  <span className="font-medium text-gray-900">
+                    Lecturer: {stats.pendingLecturerApprovals}
+                  </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-primary h-4 rounded-full transition-all"
-                    style={{ width: `${Math.min(stats.facilityUtilizationRate, 100)}%` }}
-                  ></div>
-                </div>
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Pending Approvals:</span>
-                    <span className="font-medium text-gray-900">
-                      Lecturer: {stats.pendingLecturerApprovals}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-2">
-                    <span className="text-gray-500">Admin:</span>
-                    <span className="font-medium text-gray-900">{stats.pendingAdminApprovals}</span>
-                  </div>
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-gray-500">Admin:</span>
+                  <span className="font-medium text-gray-900">{stats.pendingAdminApprovals}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts Section - Row 1: Booking Trend & User Distribution */}

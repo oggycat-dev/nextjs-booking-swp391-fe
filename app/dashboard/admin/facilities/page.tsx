@@ -72,7 +72,7 @@ export default function AdminFacilitiesPage() {
       const matchesCampus = !filterCampusId || f.campusId === filterCampusId
       const matchesStatus = !filterStatus || f.status === filterStatus
       return matchesSearch && matchesType && matchesCampus && matchesStatus
-    })
+    }).reverse() // Newest first (reverse API order)
   }, [facilities, searchTerm, filterTypeId, filterCampusId, filterStatus])
 
   const handleCreate = () => {

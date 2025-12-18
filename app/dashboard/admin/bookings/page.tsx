@@ -35,7 +35,7 @@ export default function AdminBookingsPage() {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [filterStatus, setFilterStatus] = useState<string>("")
   const [filterDate, setFilterDate] = useState<string>("")
-  
+
   // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
   const { facility, isLoading: isLoadingFacility } = useFacility(
     selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
@@ -46,11 +46,11 @@ export default function AdminBookingsPage() {
     const statusParam = searchParams.get("status")
     const dateParam = searchParams.get("date")
     const filterParam = searchParams.get("filter")
-    
+
     if (statusParam) {
       setFilterStatus(statusParam)
     }
-    
+
     if (dateParam) {
       if (dateParam === "today") {
         setFilterDate(new Date().toISOString().split('T')[0])
@@ -58,7 +58,7 @@ export default function AdminBookingsPage() {
         setFilterDate(dateParam)
       }
     }
-    
+
     if (filterParam === "pending") {
       // Already showing pending approvals by default
     }
@@ -147,7 +147,7 @@ export default function AdminBookingsPage() {
       })
       return
     }
-    
+
     const result = await rejectBookingAsAdmin(booking.id, rejectReason)
     if (result) {
       toast({
@@ -242,79 +242,61 @@ export default function AdminBookingsPage() {
                   Newest First
                 </>
               ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5"/>
-                    <path d="m5 12 7-7 7 7"/>
-                  </svg>
-                  Oldest First
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Bookings Table */}
-          <Card className="overflow-hidden">
-            {isLoadingPending ? (
-              <div className="p-12 text-center">
-                <p className="text-muted-foreground">Loading pending bookings...</p>
-              </div>
-            ) : filteredBookings.length === 0 ? (
-              <div className="p-12 text-center">
-                <p className="text-muted-foreground">
-                  {searchTerm ? "No bookings found matching your search" : "No pending bookings"}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-4 font-semibold text-sm">Booking Info</th>
-                      <th className="text-left p-4 font-semibold text-sm">Facility</th>
-                      <th className="text-left p-4 font-semibold text-sm">Requester</th>
-                      <th className="text-left p-4 font-semibold text-sm">Date & Time</th>
-                      <th className="text-left p-4 font-semibold text-sm">Lecturer</th>
-                      <th className="text-center p-4 font-semibold text-sm">Status</th>
-                      <th className="text-center p-4 font-semibold text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBookings.map((booking) => (
-                      <tr 
-                        key={booking.id} 
-                        className="border-b hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="p-4">
-                          <div>
-                            <div className="font-semibold text-sm">{booking.bookingCode}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Created: {formatDate(booking.createdAt)}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-4 font-semibold text-sm">Booking Info</th>
+                        <th className="text-left p-4 font-semibold text-sm">Facility</th>
+                        <th className="text-left p-4 font-semibold text-sm">Requester</th>
+                        <th className="text-left p-4 font-semibold text-sm">Date & Time</th>
+                        <th className="text-left p-4 font-semibold text-sm">Lecturer</th>
+                        <th className="text-center p-4 font-semibold text-sm">Status</th>
+                        <th className="text-center p-4 font-semibold text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBookings.map((booking) => (
+                        <tr
+                          key={booking.id}
+                          className="border-b hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="p-4">
+                            <div>
+                              <div className="font-semibold text-sm">{booking.bookingCode}</div>
+                              <div className="text-xs text-muted-foreground">
+                                Created: {formatDate(booking.createdAt)}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="font-medium">{booking.facilityName}</span>
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            <div className="font-medium text-sm">{booking.userName}</div>
-                            <div className="text-xs text-muted-foreground">{booking.userRole}</div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            <div className="font-medium text-sm">{formatDate(booking.bookingDate)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                          </td>
+                          <td className="p-4">
+                            <span className="font-medium">{booking.facilityName}</span>
+                          </td>
+                          <td className="p-4">
+                            <div>
+                              <div className="font-medium text-sm">{booking.userName}</div>
+                              <div className="text-xs text-muted-foreground">{booking.userRole}</div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            {booking.lecturerName && (
-                              <>
-                                <div className="font-medium text-sm">{booking.lecturerName}</div>
+                          </td>
+                          <td className="p-4">
+                            <div>
+                              <div className="font-medium text-sm">{formatDate(booking.bookingDate)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div>
+                              {booking.lecturerName && (
+                                <>
+                                  <div className="font-medium text-sm">{booking.lecturerName}</div>
+                                  <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                    {booking.lecturerEmail}
+                                  </div>
+                                </>
+                              )}
+                              {!booking.lecturerName && booking.lecturerEmail && (
                                 <div className="text-xs text-muted-foreground truncate max-w-[150px]">
                                   {booking.lecturerEmail}
                                 </div>
@@ -554,7 +536,7 @@ export default function AdminBookingsPage() {
                   </>
                 ) : null}
               </div>
-              
+
               {selectedBooking.notes && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-1">Notes</p>
@@ -689,9 +671,9 @@ export default function AdminBookingsPage() {
               >
                 {isMutating ? "Rejecting..." : "Reject"}
               </Button>
-              <Button 
-                variant="outline" 
-                className="flex-1 bg-transparent" 
+              <Button
+                variant="outline"
+                className="flex-1 bg-transparent"
                 onClick={() => {
                   setActionType(null)
                   setRejectReason("")
