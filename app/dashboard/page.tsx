@@ -715,109 +715,70 @@ function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Booking Overview - 2 Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Booking Statistics - Main Card */}
-        <Card className="lg:col-span-2 bg-white border-gray-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">Booking Overview</CardTitle>
-            <CardDescription className="text-gray-500">Booking statistics and activity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <Link href="/dashboard/admin/bookings?status=Approved&date=today">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{stats.approvedBookingsToday}</p>
-                    <p className="text-sm font-medium text-gray-700">Approved Today</p>
-                    <p className="text-xs text-gray-500">Bookings approved</p>
-                  </div>
+      {/* Booking Overview - 2x2 Grid */}
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-gray-900">Booking Overview</CardTitle>
+          <CardDescription className="text-gray-500">Today's booking statistics and activity</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/dashboard/admin/bookings?status=Approved&date=today">
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl hover:shadow-md transition-all cursor-pointer border border-green-200">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-sm">
+                  <CheckCircle2 className="h-6 w-6 text-white" />
                 </div>
-              </Link>
-              <Link href="/dashboard/admin/bookings?status=Rejected&date=today">
-                <div className={`flex items-center gap-3 p-3 ${stats.rejectedBookingsToday > 0 ? "bg-red-50" : "bg-gray-50"} rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}>
-                  <div className={`w-10 h-10 ${stats.rejectedBookingsToday > 0 ? "bg-red-100" : "bg-gray-100"} rounded-full flex items-center justify-center`}>
-                    <AlertCircle className={`h-5 w-5 ${stats.rejectedBookingsToday > 0 ? "text-red-600" : "text-gray-600"}`} />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{stats.rejectedBookingsToday}</p>
-                    <p className="text-sm font-medium text-gray-700">Rejected Today</p>
-                    <p className="text-xs text-gray-500">Bookings rejected</p>
-                  </div>
-                </div>
-              </Link>
-              <Link href="/dashboard/admin/bookings?status=InUse">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{stats.inUseBookingsNow}</p>
-                    <p className="text-sm font-medium text-gray-700">In Use Now</p>
-                    <p className="text-xs text-gray-500">Active bookings</p>
-                  </div>
-                </div>
-              </Link>
-              <Link href="/dashboard/admin/bookings?date=today">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{stats.totalBookingsToday}</p>
-                    <p className="text-sm font-medium text-gray-700">Today</p>
-                    <p className="text-xs text-gray-500">Bookings today</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-
-          </CardContent>
-        </Card>
-
-        {/* Utilization Rate - Sidebar */}
-        <Card className="bg-white border-gray-200 h-full">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">Utilization Rate</CardTitle>
-            <CardDescription className="text-gray-500">Overall facility usage</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-4xl font-bold text-primary mb-2">{stats.facilityUtilizationRate.toFixed(1)}%</p>
-                <p className="text-sm text-gray-500">Current Rate</p>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-4">
-                <div
-                  className="bg-primary h-4 rounded-full transition-all"
-                  style={{ width: `${Math.min(stats.facilityUtilizationRate, 100)}%` }}
-                ></div>
-              </div>
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Pending Approvals:</span>
-                  <span className="font-medium text-gray-900">
-                    Lecturer: {stats.pendingLecturerApprovals}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-2">
-                  <span className="text-gray-500">Admin:</span>
-                  <span className="font-medium text-gray-900">{stats.pendingAdminApprovals}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Approved Today</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.approvedBookingsToday}</p>
+                  <p className="text-xs text-gray-500 mt-1">Bookings approved</p>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </Link>
+            <Link href="/dashboard/admin/bookings?status=Rejected&date=today">
+              <div className={`flex items-center gap-4 p-4 ${stats.rejectedBookingsToday > 0 ? "bg-gradient-to-br from-red-50 to-red-100/50 border-red-200" : "bg-gradient-to-br from-gray-50 to-gray-100/50 border-gray-200"} rounded-xl hover:shadow-md transition-all cursor-pointer border`}>
+                <div className={`w-12 h-12 ${stats.rejectedBookingsToday > 0 ? "bg-red-500" : "bg-gray-400"} rounded-xl flex items-center justify-center shadow-sm`}>
+                  <AlertCircle className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Rejected Today</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.rejectedBookingsToday}</p>
+                  <p className="text-xs text-gray-500 mt-1">Bookings rejected</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/bookings?status=InUse">
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl hover:shadow-md transition-all cursor-pointer border border-blue-200">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-sm">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-1">In Use Now</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.inUseBookingsNow}</p>
+                  <p className="text-xs text-gray-500 mt-1">Active bookings</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/bookings?date=today">
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl hover:shadow-md transition-all cursor-pointer border border-purple-200">
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-sm">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Total Today</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalBookingsToday}</p>
+                  <p className="text-xs text-gray-500 mt-1">All bookings today</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts Section - Row 1: Booking Trend & User Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Booking Trend Line Chart */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -858,7 +819,7 @@ function AdminDashboard() {
         </Card>
 
         {/* User Distribution Donut Chart */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Users className="h-5 w-5 text-purple-500" />
@@ -918,10 +879,10 @@ function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Charts Section - Row 2: Facility Status & Booking Flow */}
+      {/* Charts Section - Row 2: Facility Status & Approval Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Facility Status Pie Chart */}
-        <Card className="bg-white border-gray-200">
+        {/* Facility Status */}
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-green-500" />
@@ -969,56 +930,8 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Booking Flow Area Chart */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-500" />
-              Booking Activity Flow
-            </CardTitle>
-            <CardDescription className="text-gray-500">Booking activity over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={[
-                { name: "Today", total: stats.totalBookingsToday, approved: stats.approvedBookingsToday, inUse: stats.inUseBookingsNow },
-                { name: "This Week", total: stats.totalBookingsThisWeek, approved: Math.round(stats.totalBookingsThisWeek * 0.8), inUse: Math.round(stats.totalBookingsThisWeek * 0.15) },
-                { name: "This Month", total: stats.totalBookingsThisMonth, approved: Math.round(stats.totalBookingsThisMonth * 0.75), inUse: Math.round(stats.totalBookingsThisMonth * 0.08) }
-              ]}>
-                <defs>
-                  <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="approvedGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="inUseAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" tick={{ fill: '#6b7280' }} />
-                <YAxis tick={{ fill: '#6b7280' }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                />
-                <Legend />
-                <Area type="monotone" dataKey="total" stroke="#8b5cf6" fillOpacity={1} fill="url(#totalGradient)" name="Total" />
-                <Area type="monotone" dataKey="approved" stroke="#10b981" fillOpacity={1} fill="url(#approvedGradient)" name="Approved" />
-                <Area type="monotone" dataKey="inUse" stroke="#3b82f6" fillOpacity={1} fill="url(#inUseAreaGradient)" name="In Use" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Section - Row 3: Combined Stats */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Combined Stats Bar Chart */}
-        <Card className="bg-white border-gray-200">
+        {/* Approval Pipeline */}
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-orange-500" />
@@ -1027,7 +940,7 @@ function AdminDashboard() {
             <CardDescription className="text-gray-500">Current pending approvals breakdown</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart
                 data={[
                   { name: "Lecturer Approvals", pending: stats.pendingLecturerApprovals, icon: "👨‍🏫" },
@@ -1124,133 +1037,7 @@ function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Charts Section - Row 4: Today's Booking Status & Utilization Gauge */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Booking Status - Donut */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">Today&apos;s Bookings</CardTitle>
-            <CardDescription className="text-gray-500">Approval status breakdown</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: "Approved", value: stats.approvedBookingsToday || 1, color: "#10b981" },
-                    { name: "Rejected", value: stats.rejectedBookingsToday || 0, color: "#ef4444" },
-                    { name: "In Use", value: stats.inUseBookingsNow || 0, color: "#3b82f6" }
-                  ].filter(item => item.value > 0)}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {[
-                    { name: "Approved", value: stats.approvedBookingsToday || 1, color: "#10b981" },
-                    { name: "Rejected", value: stats.rejectedBookingsToday || 0, color: "#ef4444" },
-                    { name: "In Use", value: stats.inUseBookingsNow || 0, color: "#3b82f6" }
-                  ].filter(item => item.value > 0).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
 
-        {/* Weekly Comparison Bar */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">Booking Volume</CardTitle>
-            <CardDescription className="text-gray-500">Compare by period</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={[
-                { name: "Today", count: stats.totalBookingsToday, fill: "#8b5cf6" },
-                { name: "Week", count: stats.totalBookingsThisWeek, fill: "#3b82f6" },
-                { name: "Month", count: stats.totalBookingsThisMonth, fill: "#10b981" }
-              ]} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fill: '#6b7280' }} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#6b7280' }} width={50} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                />
-                <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-                  {[
-                    { name: "Today", count: stats.totalBookingsToday, fill: "#8b5cf6" },
-                    { name: "Week", count: stats.totalBookingsThisWeek, fill: "#3b82f6" },
-                    { name: "Month", count: stats.totalBookingsThisMonth, fill: "#10b981" }
-                  ].map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Utilization Rate Visual */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">Utilization Rate</CardTitle>
-            <CardDescription className="text-gray-500">Facility usage efficiency</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center h-[250px]">
-              <div className="relative w-40 h-40">
-                <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="#e5e7eb"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="url(#utilizationGradient)"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${Math.min(stats.facilityUtilizationRate, 100) * 2.51} 251`}
-                  />
-                  <defs>
-                    <linearGradient id="utilizationGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#10b981" />
-                      <stop offset="50%" stopColor="#3b82f6" />
-                      <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{stats.facilityUtilizationRate.toFixed(1)}%</span>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-gray-500">Overall facility utilization</p>
-              <div className="flex gap-4 mt-2 text-xs text-gray-600">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Available: {stats.availableFacilities}
-                </span>
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  In Use: {stats.inUseFacilities}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

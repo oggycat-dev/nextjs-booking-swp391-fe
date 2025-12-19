@@ -35,14 +35,14 @@ export const bookingApi = {
       if (query?.pageSize) params.append("pageSize", query.pageSize.toString());
 
       const url = `${API_URL}/bookings${params.toString() ? `?${params.toString()}` : ""}`;
-      
+
       const response = await fetch(url, { //Gọi fetch để lấy dữ liệu từ API
         method: "GET",
         headers: getAuthHeaders(),
       });
 
       const text = await response.text(); // Đọc raw text từ response
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -91,14 +91,14 @@ export const bookingApi = {
 
       const url = `${API_URL}/bookings/calendar?${queryParams.toString()}`;
       console.log('Fetching calendar bookings:', url);
-      
+
       const response = await fetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" }, // No auth needed - AllowAnonymous
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -146,7 +146,7 @@ export const bookingApi = {
    */
   create: async (request: CreateBookingRequest): Promise<ApiResponse<Booking>> => {
     const requestBody = JSON.stringify(request);
-    
+
     // Debug log
     console.log("Creating booking:", request);
     //fetch POST
@@ -178,7 +178,7 @@ export const bookingApi = {
     if (!response.ok) {
       // For 422 or other errors, extract detailed error message
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      
+
       // Try to extract error message from various possible formats
       if (data?.message) {
         errorMessage = data.message;
@@ -201,7 +201,7 @@ export const bookingApi = {
         // If we have raw text but couldn't parse it or data is empty, use the raw text
         errorMessage = responseText.trim();
       }
-      
+
       // Error message is thrown below for error handling
       throw new Error(errorMessage);
     }
@@ -328,19 +328,19 @@ export const bookingApi = {
     console.log('🔵 lecturerApprove API call');
     console.log('URL:', `${API_URL}/bookings/${id}/lecturer-approve`);
     console.log('Request body:', JSON.stringify(request));
-    
+
     const response = await fetch(`${API_URL}/bookings/${id}/lecturer-approve`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(request),
     });
-    
+
     console.log('Response status:', response.status, response.statusText);
     console.log('Response ok:', response.ok);
-    
+
     const text = await response.text();
     console.log('Response text:', text);
-    
+
     if (!response.ok) {
       let errorData;
       try {
@@ -352,7 +352,7 @@ export const bookingApi = {
       console.error('❌ API Error:', errorMessage);
       throw new Error(errorMessage);
     }
-    
+
     let data;
     try {
       data = text ? JSON.parse(text) : {};
@@ -361,7 +361,7 @@ export const bookingApi = {
       console.error('Failed to parse success response as JSON');
       throw new Error('Invalid JSON response from server');
     }
-    
+
     return data;
   },
 
@@ -377,7 +377,7 @@ export const bookingApi = {
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -420,7 +420,7 @@ export const bookingApi = {
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -572,7 +572,7 @@ export const bookingApi = {
   getMyBookings: async (query?: GetBookingsQuery): Promise<ApiResponse<Booking[]>> => {
     try {
       const url = `${API_URL}/bookings/my-history`;
-      
+
       console.log('Fetching my bookings from:', url);
       const response = await fetch(url, {
         method: "GET",
@@ -580,7 +580,7 @@ export const bookingApi = {
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -618,7 +618,7 @@ export const bookingApi = {
   getMyPendingBookings: async (): Promise<ApiResponse<Booking[]>> => {
     try {
       const url = `${API_URL}/bookings/my-pending`;
-      
+
       console.log('Fetching my pending bookings from:', url);
       const response = await fetch(url, {
         method: "GET",
@@ -626,7 +626,7 @@ export const bookingApi = {
       });
 
       const text = await response.text();
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -662,7 +662,7 @@ export const bookingApi = {
    */
   getPendingAdminApprovals: async (): Promise<ApiResponse<BookingListDto[]>> => {
     const url = `${API_URL}/bookings/pending-admin-approval`;
-    
+
     // First attempt
     let response = await fetch(url, {
       method: "GET",
@@ -672,7 +672,7 @@ export const bookingApi = {
     // If 401 or 403, try to refresh token and retry once
     if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
       console.log("Got 401/403, attempting token refresh and retry...");
-      
+
       const refreshToken = storage.getItem("refreshToken");
       if (refreshToken) {
         try {
@@ -687,7 +687,7 @@ export const bookingApi = {
             if (refreshData.success && refreshData.data) {
               storage.setItem("token", refreshData.data.token);
               storage.setItem("refreshToken", refreshData.data.refreshToken);
-              
+
               // Retry the original request with new token
               response = await fetch(url, {
                 method: "GET",
@@ -704,14 +704,14 @@ export const bookingApi = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
-      
+
       // If still 401/403 after retry, user needs to re-login
       if (response.status === 401 || response.status === 403) {
         console.error("Authentication failed after retry, redirecting to login...");
         storage.clear();
         window.location.href = "/";
       }
-      
+
       throw new Error(errorMessage);
     }
 
@@ -726,7 +726,7 @@ export const bookingApi = {
     request: LecturerApproveBookingRequest
   ): Promise<ApiResponse<null>> => {
     const url = `${API_URL}/bookings/${bookingId}/admin-approve`;
-    
+
     // First attempt
     let response = await fetch(url, {
       method: "POST",
@@ -737,7 +737,7 @@ export const bookingApi = {
     // If 401 or 403, try to refresh token and retry once
     if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
       console.log("Got 401/403, attempting token refresh and retry...");
-      
+
       const refreshToken = storage.getItem("refreshToken");
       if (refreshToken) {
         try {
@@ -752,7 +752,7 @@ export const bookingApi = {
             if (refreshData.success && refreshData.data) {
               storage.setItem("token", refreshData.data.token);
               storage.setItem("refreshToken", refreshData.data.refreshToken);
-              
+
               // Retry the original request with new token
               response = await fetch(url, {
                 method: "POST",
@@ -770,14 +770,14 @@ export const bookingApi = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
-      
+
       // If still 401/403 after retry, user needs to re-login
       if (response.status === 401 || response.status === 403) {
         console.error("Authentication failed after retry, redirecting to login...");
         storage.clear();
         window.location.href = "/";
       }
-      
+
       throw new Error(errorMessage);
     }
 
@@ -861,7 +861,7 @@ export const bookingApi = {
     const headers = getAuthHeaders();
     // API_URL already includes /api, so don't add it again
     const url = `${API_URL}/bookings/${bookingId}/check-in`;
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers,
@@ -895,7 +895,7 @@ export const bookingApi = {
     const headers = getAuthHeaders();
     // API_URL already includes /api, so don't add it again
     const url = `${API_URL}/bookings/${bookingId}/check-out`;
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers,
@@ -930,7 +930,7 @@ export const bookingApi = {
       const headers = getAuthHeaders();
       // API_URL already includes /api, so don't add it again
       const url = `${API_URL}/bookings/my-history`;
-      
+
       console.log('Fetching booking history from:', url);
       const response = await fetch(url, {
         method: "GET",
@@ -995,6 +995,122 @@ export const bookingApi = {
         };
       }
       throw error;
+    }
+  },
+
+  /**
+   * Get all bookings for admin with filters and pagination (Admin only)
+   * Maps to: GET /api/bookings/admin/all
+   */
+  getAllBookingsForAdmin: async (query?: {
+    pageNumber?: number;
+    pageSize?: number;
+    facilityId?: string;
+    campusId?: string;
+    fromDate?: string;
+    toDate?: string;
+    status?: string;
+    searchTerm?: string;
+  }): Promise<ApiResponse<any>> => {
+    try {
+      const params = new URLSearchParams();
+      if (query?.pageNumber) params.append('pageNumber', String(query.pageNumber));
+      if (query?.pageSize) params.append('pageSize', String(query.pageSize));
+      if (query?.facilityId) params.append('facilityId', query.facilityId);
+      if (query?.campusId) params.append('campusId', query.campusId);
+      if (query?.fromDate) params.append('fromDate', query.fromDate);
+      if (query?.toDate) params.append('toDate', query.toDate);
+      if (query?.status) params.append('status', query.status);
+      if (query?.searchTerm) params.append('searchTerm', query.searchTerm);
+
+      const url = `${API_URL}/bookings/admin/all${params.toString() ? `?${params.toString()}` : ''}`;
+
+      // First request
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      // If 401/403, try refresh token and retry once
+      if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
+        const refreshToken = storage.getItem('refreshToken');
+        if (refreshToken) {
+          try {
+            const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken }),
+            });
+
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json().catch(() => null);
+              if (refreshData?.success && refreshData.data) {
+                storage.setItem('token', refreshData.data.token);
+                storage.setItem('refreshToken', refreshData.data.refreshToken);
+                // retry
+                response = await fetch(url, { method: 'GET', headers: getAuthHeaders() });
+              }
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+          }
+        }
+      }
+
+      const text = await response.text().catch(() => '');
+
+      if (!response.ok) {
+        let errorData: any = null;
+        try {
+          errorData = text ? JSON.parse(text) : null;
+        } catch (e) {
+          // ignore
+        }
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        return {
+          statusCode: response.status,
+          success: false,
+          message: errorMessage,
+          data: null,
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      if (!text || text.trim() === '') {
+        return {
+          statusCode: 200,
+          success: true,
+          message: 'No bookings found',
+          data: { items: [], totalCount: 0, pageNumber: 1, pageSize: 10, totalPages: 0 },
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('Failed to parse all bookings response:', parseError);
+        return {
+          statusCode: 200,
+          success: false,
+          message: 'Invalid JSON response from all bookings endpoint',
+          data: null,
+          errors: null,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch (err) {
+      console.error('Error fetching all bookings for admin:', err);
+      return {
+        statusCode: 500,
+        success: false,
+        message: (err as Error).message || 'Failed to fetch all bookings',
+        data: null,
+        errors: null,
+        timestamp: new Date().toISOString(),
+      };
     }
   },
 };
