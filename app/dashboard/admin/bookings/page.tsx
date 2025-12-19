@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useFacility, useFacilities } from "@/hooks/use-facility"
 import { useCampuses } from "@/hooks/use-campus"
 import type { Booking, BookingStatus } from "@/types"
+import { AllBookingsTab } from "./all-bookings-tab"
 
 export default function AdminBookingsPage() {
   const searchParams = useSearchParams()
@@ -22,7 +23,7 @@ export default function AdminBookingsPage() {
   const { getCurrentUser } = useAuth()
   const currentUser = getCurrentUser()
   const isAdmin = currentUser?.role === 'Admin'
-  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'all'>('pending')
 
   // Filter state for History tab
   const [historySearchTerm, setHistorySearchTerm] = useState("")
@@ -237,6 +238,7 @@ export default function AdminBookingsPage() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
           <TabsList>
             <TabsTrigger value="pending">Pending ({filteredBookings.length})</TabsTrigger>
+            {isAdmin && <TabsTrigger value="all">All Bookings</TabsTrigger>}
             {isAdmin && <TabsTrigger value="history">Approval History</TabsTrigger>}
           </TabsList>
 
@@ -579,6 +581,13 @@ export default function AdminBookingsPage() {
                   </div>
                 )}
               </Card>
+            </TabsContent>
+          )}
+
+          {/* All Bookings Tab */}
+          {isAdmin && (
+            <TabsContent value="all" className="mt-4">
+              <AllBookingsTab />
             </TabsContent>
           )}
         </Tabs>
