@@ -33,11 +33,11 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const { toast } = useToast()
   const { getCurrentUser } = useAuth()
   const { createBooking, isLoading, error } = useBookingMutations()
-  
+
   const user = getCurrentUser()
   const userRole = user?.role ? String(user.role).toLowerCase() : ""
   const isStudent = userRole === "student"
-  
+
   const [step, setStep] = useState(1)
   const [date, setDate] = useState("")
   const [startTime, setStartTime] = useState("")
@@ -50,6 +50,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [dayBookings, setDayBookings] = useState<BookingCalendarDto[]>([])
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
+  const [agreeToPolicy, setAgreeToPolicy] = useState(false)
 
   // Get campus working hours for client-side validation
   const { campus } = useCampus(facility.campusId)
@@ -70,7 +71,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
           endDate: date,
           facilityId: facility.id,
         })
-        
+
         if (response.success && response.data) {
           setDayBookings(response.data)
         } else {
@@ -106,30 +107,30 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const validateStartTime = (value: string, dateValue: string): string | undefined => {
     if (!value) return undefined
     if (!dateValue) return undefined
-    
+
     const now = new Date()
     const bookingDateTime = new Date(`${dateValue}T${value}:00`)
-    
+
     if (bookingDateTime <= now) {
       const nowTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
       return `Cannot book in the past. Current time is ${nowTime}. Please select a future time slot.`
     }
-    
+
     if (endTime && value >= endTime) {
       return "End time must be after start time"
     }
-    
+
     return undefined
   }
 
   const validateEndTime = (value: string, dateValue: string, startTimeValue: string): string | undefined => {
     if (!value) return undefined
     if (!startTimeValue) return undefined
-    
+
     if (startTimeValue >= value) {
       return "End time must be after start time"
     }
-    
+
     return undefined
   }
 
@@ -242,7 +243,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         setFieldErrors(prev => ({ ...prev, date: "Cannot book facilities on holidays" }))
       }
     }
-    
+
     // Re-validate times when date changes
     if (startTime) {
       const startError = validateStartTime(startTime, value)
@@ -252,9 +253,9 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     // If both times present, validate against campus working hours
     if (startTime && endTime) {
       const wh = validateWorkingHours(startTime, endTime)
-        if (wh) {
-          setFieldErrors(prev => ({ ...prev, startTime: wh, endTime: wh }))
-          // show inline errors only
+      if (wh) {
+        setFieldErrors(prev => ({ ...prev, startTime: wh, endTime: wh }))
+        // show inline errors only
       }
     }
   }
@@ -308,13 +309,14 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     if (!isOpen) {
       setFieldErrors({})
       setDayBookings([])
+      setAgreeToPolicy(false)
     }
   }, [isOpen])
 
   const handleSubmit = async () => {
     // Validate all fields
     const errors: FieldErrors = {}
-    
+
     errors.date = validateDate(date)
     if (!errors.date && holidays && holidays.length > 0 && date) {
       const isHoliday = holidays.some(h => h.holidayDate === date)
@@ -368,11 +370,11 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
 
     try {
       const result = await createBooking(bookingData)
-      
+
       if (result) {
         toast({
           title: "Booking Created",
-          description: isStudent 
+          description: isStudent
             ? "Your booking request has been sent to the lecturer for approval"
             : "Your booking request has been sent to admin for approval",
         })
@@ -389,6 +391,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         setNotes("")
         setFieldErrors({})
         setDayBookings([])
+        setAgreeToPolicy(false)
         if (onBookingCreated) {
           onBookingCreated()
         }
@@ -450,24 +453,24 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const getBookingStyle = (booking: BookingCalendarDto) => {
     const gridStartHour = 7  // 7:00 AM
     const gridEndHour = 22   // 10:00 PM (22:00)
-    
+
     const startHour = parseInt(booking.startTime.split(':')[0])
     const startMinute = parseInt(booking.startTime.split(':')[1])
     const endHour = parseInt(booking.endTime.split(':')[0])
     const endMinute = parseInt(booking.endTime.split(':')[1])
-    
+
     // Check if booking spans across midnight
     const spansMidnight = endHour < startHour || (endHour === startHour && endMinute < startMinute)
-    
+
     // For daily view, determine the visible portion of the booking
     // Calculate the start position (clamp to grid start if before)
     const visibleStartHour = Math.max(startHour, gridStartHour)
     const visibleStartMinute = startHour < gridStartHour ? 0 : startMinute
-    
+
     // Calculate the end position (clamp to grid end or end of day for midnight-spanning bookings)
     let visibleEndHour: number
     let visibleEndMinute: number
-    
+
     if (spansMidnight) {
       // Booking spans midnight - show until end of grid (22:00) or end of day
       visibleEndHour = gridEndHour
@@ -477,14 +480,14 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
       visibleEndHour = Math.min(endHour, gridEndHour)
       visibleEndMinute = endHour > gridEndHour ? 59 : endMinute
     }
-    
+
     // Calculate top position from grid start (each hour = 40px, each minute = 40/60 px)
     const topPosition = (visibleStartHour - gridStartHour) * 40 + (visibleStartMinute / 60) * 40
-    
+
     // Calculate height based on visible duration
     const durationMinutes = (visibleEndHour - visibleStartHour) * 60 + (visibleEndMinute - visibleStartMinute)
     const height = Math.max((durationMinutes / 60) * 40, 20) // Minimum 20px height
-    
+
     return {
       top: `${topPosition}px`,
       height: `${height}px`,
@@ -552,9 +555,9 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Start Time</label>
-                <Input 
-                  type="time" 
-                  value={startTime} 
+                <Input
+                  type="time"
+                  value={startTime}
                   onChange={(e) => handleStartTimeChange(e.target.value)}
                   onBlur={() => {
                     const error = validateStartTime(startTime, date)
@@ -577,9 +580,9 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">End Time</label>
-                <Input 
-                  type="time" 
-                  value={endTime} 
+                <Input
+                  type="time"
+                  value={endTime}
                   onChange={(e) => handleEndTimeChange(e.target.value)}
                   onBlur={() => {
                     const error = validateEndTime(endTime, date, startTime)
@@ -606,11 +609,11 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
             {date && (
               <div className="mt-4 border rounded-lg p-3 bg-muted/20">
                 <h4 className="text-sm font-semibold mb-2">
-                  {new Date(date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date(date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </h4>
                 <div className="relative" style={{ minHeight: '640px' }}>
@@ -650,12 +653,12 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                               const startHour = parseInt(booking.startTime.split(':')[0])
                               const endHour = parseInt(booking.endTime.split(':')[0])
                               const endMinute = parseInt(booking.endTime.split(':')[1])
-                              
+
                               // If booking spans midnight, it's visible if it starts before grid end
                               if (endHour < startHour || (endHour === startHour && endMinute < parseInt(booking.startTime.split(':')[1]))) {
                                 return startHour < 22 // Show if starts before 22:00
                               }
-                              
+
                               // For normal bookings, show if they overlap with visible range
                               return (startHour < 22) && (endHour >= 7)
                             })
@@ -663,35 +666,35 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                               const style = getBookingStyle(booking)
                               const height = parseFloat(style.height.replace('px', ''))
                               const statusColor = getStatusColor(booking.status)
-                              
+
                               // Check if booking spans midnight
                               const startHour = parseInt(booking.startTime.split(':')[0])
                               const endHour = parseInt(booking.endTime.split(':')[0])
                               const startMinute = parseInt(booking.startTime.split(':')[1])
                               const endMinute = parseInt(booking.endTime.split(':')[1])
                               const spansMidnight = endHour < startHour || (endHour === startHour && endMinute < startMinute)
-                              
+
                               // Adapt text size based on height
                               const isSmall = height < 40
                               const isMedium = height >= 40 && height < 80
-                              
+
                               // Format display time - if spans midnight, show end as "23:59" or grid end
-                              let displayEndTime = booking.endTime.slice(0,5)
+                              let displayEndTime = booking.endTime.slice(0, 5)
                               if (spansMidnight) {
                                 // For midnight-spanning bookings, show until end of day in daily view
                                 displayEndTime = "23:59"
                               }
-                              
+
                               return (
                                 <div
                                   key={`${booking.id}-${idx}`}
                                   className={`absolute left-0 right-0 rounded-lg border-l-[4px] shadow-sm ${statusColor}`}
                                   style={style}
-                                  title={`${booking.startTime.slice(0,5)} - ${booking.endTime.slice(0,5)}${spansMidnight ? ' (overnight)' : ''} | ${booking.status}`}
+                                  title={`${booking.startTime.slice(0, 5)} - ${booking.endTime.slice(0, 5)}${spansMidnight ? ' (overnight)' : ''} | ${booking.status}`}
                                 >
                                   <div className={`h-full flex flex-col justify-center ${isSmall ? 'px-1.5 py-0.5' : isMedium ? 'px-2 py-1' : 'px-2 py-1.5'}`}>
                                     <div className={`font-semibold truncate ${isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs'}`}>
-                                      {booking.startTime.slice(0,5)} - {displayEndTime}
+                                      {booking.startTime.slice(0, 5)} - {displayEndTime}
                                       {spansMidnight && !isSmall && ' *'}
                                     </div>
                                     {!isSmall && (
@@ -856,7 +859,12 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
               </div>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4 accent-primary rounded" defaultChecked />
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-primary rounded"
+                checked={agreeToPolicy}
+                onChange={(e) => setAgreeToPolicy(e.target.checked)}
+              />
               <span className="text-sm">I agree to the no-show policy</span>
             </label>
           </div>
@@ -864,13 +872,13 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
 
         <div className="flex gap-2 mt-4">
           {step > 1 && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setStep(step - 1)
                 // Clear errors when going back
                 setFieldErrors({})
-              }} 
+              }}
               className="flex-1 h-9"
             >
               Back
@@ -891,7 +899,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                   errors.startTime = validateStartTime(startTime, date)
                   errors.endTime = validateEndTime(endTime, date, startTime)
                   setFieldErrors(errors)
-                  
+
                   if (!errors.date && !errors.startTime && !errors.endTime && date && startTime && endTime) {
                     setStep(step + 1)
                   }
@@ -903,7 +911,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                     errors.lecturerEmail = validateLecturerEmail(lecturerEmail)
                   }
                   setFieldErrors(errors)
-                  
+
                   const hasErrors = Object.values(errors).some(error => error !== undefined)
                   if (!hasErrors && purpose && participants && (!isStudent || lecturerEmail)) {
                     setStep(step + 1)
@@ -913,17 +921,17 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 }
               }}
               disabled={
-                (step === 1 && (!date || !startTime || !endTime || Boolean(fieldErrors.date))) || 
+                (step === 1 && (!date || !startTime || !endTime || Boolean(fieldErrors.date))) ||
                 (step === 2 && (!purpose || !participants || (isStudent && !lecturerEmail)))
               }
             >
               Continue
             </Button>
           ) : (
-            <Button 
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-9" 
+            <Button
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-9"
               onClick={handleSubmit}
-              disabled={isLoading}
+              disabled={isLoading || !agreeToPolicy}
             >
               {isLoading ? "Submitting..." : "Submit Booking"}
             </Button>

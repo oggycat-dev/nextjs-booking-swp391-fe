@@ -415,10 +415,6 @@ export default function CalendarPage() {
                     <label className="text-sm font-medium text-muted-foreground">Time</label>
                     <p className="text-base">{selectedBooking.startTime.slice(0, 5)} - {selectedBooking.endTime.slice(0, 5)}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Number of Participants</label>
-                    <p className="text-base">👥 {selectedBooking.numParticipants} people</p>
-                  </div>
                 </div>
               </div>
 
