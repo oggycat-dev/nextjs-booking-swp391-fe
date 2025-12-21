@@ -15,7 +15,7 @@ import { parseApiError } from "@/lib/error-utils"
 export default function AdminIssuesPage() {
   const { toast } = useToast()
   const { issues, fetchPendingIssues, isLoading } = usePendingFacilityIssues()
-  const { changeRoom, rejectIssue, isLoading: isChangingRoom } = useFacilityIssueMutations()
+  const { changeRoom, rejectIssue, isLoading: isChangingRoom, error: mutationError } = useFacilityIssueMutations()
   const { facilities, fetchFacilities } = useFacilities()
 
   const [selectedIssue, setSelectedIssue] = useState<FacilityIssue | null>(null)
@@ -60,14 +60,23 @@ export default function AdminIssuesPage() {
 
       if (success) {
         toast({
-          title: "Room Changed",
-          description: "The room has been changed and user has been notified via email.",
+          title: "Room Changed Successfully",
+          description: "The room has been changed and the user has been notified via email.",
         })
         setShowChangeRoomDialog(false)
         setSelectedIssue(null)
         setNewFacilityId("")
         setAdminResponse("")
         fetchPendingIssues()
+      } else {
+        // Handle case when changeRoom returns false (error occurred)
+        const { title, description } = parseApiError(new Error(mutationError || "Failed to change room"));
+
+        toast({
+          variant: "destructive",
+          title: title,
+          description: description,
+        })
       }
     } catch (error) {
       const { title, description } = parseApiError(error);
