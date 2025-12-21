@@ -70,7 +70,9 @@ export default function AdminIssuesPage() {
         fetchPendingIssues()
       } else {
         // Handle case when changeRoom returns false (error occurred)
-        const { title, description } = parseApiError(new Error(mutationError || "Failed to change room"));
+        // Get error message from mutationError state
+        const errorMsg = mutationError || "Failed to change room";
+        const { title, description } = parseApiError(new Error(errorMsg));
 
         toast({
           variant: "destructive",
@@ -79,6 +81,7 @@ export default function AdminIssuesPage() {
         })
       }
     } catch (error) {
+      // This catch block handles unexpected errors only
       const { title, description } = parseApiError(error);
 
       toast({

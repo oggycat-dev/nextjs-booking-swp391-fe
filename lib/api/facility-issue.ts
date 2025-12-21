@@ -77,7 +77,7 @@ export const facilityIssueApi = {
       if (!text || text.trim() === '') {
         throw new Error('Empty response from server');
       }
-      
+
       try {
         return JSON.parse(text);
       } catch (parseError) {
@@ -199,7 +199,7 @@ export const facilityIssueApi = {
       const url = `${API_URL}/FacilityIssue/${reportId}/change-room`;
       console.log('Changing room for issue:', reportId);
       console.log('Request body:', request);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -258,7 +258,7 @@ export const facilityIssueApi = {
       const url = `${API_URL}/FacilityIssue/${reportId}/reject`;
       console.log('Rejecting issue:', reportId);
       console.log('Request body:', request);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: getAuthHeaders(),
