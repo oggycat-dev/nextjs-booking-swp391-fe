@@ -44,23 +44,26 @@ export function parseApiError(error: unknown): { title: string; description: str
             }
 
             // Check for specific error patterns
-            if (errorMessage.toLowerCase().includes("conflict") ||
+            if (errorMessage.toLowerCase().includes("conflicting bookings")) {
+                title = "Room Already Booked";
+                description = "The selected room is already booked for the remaining time slot. Please choose another room.";
+            } else if (errorMessage.toLowerCase().includes("conflict") ||
                 errorMessage.toLowerCase().includes("already booked") ||
                 errorMessage.toLowerCase().includes("overlapping")) {
-                title = "Xung đột đặt phòng";
-                description = "Phòng đã được đặt trong khung giờ này. Vui lòng chọn phòng khác.";
+                title = "Booking Conflict";
+                description = "The room is already booked for this time slot. Please choose another room.";
             } else if (errorMessage.toLowerCase().includes("not available") ||
                 errorMessage.toLowerCase().includes("unavailable")) {
-                title = "Phòng không khả dụng";
-                description = "Phòng hiện không khả dụng. Vui lòng chọn phòng khác.";
+                title = "Room Not Available";
+                description = "The room is currently not available. Please choose another room.";
             } else if (errorMessage.toLowerCase().includes("not found")) {
-                title = "Không tìm thấy";
-                description = "Không tìm thấy thông tin. Vui lòng tải lại trang và thử lại.";
+                title = "Not Found";
+                description = "The requested information was not found. Please refresh the page and try again.";
             } else if (errorMessage.toLowerCase().includes("unauthorized")) {
-                title = "Không có quyền";
-                description = "Bạn không có quyền thực hiện thao tác này.";
+                title = "Unauthorized";
+                description = "You do not have permission to perform this action.";
             } else if (errorMessage.toLowerCase().includes("validation")) {
-                title = "Dữ liệu không hợp lệ";
+                title = "Validation Error";
                 description = errorMessage;
             } else {
                 // Use the error message as is
