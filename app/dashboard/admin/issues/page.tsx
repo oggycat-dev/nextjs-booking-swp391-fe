@@ -10,6 +10,7 @@ import { usePendingFacilityIssues, useFacilityIssueMutations } from "@/hooks/use
 import { useFacilities } from "@/hooks/use-facility"
 import { AlertCircle, Clock, MapPin, User, Image as ImageIcon, Loader2, CheckCircle2 } from "lucide-react"
 import type { FacilityIssue } from "@/types"
+import { parseApiError } from "@/lib/error-utils"
 
 export default function AdminIssuesPage() {
   const { toast } = useToast()
@@ -69,26 +70,7 @@ export default function AdminIssuesPage() {
         fetchPendingIssues()
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to change room";
-
-      // Parse error message to provide better user feedback
-      let title = "Failed to Change Room";
-      let description = errorMessage;
-
-      // Check for specific error patterns
-      if (errorMessage.toLowerCase().includes("conflict") ||
-        errorMessage.toLowerCase().includes("already booked") ||
-        errorMessage.toLowerCase().includes("overlapping")) {
-        title = "Booking Conflict Detected";
-        description = "The selected facility already has a booking at the same time. Please choose a different facility or time slot.";
-      } else if (errorMessage.toLowerCase().includes("not available") ||
-        errorMessage.toLowerCase().includes("unavailable")) {
-        title = "Facility Not Available";
-        description = "The selected facility is currently not available. Please choose another facility.";
-      } else if (errorMessage.toLowerCase().includes("not found")) {
-        title = "Facility Not Found";
-        description = "The selected facility could not be found. Please refresh and try again.";
-      }
+      const { title, description } = parseApiError(error);
 
       toast({
         variant: "destructive",
@@ -137,11 +119,12 @@ export default function AdminIssuesPage() {
         fetchPendingIssues()
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to reject issue";
+      const { title, description } = parseApiError(error);
+
       toast({
         variant: "destructive",
-        title: "Failed to Reject Issue",
-        description: errorMessage,
+        title: title,
+        description: description,
       })
     }
   }
