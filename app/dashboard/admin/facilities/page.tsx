@@ -874,7 +874,7 @@ function FacilityFormModal({ isOpen, onClose, facility, facilityTypes, campuses,
             {/* Images upload - used for both create and update (matches Swagger images[] array) */}
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Images (Up to 2 files)
+                Images
               </label>
               <div className="relative">
                 <input
