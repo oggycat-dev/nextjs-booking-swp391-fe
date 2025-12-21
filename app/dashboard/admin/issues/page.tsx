@@ -16,7 +16,7 @@ export default function AdminIssuesPage() {
   const { issues, fetchPendingIssues, isLoading } = usePendingFacilityIssues()
   const { changeRoom, rejectIssue, isLoading: isChangingRoom } = useFacilityIssueMutations()
   const { facilities, fetchFacilities } = useFacilities()
-  
+
   const [selectedIssue, setSelectedIssue] = useState<FacilityIssue | null>(null)
   const [showChangeRoomDialog, setShowChangeRoomDialog] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -70,10 +70,30 @@ export default function AdminIssuesPage() {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to change room";
+
+      // Parse error message to provide better user feedback
+      let title = "Failed to Change Room";
+      let description = errorMessage;
+
+      // Check for specific error patterns
+      if (errorMessage.toLowerCase().includes("conflict") ||
+        errorMessage.toLowerCase().includes("already booked") ||
+        errorMessage.toLowerCase().includes("overlapping")) {
+        title = "Booking Conflict Detected";
+        description = "The selected facility already has a booking at the same time. Please choose a different facility or time slot.";
+      } else if (errorMessage.toLowerCase().includes("not available") ||
+        errorMessage.toLowerCase().includes("unavailable")) {
+        title = "Facility Not Available";
+        description = "The selected facility is currently not available. Please choose another facility.";
+      } else if (errorMessage.toLowerCase().includes("not found")) {
+        title = "Facility Not Found";
+        description = "The selected facility could not be found. Please refresh and try again.";
+      }
+
       toast({
         variant: "destructive",
-        title: "Failed to Change Room",
-        description: errorMessage,
+        title: title,
+        description: description,
       })
     }
   }
@@ -211,8 +231,8 @@ export default function AdminIssuesPage() {
               </thead>
               <tbody>
                 {issues.map((issue) => (
-                  <tr 
-                    key={issue.id} 
+                  <tr
+                    key={issue.id}
                     className="border-b hover:bg-muted/30 transition-colors"
                   >
                     <td className="p-4">
