@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { usePendingRegistrations } from "@/hooks/use-auth"
 import { useCampusChangeRequests, useCampusChangeRequestMutations } from "@/hooks/use-campus-change-requests"
+import { useCampuses } from "@/hooks/use-campus"
 import type { User, UserRole, PendingRegistration, CampusChangeRequest } from "@/types"
 
 export default function AdminUsersPage() {
@@ -17,6 +18,7 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState<string>("")
   const [filterStatus, setFilterStatus] = useState<boolean | "">("")
+  const [filterCampus, setFilterCampus] = useState<string>("")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [activeTab, setActiveTab] = useState<"users" | "pending" | "campus-change">("users")
@@ -54,6 +56,7 @@ export default function AdminUsersPage() {
   const { registrations, fetchPendingRegistrations, approveRegistration, isLoading: isPendingLoading } = usePendingRegistrations()
   const { requests: campusChangeRequests, fetchPending: fetchCampusChangeRequests, isLoading: isCampusChangeLoading } = useCampusChangeRequests()
   const { approveRequest: approveCampusChangeRequest, isLoading: isApprovingCampusChange } = useCampusChangeRequestMutations()
+  const { campuses, fetchCampuses } = useCampuses()
 
   // Read query params on mount
   useEffect(() => {
@@ -71,6 +74,10 @@ export default function AdminUsersPage() {
   }, [searchParams])
 
   useEffect(() => {
+    fetchCampuses()
+  }, [])
+
+  useEffect(() => {
     if (activeTab === "users") {
       fetchUsers({
         pageNumber,
@@ -85,7 +92,7 @@ export default function AdminUsersPage() {
       fetchCampusChangeRequests()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchTerm, filterRole, filterStatus, activeTab])
+  }, [pageNumber, searchTerm, filterRole, filterStatus, filterCampus, activeTab])
 
   const handleSearch = () => {
     setPageNumber(1) // Reset to first page when searching
@@ -189,7 +196,11 @@ export default function AdminUsersPage() {
     }
   }
 
-  const displayUsers = users?.items || []
+  // Client-side filter by campus since backend doesn't support it
+  const displayUsers = (users?.items || []).filter(user => {
+    if (!filterCampus) return true
+    return user.campusId === filterCampus
+  })
 
   const stats = {
     totalUsers: users?.totalCount || 0,
@@ -317,8 +328,8 @@ export default function AdminUsersPage() {
         <button
           onClick={() => setActiveTab("users")}
           className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === "users"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
         >
           All Users
@@ -326,8 +337,8 @@ export default function AdminUsersPage() {
         <button
           onClick={() => setActiveTab("pending")}
           className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${activeTab === "pending"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
         >
           Pending Registrations
@@ -340,8 +351,8 @@ export default function AdminUsersPage() {
         <button
           onClick={() => setActiveTab("campus-change")}
           className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${activeTab === "campus-change"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
         >
           Campus Change Requests
@@ -403,8 +414,8 @@ export default function AdminUsersPage() {
               Create User
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+            <div className="space-y-2 md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Search</label>
               <Input
                 placeholder="Search by name or email..."
@@ -429,6 +440,22 @@ export default function AdminUsersPage() {
                   <SelectItem value="Student">Student</SelectItem>
                   <SelectItem value="Lecturer">Lecturer</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Campus</label>
+              <Select value={filterCampus || "all"} onValueChange={(value) => setFilterCampus(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
+                  <SelectValue placeholder="All Campuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Campuses</SelectItem>
+                  {campuses.map((campus) => (
+                    <SelectItem key={campus.id} value={campus.id}>
+                      {campus.campusName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -464,6 +491,7 @@ export default function AdminUsersPage() {
                 onClick={() => {
                   setSearchTerm("")
                   setFilterRole("")
+                  setFilterCampus("")
                   setFilterStatus("")
                   setPageNumber(1)
                 }}
@@ -765,10 +793,10 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="p-4 text-center">
                           <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${user.role === "Student"
-                              ? "bg-blue-100 text-blue-700 border-blue-200"
-                              : user.role === "Lecturer"
-                                ? "bg-purple-100 text-purple-700 border-purple-200"
-                                : "bg-primary/10 text-primary border-primary/20"
+                            ? "bg-blue-100 text-blue-700 border-blue-200"
+                            : user.role === "Lecturer"
+                              ? "bg-purple-100 text-purple-700 border-purple-200"
+                              : "bg-primary/10 text-primary border-primary/20"
                             }`}>
                             {user.role}
                           </span>
@@ -856,8 +884,8 @@ export default function AdminUsersPage() {
                           variant={pageNum === users.pageNumber ? "default" : "outline"}
                           onClick={() => setPageNumber(pageNum)}
                           className={`h-10 w-10 p-0 ${pageNum === users.pageNumber
-                              ? "bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary"
-                              : ""
+                            ? "bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary"
+                            : ""
                             }`}
                         >
                           {pageNum}
