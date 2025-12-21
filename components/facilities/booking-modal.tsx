@@ -50,7 +50,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [dayBookings, setDayBookings] = useState<BookingCalendarDto[]>([])
   const [isLoadingBookings, setIsLoadingBookings] = useState(false)
-  const [agreeToPolicy, setAgreeToPolicy] = useState(false)
+
 
   // Get campus working hours for client-side validation
   const { campus } = useCampus(facility.campusId)
@@ -309,7 +309,6 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
     if (!isOpen) {
       setFieldErrors({})
       setDayBookings([])
-      setAgreeToPolicy(false)
     }
   }, [isOpen])
 
@@ -391,7 +390,6 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
         setNotes("")
         setFieldErrors({})
         setDayBookings([])
-        setAgreeToPolicy(false)
         if (onBookingCreated) {
           onBookingCreated()
         }
@@ -843,9 +841,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
             )}
             <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <p><span className="font-medium">Facility:</span> {facility.facilityName}</p>
-                <p><span className="font-medium">Type:</span> {facility.typeName}</p>
-                <p className="col-span-2"><span className="font-medium">Location:</span> {facility.campusName}</p>
+                <p className="col-span-2"><span className="font-medium">Facility:</span> {facility.facilityName}</p>
                 <p><span className="font-medium">Date:</span> {date}</p>
                 <p><span className="font-medium">Time:</span> {startTime} - {endTime}</p>
                 <p><span className="font-medium">Purpose:</span> {purpose}</p>
@@ -858,15 +854,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
                 )}
               </div>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-primary rounded"
-                checked={agreeToPolicy}
-                onChange={(e) => setAgreeToPolicy(e.target.checked)}
-              />
-              <span className="text-sm">I agree to the no-show policy</span>
-            </label>
+
           </div>
         )}
 
@@ -931,7 +919,7 @@ export function BookingModal({ facility, isOpen, onClose, onBookingCreated }: Bo
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-9"
               onClick={handleSubmit}
-              disabled={isLoading || !agreeToPolicy}
+              disabled={isLoading}
             >
               {isLoading ? "Submitting..." : "Submit Booking"}
             </Button>

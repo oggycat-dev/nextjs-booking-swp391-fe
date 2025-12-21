@@ -28,7 +28,7 @@ export default function AdminUsersPage() {
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  
+
   // Create user modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createEmail, setCreateEmail] = useState("")
@@ -38,14 +38,14 @@ export default function AdminUsersPage() {
   const [createRole, setCreateRole] = useState("Student")
   const [createPassword, setCreatePassword] = useState("")
   const [createConfirmPassword, setCreateConfirmPassword] = useState("")
-  
+
   // Edit form states
   const [editFirstName, setEditFirstName] = useState("")
   const [editLastName, setEditLastName] = useState("")
   const [editEmail, setEditEmail] = useState("")
   const [editRole, setEditRole] = useState<number>(0)
   const [editIsActive, setEditIsActive] = useState(true)
-  
+
   const pageSize = 10
   const { toast } = useToast()
 
@@ -59,12 +59,12 @@ export default function AdminUsersPage() {
   useEffect(() => {
     const roleParam = searchParams.get("role")
     const tabParam = searchParams.get("tab")
-    
+
     if (roleParam) {
       setFilterRole(roleParam)
       setActiveTab("users")
     }
-    
+
     if (tabParam === "pending" || tabParam === "campus-change") {
       setActiveTab(tabParam as "pending" | "campus-change")
     }
@@ -102,7 +102,7 @@ export default function AdminUsersPage() {
     const [firstName, ...lastNameParts] = user.fullName.split(' ')
     const lastName = lastNameParts.join(' ') || firstName
     const roleMap: Record<UserRole, number> = { Student: 0, Lecturer: 1, Admin: 2 }
-    
+
     const updated = await updateUser(user.id, {
       firstName: firstName,
       lastName: lastName,
@@ -128,7 +128,7 @@ export default function AdminUsersPage() {
 
   const handleEditUser = () => {
     if (!selectedUser) return
-    
+
     // Load current data into form
     const [firstName, ...lastNameParts] = selectedUser.fullName.split(' ')
     setEditFirstName(firstName)
@@ -208,7 +208,7 @@ export default function AdminUsersPage() {
 
   const handleResetPassword = async () => {
     if (!selectedUser || !newPassword || !confirmPassword) return
-    
+
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match!")
       return
@@ -280,7 +280,7 @@ export default function AdminUsersPage() {
       isApproved: approved,
       rejectionReason: approved ? undefined : rejectionReason || undefined,
     })
-    
+
     if (result) {
       setSelectedPending(null)
       setRejectionReason("")
@@ -295,7 +295,7 @@ export default function AdminUsersPage() {
       approved,
       comment: campusChangeComment || undefined,
     })
-    
+
     if (result) {
       setSelectedCampusChange(null)
       setCampusChangeComment("")
@@ -316,21 +316,19 @@ export default function AdminUsersPage() {
       <div className="flex gap-2 border-b border-border">
         <button
           onClick={() => setActiveTab("users")}
-          className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-            activeTab === "users"
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === "users"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           All Users
         </button>
         <button
           onClick={() => setActiveTab("pending")}
-          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
-            activeTab === "pending"
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${activeTab === "pending"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           Pending Registrations
           {registrations.length > 0 && (
@@ -341,11 +339,10 @@ export default function AdminUsersPage() {
         </button>
         <button
           onClick={() => setActiveTab("campus-change")}
-          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
-            activeTab === "campus-change"
+          className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${activeTab === "campus-change"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           Campus Change Requests
           {campusChangeRequests.length > 0 && (
@@ -407,75 +404,75 @@ export default function AdminUsersPage() {
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Search</label>
-            <Input
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch()
-                }
-              }}
-              className="h-11 border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all"
-            />
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Search</label>
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch()
+                  }
+                }}
+                className="h-11 border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Role</label>
+              <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="Student">Student</SelectItem>
+                  <SelectItem value="Lecturer">Lecturer</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Status</label>
+              <Select
+                value={filterStatus === "" ? "all" : filterStatus === true ? "active" : "inactive"}
+                onValueChange={(value) => {
+                  if (value === "all") setFilterStatus("")
+                  else setFilterStatus(value === "active")
+                }}
+              >
+                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={handleSearch} className="flex-1 h-11 bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary shadow-lg hover:shadow-xl transition-all rounded-xl font-semibold">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Search
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 h-11 border-2 border-gray-300 hover:bg-gray-100 rounded-xl font-semibold"
+                onClick={() => {
+                  setSearchTerm("")
+                  setFilterRole("")
+                  setFilterStatus("")
+                  setPageNumber(1)
+                }}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Role</label>
-            <Select value={filterRole || "all"} onValueChange={(value) => setFilterRole(value === "all" ? "" : value)}>
-              <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="Student">Student</SelectItem>
-                <SelectItem value="Lecturer">Lecturer</SelectItem>
-                <SelectItem value="Admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Status</label>
-            <Select
-              value={filterStatus === "" ? "all" : filterStatus === true ? "active" : "inactive"}
-              onValueChange={(value) => {
-                if (value === "all") setFilterStatus("")
-                else setFilterStatus(value === "active")
-              }}
-            >
-              <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-primary rounded-xl">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end gap-2">
-            <Button onClick={handleSearch} className="flex-1 h-11 bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary shadow-lg hover:shadow-xl transition-all rounded-xl font-semibold">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Search
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 h-11 border-2 border-gray-300 hover:bg-gray-100 rounded-xl font-semibold"
-              onClick={() => {
-                setSearchTerm("")
-                setFilterRole("")
-                setFilterStatus("")
-                setPageNumber(1)
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
-      </Card>
+        </Card>
       )}
 
       {activeTab === "users" && isLoading && (
@@ -550,8 +547,8 @@ export default function AdminUsersPage() {
                   </thead>
                   <tbody>
                     {registrations.map((registration) => (
-                      <tr 
-                        key={registration.id} 
+                      <tr
+                        key={registration.id}
                         className="border-b hover:bg-muted/30 transition-colors"
                       >
                         <td className="p-4">
@@ -646,8 +643,8 @@ export default function AdminUsersPage() {
                   </thead>
                   <tbody>
                     {campusChangeRequests.map((request: CampusChangeRequest) => (
-                      <tr 
-                        key={request.id} 
+                      <tr
+                        key={request.id}
                         className="border-b hover:bg-muted/30 transition-colors"
                       >
                         <td className="p-4">
@@ -743,8 +740,8 @@ export default function AdminUsersPage() {
                   </thead>
                   <tbody>
                     {displayUsers.map((user) => (
-                      <tr 
-                        key={user.id} 
+                      <tr
+                        key={user.id}
                         className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
                         onClick={() => setSelectedUser(user)}
                       >
@@ -767,13 +764,12 @@ export default function AdminUsersPage() {
                           <span className="text-sm font-medium">{user.userCode}</span>
                         </td>
                         <td className="p-4 text-center">
-                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${
-                            user.role === "Student" 
-                              ? "bg-blue-100 text-blue-700 border-blue-200" 
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${user.role === "Student"
+                              ? "bg-blue-100 text-blue-700 border-blue-200"
                               : user.role === "Lecturer"
-                              ? "bg-purple-100 text-purple-700 border-purple-200"
-                              : "bg-primary/10 text-primary border-primary/20"
-                          }`}>
+                                ? "bg-purple-100 text-purple-700 border-purple-200"
+                                : "bg-primary/10 text-primary border-primary/20"
+                            }`}>
                             {user.role}
                           </span>
                         </td>
@@ -859,11 +855,10 @@ export default function AdminUsersPage() {
                           key={pageNum}
                           variant={pageNum === users.pageNumber ? "default" : "outline"}
                           onClick={() => setPageNumber(pageNum)}
-                          className={`h-10 w-10 p-0 ${
-                            pageNum === users.pageNumber
+                          className={`h-10 w-10 p-0 ${pageNum === users.pageNumber
                               ? "bg-gradient-to-r from-primary via-orange-500 to-orange-600 hover:from-orange-600 hover:to-primary"
                               : ""
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </Button>
@@ -909,14 +904,14 @@ export default function AdminUsersPage() {
               <h2 className="text-2xl font-bold">
                 {selectedUser.fullName}
               </h2>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedUser(null)
                   setIsEditMode(false)
                   setShowResetPassword(false)
                   setNewPassword("")
                   setConfirmPassword("")
-                }} 
+                }}
                 className="text-muted-foreground hover:text-foreground"
               >
                 ✕
@@ -950,7 +945,7 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Campus</p>
-                      <p className="font-bold">{selectedUser.campusId || "N/A"}</p>
+                      <p className="font-bold">{selectedUser.campusName || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Status</p>
@@ -1070,8 +1065,8 @@ export default function AdminUsersPage() {
                       <label className="block text-sm font-medium mb-2">
                         First Name <span className="text-destructive">*</span>
                       </label>
-                      <Input 
-                        value={editFirstName} 
+                      <Input
+                        value={editFirstName}
                         onChange={(e) => setEditFirstName(e.target.value)}
                         placeholder="Enter first name"
                       />
@@ -1080,8 +1075,8 @@ export default function AdminUsersPage() {
                       <label className="block text-sm font-medium mb-2">
                         Last Name <span className="text-destructive">*</span>
                       </label>
-                      <Input 
-                        value={editLastName} 
+                      <Input
+                        value={editLastName}
                         onChange={(e) => setEditLastName(e.target.value)}
                         placeholder="Enter last name"
                       />
@@ -1090,9 +1085,9 @@ export default function AdminUsersPage() {
                       <label className="block text-sm font-medium mb-2">
                         Email <span className="text-destructive">*</span>
                       </label>
-                      <Input 
+                      <Input
                         type="email"
-                        value={editEmail} 
+                        value={editEmail}
                         onChange={(e) => setEditEmail(e.target.value)}
                         placeholder="Enter email"
                       />
@@ -1136,9 +1131,9 @@ export default function AdminUsersPage() {
                   >
                     {isMutating ? "Saving..." : "Save Changes"}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 bg-transparent" 
+                  <Button
+                    variant="outline"
+                    className="flex-1 bg-transparent"
                     onClick={handleCancelEdit}
                     disabled={isMutating}
                   >
