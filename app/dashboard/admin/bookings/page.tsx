@@ -9,10 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { usePendingAdminApprovals, useBookingMutations, useApprovedBookings } from "@/hooks/use-booking"
 import { useAuth } from '@/hooks/use-auth'
-import { useFacility, useFacilities } from "@/hooks/use-facility"
+import { useFacilities } from "@/hooks/use-facility"
 import { useCampuses } from "@/hooks/use-campus"
 import type { Booking, BookingStatus } from "@/types"
 import { AllBookingsTab } from "./all-bookings-tab"
+import { BookingDetailModal } from "@/components/admin/booking-detail-modal"
 
 export default function AdminBookingsPage() {
   const searchParams = useSearchParams()
@@ -59,10 +60,6 @@ export default function AdminBookingsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("")
   const [filterDate, setFilterDate] = useState<string>("")
 
-  // Fetch facility details when a booking is selected (only when viewing details, not in approve/reject modals)
-  const { facility, isLoading: isLoadingFacility } = useFacility(
-    selectedBooking?.facilityId && !actionType ? selectedBooking.facilityId : undefined
-  )
 
   // Read query params on mount
   useEffect(() => {
@@ -587,151 +584,20 @@ export default function AdminBookingsPage() {
           {/* All Bookings Tab */}
           {isAdmin && (
             <TabsContent value="all" className="mt-4">
-              <AllBookingsTab />
+              <AllBookingsTab onViewDetails={(booking) => setSelectedBooking(booking as any)} />
             </TabsContent>
           )}
         </Tabs>
       </Card>
 
       {/* Booking Details Modal */}
-      {
-        selectedBooking && !actionType && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">Booking Details</h2>
-                <button onClick={() => setSelectedBooking(null)} className="text-muted-foreground hover:text-foreground">
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Booking Code</p>
-                    <p className="font-bold">{selectedBooking.bookingCode}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Status</p>
-                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(selectedBooking.status)}`}>
-                      {selectedBooking.status}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Facility</p>
-                    <p className="font-bold">{selectedBooking.facilityName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Date</p>
-                    <p className="font-bold">{formatDate(selectedBooking.bookingDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Time</p>
-                    <p className="font-bold">{formatTime(selectedBooking.startTime)} - {formatTime(selectedBooking.endTime)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Created At</p>
-                    <p className="font-bold">{formatDate(selectedBooking.createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Purpose</p>
-                    <p className="font-bold">{selectedBooking.purpose}</p>
-                  </div>
-                  {isLoadingFacility ? (
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Loading facility details...</p>
-                    </div>
-                  ) : facility ? (
-                    <>
-                      {facility.building && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Tòa nhà (Building)</p>
-                          <p className="font-bold">{facility.building}</p>
-                        </div>
-                      )}
-                      {facility.floor && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Tầng (Floor)</p>
-                          <p className="font-bold">{facility.floor}</p>
-                        </div>
-                      )}
-                      {facility.roomNumber && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Phòng (Room)</p>
-                          <p className="font-bold">{facility.roomNumber}</p>
-                        </div>
-                      )}
-                      {facility.campusName && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Campus</p>
-                          <p className="font-bold">{facility.campusName}</p>
-                        </div>
-                      )}
-                    </>
-                  ) : null}
-                </div>
-
-                {selectedBooking.notes && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground mb-1">Notes</p>
-                    <p className="font-medium">{selectedBooking.notes}</p>
-                  </div>
-                )}
-
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Requester Information</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="font-medium">{selectedBooking.userName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Role</p>
-                      <p className="font-medium">{selectedBooking.userRole}</p>
-                    </div>
-                    {selectedBooking.lecturerEmail && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Lecturer Email</p>
-                        <p className="font-medium">{selectedBooking.lecturerEmail}</p>
-                      </div>
-                    )}
-                    {selectedBooking.lecturerName && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Approved by Lecturer</p>
-                        <p className="font-medium">{selectedBooking.lecturerName}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                {/* Only show Approve/Reject for pending bookings */}
-                {((selectedBooking as any).status === 'PendingLecturerApproval' || (selectedBooking as any).status === 'PendingAdminApproval') && (
-                  <>
-                    <Button
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setActionType("approve")}
-                    >
-                      Approve Booking
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-destructive hover:text-destructive bg-transparent"
-                      onClick={() => setActionType("reject")}
-                    >
-                      Reject Booking
-                    </Button>
-                  </>
-                )}
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setSelectedBooking(null)}>
-                  Close
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )
-      }
+      <BookingDetailModal
+        booking={selectedBooking && !actionType ? selectedBooking : null}
+        onClose={() => setSelectedBooking(null)}
+        onApprove={() => setActionType("approve")}
+        onReject={() => setActionType("reject")}
+        showActions={true}
+      />
 
       {/* Approve Modal */}
       {

@@ -324,7 +324,7 @@ function StudentLecturerDashboard() {
       <HeroSection
         title="Discover & Book Facilities"
         subtitle="Find the perfect space for your study sessions, group meetings, and academic activities"
-        showSearch={true}
+        showSearch={false}
         backgroundImage="/FPT layout.png"
       />
 

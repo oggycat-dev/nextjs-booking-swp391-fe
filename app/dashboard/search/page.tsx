@@ -21,6 +21,7 @@ interface FilterOptions {
 }
 
 export default function SearchPage() {
+  const [searchQuery, setSearchQuery] = useState("")
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     availableOnly: true,
   })
@@ -44,7 +45,7 @@ export default function SearchPage() {
           const user = JSON.parse(userStr);
           return user.campusId;
         }
-      } catch {}
+      } catch { }
     }
     return undefined;
   }
@@ -83,7 +84,7 @@ export default function SearchPage() {
             const user = JSON.parse(userStr);
             return user.campusId;
           }
-        } catch {}
+        } catch { }
       }
       return undefined;
     }
@@ -115,8 +116,15 @@ export default function SearchPage() {
       filtered = filtered.filter((f) => f.status === "Available" && f.isActive);
     }
 
+    // Filter by search query (facility name)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((f) =>
+        f.facilityName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
     return filtered;
-  }, [facilities, filterOptions]);
+  }, [facilities, filterOptions, searchQuery]);
 
   const handleFilter = (filters: {
     type?: string
@@ -126,7 +134,7 @@ export default function SearchPage() {
   }) => {
     // Find facility type ID from type name
     const facilityType = facilityTypes.find((ft) => ft.typeName === filters.type)
-    
+
     setFilterOptions({
       facilityTypeId: facilityType?.id || undefined,
       capacity: filters.capacity,
@@ -139,11 +147,11 @@ export default function SearchPage() {
     try {
       setIsLoadingDetail(true)
       console.log(`Fetching facility details for ID: ${facility.id}`)
-      
+
       // Call API to get facility by ID
       const response = await facilityApi.getById(facility.id)
       console.log('Facility detail response:', response)
-      
+
       if (response.success && response.data) {
         setSelectedFacility(response.data)
         setShowDetailModal(true)
@@ -168,10 +176,10 @@ export default function SearchPage() {
     try {
       setIsLoadingDetail(true)
       console.log(`Fetching facility details for booking: ${facility.id}`)
-      
+
       const response = await facilityApi.getById(facility.id)
       console.log('Facility detail response:', response)
-      
+
       if (response.success && response.data) {
         setSelectedFacility(response.data)
         setShowBookingModal(true)
@@ -201,7 +209,7 @@ export default function SearchPage() {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative w-full h-[280px] rounded-2xl overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/modern-meeting-room.png')" }}
         >
@@ -226,13 +234,39 @@ export default function SearchPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <FacilitySearchFilters 
-            onFilter={handleFilter} 
+          <FacilitySearchFilters
+            onFilter={handleFilter}
             facilityTypes={facilityTypes}
           />
         </div>
 
         <div className="lg:col-span-3">
+          {/* Search Input */}
+          <div className="relative mb-4">
+            <input
+              type="text"
+              placeholder="Search facilities by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-5 py-3 pr-12 rounded-lg bg-white dark:bg-gray-800 text-foreground placeholder-muted-foreground border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-lg transition-all text-sm"
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Loading facilities...</p>
@@ -266,17 +300,17 @@ export default function SearchPage() {
           ) : filteredFacilities.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground mb-4">No facilities found matching your criteria</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setFilterOptions({ availableOnly: true })}
               >
                 Clear Filters
               </Button>
             </Card>
           ) : (
-            <FacilityGrid 
-              facilities={filteredFacilities} 
-              viewMode={viewMode} 
+            <FacilityGrid
+              facilities={filteredFacilities}
+              viewMode={viewMode}
               onBooking={handleBooking}
               onFacilityClick={handleFacilityClick}
             />

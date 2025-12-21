@@ -23,7 +23,7 @@ const BOOKING_STATUSES = [
     "NoShow",
 ]
 
-export function AllBookingsTab() {
+export function AllBookingsTab({ onViewDetails }: { onViewDetails?: (booking: BookingListDto) => void }) {
     const [bookings, setBookings] = useState<BookingListDto[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -44,7 +44,7 @@ export function AllBookingsTab() {
 
     // Fetch data for dropdowns
     const { campuses } = useCampuses()
-    const { facilities } = useFacilities(selectedCampusId ? { campusId: selectedCampusId } : undefined)
+    const { facilities } = useFacilities(selectedCampusId ? { campusId: selectedCampusId } : {})
 
     // Fetch bookings
     const fetchBookings = async () => {
@@ -272,6 +272,7 @@ export function AllBookingsTab() {
                                         <th className="text-left p-3 font-semibold text-sm">Time</th>
                                         <th className="text-left p-3 font-semibold text-sm">Status</th>
                                         <th className="text-left p-3 font-semibold text-sm">Created</th>
+                                        <th className="text-left p-3 font-semibold text-sm">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -304,6 +305,16 @@ export function AllBookingsTab() {
                                                 <div className="text-xs text-muted-foreground">
                                                     {formatDate(booking.createdAt)}
                                                 </div>
+                                            </td>
+                                            <td className="p-3">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => onViewDetails?.(booking)}
+                                                    className="h-8 text-xs"
+                                                >
+                                                    Detail
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}
