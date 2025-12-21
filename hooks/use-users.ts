@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { usersApi } from "@/lib/api/users";
+import { campusApi } from "@/lib/api/campus";
 import type {
   User,
   CreateUserRequest,
@@ -19,15 +20,37 @@ export function useUsers() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await usersApi.getAll(query);
-      if (response.success && response.data) {
-        setUsers(response.data);
+      // Fetch users and campuses in parallel
+      const [usersResponse, campusesResponse] = await Promise.all([
+        usersApi.getAll(query),
+        campusApi.getAll()
+      ]);
+
+      if (usersResponse.success && usersResponse.data) {
+        let enrichedUsers = usersResponse.data.items;
+
+        // Enrich users with campus names if campuses were fetched successfully
+        if (campusesResponse.success && campusesResponse.data) {
+          const campusMap = new Map(
+            campusesResponse.data.map(campus => [campus.id, campus.campusName])
+          );
+
+          enrichedUsers = usersResponse.data.items.map(user => ({
+            ...user,
+            campusName: user.campusId ? (campusMap.get(user.campusId) || null) : null
+          }));
+        }
+
+        setUsers({
+          ...usersResponse.data,
+          items: enrichedUsers
+        });
       } else {
-        const errorMessage = response.message || 
-                           (response.errors && Array.isArray(response.errors) ? response.errors.join(", ") : null) ||
-                           "Failed to fetch users";
+        const errorMessage = usersResponse.message ||
+          (usersResponse.errors && Array.isArray(usersResponse.errors) ? usersResponse.errors.join(", ") : null) ||
+          "Failed to fetch users";
         setError(errorMessage);
-        console.error("Failed to fetch users - Response:", response);
+        console.error("Failed to fetch users - Response:", usersResponse);
       }
     } catch (err) {
       let message = "Failed to fetch users";
