@@ -13,9 +13,8 @@ interface ApiErrorResponse {
  * Parse API error and extract readable message
  */
 export function parseApiError(error: unknown): { title: string; description: string } {
-    // Default error
-    let title = "Đã xảy ra lỗi";
-    let description = "Vui lòng thử lại sau.";
+    let title = "Error";
+    let description = "An error occurred";
 
     try {
         if (error instanceof Error) {
@@ -28,13 +27,13 @@ export function parseApiError(error: unknown): { title: string; description: str
                     const errorData: ApiErrorResponse = JSON.parse(jsonMatch[0]);
 
                     if (errorData.message) {
-                        title = "Thao tác thất bại";
+                        title = "Error";
                         description = errorData.message;
                     }
 
                     // If there are additional errors, append them
                     if (errorData.errors && errorData.errors.length > 0) {
-                        description += "\n\nChi tiết:\n" + errorData.errors.join("\n");
+                        description += "\n\n" + errorData.errors.join("\n");
                     }
 
                     return { title, description };
@@ -66,14 +65,16 @@ export function parseApiError(error: unknown): { title: string; description: str
                 title = "Validation Error";
                 description = errorMessage;
             } else {
-                // Use the error message as is
+                // Use the error message as is from backend
+                title = "Error";
                 description = errorMessage;
             }
         } else if (typeof error === "string") {
+            title = "Error";
             description = error;
         }
     } catch {
-        // Use default error
+        // Keep the default values
     }
 
     return { title, description };
