@@ -308,6 +308,11 @@ export default function AdminBookingsPage() {
                         <td className="p-4">
                           <div>
                             <div className="font-medium text-sm">{booking.userName}</div>
+                            {booking.userEmail && (
+                              <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {booking.userEmail}
+                              </div>
+                            )}
                             <div className="text-xs text-muted-foreground">{booking.userRole}</div>
                           </div>
                         </td>
@@ -527,7 +532,16 @@ export default function AdminBookingsPage() {
                             <td className="p-3">{b.bookingCode}</td>
                             <td className="p-3">{new Date(b.bookingDate).toLocaleDateString()}</td>
                             <td className="p-3">{b.startTime?.substring(0, 5)} - {b.endTime?.substring(0, 5)}</td>
-                            <td className="p-3">{b.userName}</td>
+                            <td className="p-3">
+                              <div>
+                                <div className="font-medium text-sm">{b.userName}</div>
+                                {b.userEmail && (
+                                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                    {b.userEmail}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
                             <td className="p-3">{b.status}</td>
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-2">

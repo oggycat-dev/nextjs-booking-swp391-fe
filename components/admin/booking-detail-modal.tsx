@@ -148,6 +148,12 @@ export function BookingDetailModal({
                                 <p className="text-xs text-muted-foreground">Role</p>
                                 <p className="font-medium">{booking.userRole}</p>
                             </div>
+                            {booking.userEmail && (
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Email</p>
+                                    <p className="font-medium">{booking.userEmail}</p>
+                                </div>
+                            )}
                             {booking.lecturerEmail && (
                                 <div>
                                     <p className="text-xs text-muted-foreground">Lecturer Email</p>

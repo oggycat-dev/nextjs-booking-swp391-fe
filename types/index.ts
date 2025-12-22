@@ -334,14 +334,14 @@ export interface MyCampusChangeRequest {
 // Booking Types
 // ============================================
 
-export type BookingStatus = 
-  | "WaitingLecturerApproval" 
-  | "WaitingAdminApproval" 
-  | "Approved" 
-  | "Rejected" 
-  | "Cancelled" 
-  | "Completed" 
-  | "InUse" 
+export type BookingStatus =
+  | "WaitingLecturerApproval"
+  | "WaitingAdminApproval"
+  | "Approved"
+  | "Rejected"
+  | "Cancelled"
+  | "Completed"
+  | "InUse"
   | "NoShow"
   | "Pending";
 
@@ -352,6 +352,7 @@ export interface Booking {
   facilityName: string;
   userId: string;
   userName: string;
+  userEmail?: string | null;
   userRole: string;
   bookingDate: string; // ISO date string
   startTime: string; // TimeSpan "HH:mm:ss"
